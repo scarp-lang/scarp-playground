@@ -115,12 +115,16 @@ test('keeps the main file undo history when switching to another Scarp module', 
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
   await editor.focus();
-  await page.keyboard.press('ControlOrMeta+A');
-  await page.keyboard.insertText('print("temporary source");');
+  await page.keyboard.press('ControlOrMeta+End');
+  // A single append is one undoable operation. Replacing all text can create
+  // multiple undo stops in Monaco and is a weaker cross-tab history test.
+  await page.keyboard.insertText('print("extra line");\n');
+  await expect(page.locator('.monaco-editor .view-lines')).toContainText('extra line');
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await page.getByRole('tab', { name: /main.srp/ }).click();
   await editor.focus();
   await page.keyboard.press('ControlOrMeta+Z');
+  await expect(page.locator('.monaco-editor .view-lines')).not.toContainText('extra line');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
 });
