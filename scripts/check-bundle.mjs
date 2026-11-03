@@ -1,3 +1,4 @@
+import process from 'node:process';
 import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { gzipSync } from 'node:zlib';
@@ -20,8 +21,8 @@ const report = {
   files: measurements.sort((a, b) => b.bytes - a.bytes).slice(0, 8),
 };
 writeFileSync('dist/bundle-report.json', JSON.stringify(report, null, 2) + '\n');
-console.log('Browser JS bundle (raw/gzip):', JSON.stringify(report));
+process.stdout.write('Browser JS bundle (raw/gzip): ' + JSON.stringify(report) + '\n');
 if (extras.length) {
-  console.error('Unrelated language chunks detected:', extras.join(', '));
+  process.stderr.write('Unrelated language chunks detected: ' + extras.join(', ') + '\n');
   process.exitCode = 1;
 }
