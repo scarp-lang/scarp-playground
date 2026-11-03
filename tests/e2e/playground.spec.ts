@@ -116,15 +116,15 @@ test('keeps the main file undo history when switching to another Scarp module', 
   await expect(editor).toBeAttached();
   await editor.focus();
   await page.keyboard.press('ControlOrMeta+End');
-  // A single append is one undoable operation. Replacing all text can create
-  // multiple undo stops in Monaco and is a weaker cross-tab history test.
-  await page.keyboard.insertText('print("extra line");\n');
-  await expect(page.locator('.monaco-editor .view-lines')).toContainText('extra line');
+  // Use a real keypress rather than Playwright insertText, which bypasses
+  // keydown/keyup and does not reliably create a Monaco keyboard undo entry.
+  await page.keyboard.press('x');
+  await expect(page.locator('.monaco-editor .view-lines')).toContainText('x');
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await page.getByRole('tab', { name: /main.srp/ }).click();
   await editor.focus();
   await page.keyboard.press('ControlOrMeta+Z');
-  await expect(page.locator('.monaco-editor .view-lines')).not.toContainText('extra line');
+  await expect(page.locator('.monaco-editor .view-lines')).not.toContainText('x');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
 });
