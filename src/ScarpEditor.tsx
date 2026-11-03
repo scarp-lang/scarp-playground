@@ -22,7 +22,7 @@ monaco.languages.setMonarchTokensProvider('scarp', {
       [/\b(?:0x[0-9a-fA-F]+|0b[01]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/, 'number'],
       [/[a-zA-Z_][\w]*/, { cases: { '@keywords': 'keyword', '@default': 'identifier' } }],
       [/[{}()[\]]/, '@brackets'],
-      [/[+*\/%=<>!&|:-]+/, 'operator'],
+      [new RegExp('[+*/%=<>!&|:-]+'), 'operator'],
     ],
   },
 });
@@ -64,7 +64,6 @@ export function ScarpEditor({ path, value, dark, onChange }: Props) {
       editor.current = null;
     };
     // The editor instance must survive value and theme changes.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
