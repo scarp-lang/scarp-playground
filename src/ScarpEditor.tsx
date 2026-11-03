@@ -1,5 +1,9 @@
 import { useEffect, useRef } from 'react';
-import * as monaco from 'monaco-editor';
+// Editor-only Monaco ESM entry: do NOT import the package root, which
+// registers and bundles dozens of non-Scarp language packs.
+// Retain normal editor commands (find, undo, folding, selection, etc.).
+import 'monaco-editor/esm/vs/editor/editor.all.js';
+import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 
 const environment = globalThis as typeof globalThis & {

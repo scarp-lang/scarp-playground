@@ -66,3 +66,16 @@ diagnostic schema 1 (UTF-8 byte spans and 1-based Unicode-scalar columns).
 4. Add Monaco markers, exact source-span repair suggestions and richer docs.
 5. Conduct independent security review before stable; a stable compiler by
    itself is not a release authorization.
+
+## Monaco bundle optimization (post-alpha development)
+
+The initial v0.0.1 build imported the `monaco-editor` package root.
+That generated many unrelated syntax-language chunks (for example Python,
+TypeScript, Java and SQL) even though Playground edits Scarp exclusively.
+
+Development now uses the editor ESM API and editor feature registrations
+without bundled stock language packs. A post-build script reports the JS
+asset count, byte sizes and gzip sizes, and fails CI if unrelated language
+chunks return. Playwright verifies real editable Monaco input and Scarp
+compiler execution. Internal Monaco ESM entrypoints must be rechecked on
+dependency upgrades; keep the pinned tested editor version until then.
