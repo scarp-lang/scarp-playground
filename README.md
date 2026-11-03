@@ -83,7 +83,7 @@ without a separate security design and independent review.
 ## Deploy and release
 
 The `Playground CI and Pages` workflow builds real WebAssembly on every
-feature push and pull request. After the workflow succeeds on `main`, the same
+pull request and main-branch push. After the workflow succeeds on `main`, the same
 workflow deploys the static site using GitHub Pages Actions. The Pages source
 must be configured to **GitHub Actions**, not branch-based publishing.
 

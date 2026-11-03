@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import * as monaco from 'monaco-editor';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
-import 'monaco-editor/esm/vs/editor/editor.main.css';
 
 const environment = globalThis as typeof globalThis & {
   MonacoEnvironment?: { getWorker: () => Worker };
