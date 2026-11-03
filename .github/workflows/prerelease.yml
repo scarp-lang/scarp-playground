@@ -61,7 +61,7 @@ jobs:
       - name: Publish alpha only, never stable
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED_VERSION: ${{ inputs.version }}
+          REQUESTED_VERSION: ${{ github.event_name == 'push' && 'v0.0.1' || inputs.version }}
         run: |
           gh release create "$REQUESTED_VERSION" \
             scarp-playground-v0.0.1-web.tar.gz \
