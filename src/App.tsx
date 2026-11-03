@@ -93,6 +93,38 @@ export function App() {
     }
   }, [dark]);
 
+  // Navigating between #code= snippets and normal URLs can be a same-document
+  // navigation (no React remount). Apply shared code without overwriting saved
+  // projects, and restore the saved project when the fragment is cleared.
+  useEffect(() => {
+    const onHashChange = () => {
+      const shared = sourceFromHash(window.location.hash);
+      if (shared !== null) {
+        setSavingLocally(false);
+        setWorkspace({ entry: 'main.srp', files: { 'main.srp': shared } });
+        setActiveFile('main.srp');
+        setResult(null);
+        setNotice('Opened shared code. Your locally saved workspace remains unchanged.');
+        return;
+      }
+      if (window.location.hash !== '') return;
+      try {
+        const saved = restoreLocalWorkspace(window.localStorage);
+        if (saved) {
+          setWorkspace(saved.workspace);
+          setActiveFile(saved.activeFile);
+          setSavingLocally(true);
+          setResult(null);
+          setNotice('Restored your locally saved workspace.');
+        }
+      } catch {
+        // No persistent access: leave the current editor intact.
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
   // Opt-in only: store source after explicit Save locally. Do not upload it.
   useEffect(() => {
     if (!savingLocally) return;
