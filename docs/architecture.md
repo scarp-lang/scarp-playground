@@ -99,3 +99,13 @@ These are build asset sizes, not network/wall-clock measurements. Monaco's
 ~3.24 MB chunk still loads when the editor is mounted. Runtime performance
 must be separately measured on actual devices; these figures must not be
 presented as a promise of a given load time.
+
+## Release version accuracy
+
+The **v0.0.1 alpha** GitHub release is an immutable snapshot. The live
+GitHub Pages website deploys `main` and may include changes that are not
+part of that tagged archive, such as Monaco optimization and opt-in local
+workspace saving. The UI intentionally displays **Development preview**
+instead of claiming the live build is the original v0.0.1 release. The
+official compiler remains pinned to `v0.0.5-alpha.3` until separately
+validated against an updated compiler revision.

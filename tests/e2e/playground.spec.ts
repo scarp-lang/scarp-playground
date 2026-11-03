@@ -5,6 +5,7 @@ import { expect, test } from '@playwright/test';
 test('boots the real interpreter and executes the official hello sample', async ({ page }) => {
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Code. Run. Learn.' })).toBeVisible();
+  await expect(page.getByText('Development preview', { exact: true })).toBeVisible();
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
   await expect(page.locator('.result-status.success')).toBeVisible();
