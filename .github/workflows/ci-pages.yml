@@ -1,0 +1,73 @@
+name: Playground CI and Pages
+
+on:
+  push:
+    branches:
+      - main
+      - 'feat/**'
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: playground-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    name: Check browser and real compiler
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out playground
+        uses: actions/checkout@v4
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install JS dependencies
+        run: npm install --no-audit --no-fund
+      - name: Lint TypeScript
+        run: npm run lint
+      - name: Type-check TypeScript
+        run: npm run typecheck
+      - name: Run frontend tests
+        run: npm run test
+      - name: Set up stable Rust for native tests and WebAssembly
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - name: Test against the pinned real Scarp interpreter
+        run: cargo test --manifest-path bridge/Cargo.toml
+      - name: Install wasm-pack
+        run: cargo install wasm-pack --locked
+      - name: Compile the real interpreter to browser WebAssembly
+        run: wasm-pack build bridge --release --target web --out-dir ../public/compiler
+      - name: Build client with compiler bundle
+        run: npm run build
+      - name: Verify executable WASM and JavaScript bridge are deployed
+        run: |
+          test -s dist/compiler/scarp_playground_wasm_bg.wasm
+          test -s dist/compiler/scarp_playground_wasm.js
+          test -s dist/index.html
+      - name: Upload website for GitHub Pages
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: dist
+
+  deploy:
+    name: Deploy verified preview
+    needs: build-test
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    permissions:
+      pages: write
+      id-token: write
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
