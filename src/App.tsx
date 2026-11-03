@@ -47,6 +47,7 @@ export function App() {
   const [initial] = useState(startingSession);
   const [workspace, setWorkspace] = useState<Workspace>(initial.workspace);
   const [activeFile, setActiveFile] = useState(initial.activeFile);
+  const [editorSession, setEditorSession] = useState(0);
   const [savingLocally, setSavingLocally] = useState(initial.savingLocally);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
@@ -109,6 +110,7 @@ export function App() {
       if (shared !== null) {
         setSavingLocally(false);
         setWorkspace({ entry: 'main.srp', files: { 'main.srp': shared } });
+        setEditorSession((number) => number + 1);
         setActiveFile('main.srp');
         setResult(null);
         setNotice('Opened shared code. Your locally saved workspace remains unchanged.');
@@ -119,6 +121,7 @@ export function App() {
         const saved = restoreLocalWorkspace(window.localStorage);
         if (saved) {
           setWorkspace(saved.workspace);
+          setEditorSession((number) => number + 1);
           setActiveFile(saved.activeFile);
           setSavingLocally(true);
           setResult(null);
@@ -184,6 +187,7 @@ export function App() {
   function selectExample(index: number) {
     const example = examples[index];
     setWorkspace({ entry: example.entry, files: { ...example.files } });
+    setEditorSession((number) => number + 1);
     setActiveFile(example.entry);
     setResult(null);
     setNotice('Loaded ' + example.title + ' — ready to execute with the real compiler.');
@@ -347,7 +351,7 @@ export function App() {
                   </div>
                 }
               >
-                <ScarpEditor path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} />
+                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} />
               </Suspense>
             </div>
             <div className="editor-footer">
