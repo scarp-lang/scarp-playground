@@ -16,7 +16,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: Guard release policy
+      - name: Guard alpha release policy and compiler revision
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -32,15 +32,18 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 22
+          cache: npm
       - uses: dtolnay/rust-toolchain@stable
         with:
           targets: wasm32-unknown-unknown
-      - run: npm install --no-audit --no-fund
+      - run: npm ci --no-audit --no-fund
       - run: npm run lint && npm run typecheck && npm run test
-      - run: cargo test --manifest-path bridge/Cargo.toml
+      - run: cargo test --locked --manifest-path bridge/Cargo.toml
       - run: cargo install wasm-pack --locked
-      - run: wasm-pack build bridge --release --target web --out-dir ../public/compiler
+      - run: wasm-pack build bridge --release --target web --out-dir ../public/compiler --locked
       - run: npm run build
+      - run: npx playwright install --with-deps chromium
+      - run: npm run test:e2e
       - name: Package verified static website
         run: |
           test -s dist/compiler/scarp_playground_wasm_bg.wasm
@@ -51,4 +54,9 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           REQUESTED_VERSION: ${{ inputs.version }}
         run: |
-          gh release create "$REQUESTED_VERSION"             scarp-playground-v0.0.1-web.tar.gz             scarp-playground-v0.0.1-web.tar.gz.sha256             --prerelease --target "$GITHUB_SHA" --title "Scarp Playground v0.0.1 (alpha)"             --notes "Experimental browser playground using the real Scarp v0.0.5-alpha.3 interpreter pinned to commit 7715c28df09c7703b39e14fddb963275b25df476. Not a stable release. Runs in-browser with execution limits; see README for security and compatibility details."
+          gh release create "$REQUESTED_VERSION" \
+            scarp-playground-v0.0.1-web.tar.gz \
+            scarp-playground-v0.0.1-web.tar.gz.sha256 \
+            --prerelease --target "$GITHUB_SHA" \
+            --title "Scarp Playground v0.0.1 (alpha)" \
+            --notes "Experimental browser playground using the real Scarp v0.0.5-alpha.3 interpreter pinned to commit 7715c28df09c7703b39e14fddb963275b25df476. Not stable. Passed JavaScript, native Rust, WebAssembly and Playwright browser tests. Runs in-browser with execution limits; see README for security and compatibility details."
