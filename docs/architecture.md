@@ -74,8 +74,25 @@ That generated many unrelated syntax-language chunks (for example Python,
 TypeScript, Java and SQL) even though Playground edits Scarp exclusively.
 
 Development now uses the editor ESM API and editor feature registrations
-without bundled stock language packs. A post-build script reports the JS
+without bundled stock language packs. The editor is lazy-loaded with a React
+Suspense placeholder, keeping the initial shell separate from Monaco. A post-build script reports the JS
 asset count, byte sizes and gzip sizes, and fails CI if unrelated language
 chunks return. Playwright verifies real editable Monaco input and Scarp
 compiler execution. Internal Monaco ESM entrypoints must be rechecked on
 dependency upgrades; keep the pinned tested editor version until then.
+
+Verified GitHub Actions measurements (same pinned dependencies, 2026-11-03):
+
+| Metric | v0.0.1 starting build | Optimized PR #8 |
+| --- | ---: | ---: |
+| Transformed modules | 1,082 | 889 |
+| Generated JS asset files | 88 | 4 |
+| Generated JS, raw | ~4.32 MB | ~3.71 MB |
+| Initial application JS | ~3.54 MB | 0.235 MB |
+| Initial application JS, gzip | ~925 KB | ~74 KB |
+| Chromium real-browser checks | 6 | 7 |
+
+These are build asset sizes, not network/wall-clock measurements. Monaco's
+~3.24 MB chunk still loads when the editor is mounted. Runtime performance
+must be separately measured on actual devices; these figures must not be
+presented as a promise of a given load time.
