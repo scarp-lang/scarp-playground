@@ -1,0 +1,8 @@
+{
+  "tag": "v0.0.1",
+  "status": "alpha pre-release only",
+  "compiler_version": "v0.0.5-alpha.3",
+  "compiler_commit": "7715c28df09c7703b39e14fddb963275b25df476",
+  "release_gate": "Complete GitHub Actions JS, Rust, WebAssembly, Chromium and page packaging checks; no stable release.",
+  "intent": "Approved alpha candidate from the user's Nov 3 original Playground development request. Publish only from main after PR merge."
+}

@@ -1,6 +1,13 @@
 name: Publish explicitly authorized alpha
 
 on:
+  # The one-time, maintainer-reviewed intent file triggers the first alpha after
+  # its PR is merged into main. Subsequent pushes do not retrigger this path.
+  push:
+    branches:
+      - main
+    paths:
+      - .github/release-intents/v0.0.1.json
   workflow_dispatch:
     inputs:
       version:
@@ -20,9 +27,11 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED_VERSION: ${{ inputs.version }}
+          REQUESTED_VERSION: ${{ github.event_name == 'push' && 'v0.0.1' || inputs.version }}
         run: |
           test "$REQUESTED_VERSION" = "v0.0.1"
+          test "$GITHUB_REF" = "refs/heads/main"
+          test -s .github/release-intents/v0.0.1.json
           test "$(node -p "require('./package.json').version")" = "0.0.1"
           grep -Fq '7715c28df09c7703b39e14fddb963275b25df476' bridge/Cargo.toml
           if gh release view "$REQUESTED_VERSION" >/dev/null 2>&1; then
@@ -59,4 +68,4 @@ jobs:
             scarp-playground-v0.0.1-web.tar.gz.sha256 \
             --prerelease --target "$GITHUB_SHA" \
             --title "Scarp Playground v0.0.1 (alpha)" \
-            --notes "Experimental browser playground using the real Scarp v0.0.5-alpha.3 interpreter pinned to commit 7715c28df09c7703b39e14fddb963275b25df476. Not stable. Passed JavaScript, native Rust, WebAssembly and Playwright browser tests. Runs in-browser with execution limits; see README for security and compatibility details."
+            --notes-file docs/releases/v0.0.1-alpha.md
