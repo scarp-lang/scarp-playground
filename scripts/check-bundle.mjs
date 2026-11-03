@@ -24,9 +24,9 @@ writeFileSync('dist/bundle-report.json', JSON.stringify(report, null, 2) + '\n')
 process.stdout.write('Browser JS bundle (raw/gzip): ' + JSON.stringify(report) + '\n');
 // Keep the quickly rendered application shell separate from the large editor.
 // This is a build size guard, not a simulated network performance benchmark.
-const shell = measurements.find(({ name }) => /^index-[\\w-]+\\.js$/.test(name));
+const shell = measurements.find(({ name }) => /^index-[\w-]+\.js$/.test(name));
 if (!shell || shell.bytes > 400_000) {
-  process.stderr.write('Initial React shell exceeds 400 KiB or is missing.\\n');
+  process.stderr.write('Initial React shell exceeds 400 KiB or is missing.\n');
   process.exitCode = 1;
 }
 if (extras.length) {
