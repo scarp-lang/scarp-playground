@@ -60,7 +60,14 @@ export function App() {
     setResult(null);
     setNotice(null);
     try {
-      setResult(await runWorkspace(workspace));
+      const response = await runWorkspace(workspace);
+      setResult(response);
+      // Compiler diagnostics carry the real source path, including imports.
+      // Open that virtual file so the Monaco marker is visible immediately.
+      const sourcePath = response.diagnostic?.primary?.path;
+      if (!response.ok && sourcePath && Object.hasOwn(workspace.files, sourcePath)) {
+        setActiveFile(sourcePath);
+      }
     } catch (problem) {
       setResult({
         ok: false,
@@ -183,11 +190,13 @@ export function App() {
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 
-  function changeSource(source: string) {
-    setWorkspace((previous) => ({
-      ...previous,
-      files: { ...previous.files, [activeFile]: source },
-    }));
+  function changeSource(path: string, source: string) {
+    setWorkspace((previous) => {
+      if (!Object.hasOwn(previous.files, path) || previous.files[path] === source) return previous;
+      return { ...previous, files: { ...previous.files, [path]: source } };
+    });
+    // Once the user edits source, the previous run's errors are no longer valid.
+    setResult(null);
   }
 
   function addFile() {
@@ -338,7 +347,7 @@ export function App() {
                   </div>
                 }
               >
-                <ScarpEditor path={activeFile} value={workspace.files[activeFile]} dark={dark} onChange={changeSource} />
+                <ScarpEditor path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} />
               </Suspense>
             </div>
             <div className="editor-footer">
@@ -368,9 +377,38 @@ export function App() {
                   {result.stderr && <pre className="stderr">{result.stderr}</pre>}
                   {!result.ok && (
                     <div className="error-panel" role="alert">
-                      <div className="error-title">{diagnostic?.code || 'Execution error'}{location ? ' · ' + location.path + ':' + location.start.line + ':' + location.start.column : ''}</div>
+                      <div className="error-title">
+                        {diagnostic?.code || 'Execution error'}
+                        {location && (
+                          <>
+                            {' · '}
+                            <button
+                              type="button"
+                              className="diagnostic-jump"
+                              aria-label={'Go to error in ' + location.path}
+                              title="Jump to the compiler error location"
+                              disabled={!Object.hasOwn(workspace.files, location.path)}
+                              onClick={() => setActiveFile(location.path)}
+                            >
+                              {location.path + ':' + location.start.line + ':' + location.start.column}
+                            </button>
+                          </>
+                        )}
+                      </div>
                       <pre>{errorText || 'An unknown compiler error occurred.'}</pre>
                       {diagnostic?.help && <p className="error-help">Hint: {diagnostic.help}</p>}
+                      {diagnostic?.related?.map((note, index) => note.location && (
+                        <button
+                          key={index}
+                          type="button"
+                          className="diagnostic-related"
+                          disabled={!Object.hasOwn(workspace.files, note.location.path)}
+                          onClick={() => setActiveFile(note.location!.path)}
+                        >
+                          {note.message + ' · ' + note.location.path + ':' +
+                            note.location.start.line + ':' + note.location.start.column}
+                        </button>
+                      ))}
                     </div>
                   )}
                   {result.ok && !result.stdout && !result.stderr && <p className="terminal-muted">Program completed without producing output.</p>}
