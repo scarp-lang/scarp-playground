@@ -7,9 +7,10 @@ real diagnostics, and run programs using the **official Rust Scarp interpreter
 compiled into WebAssembly**. The application is a React/Vite/TypeScript static
 site; no application server evaluates user source.
 
-> **Release status:** v0.0.1 alpha candidate — not yet verified/published. Do
-> not describe browser execution as available until GitHub Actions builds the
-> Rust bridge and the Pages preview is deployed successfully.
+> **Release status:** v0.0.1 experimental browser preview is deployed at
+> https://scarp-lang.github.io/scarp-playground/. A versioned GitHub alpha
+> release has **not** yet been published. Real-browser end-to-end tests and
+> reproducible-build checks are mandatory gates for that release.
 
 ## Compiler compatibility
 
@@ -33,14 +34,17 @@ Requires Node.js 22+, a current stable Rust toolchain, the
 `wasm32-unknown-unknown` target and `wasm-pack`.
 
 ```sh
-npm install
+npm ci
 rustup target add wasm32-unknown-unknown
 cargo install wasm-pack --locked
-cargo test --manifest-path bridge/Cargo.toml
-wasm-pack build bridge --release --target web --out-dir ../public/compiler
+cargo test --locked --manifest-path bridge/Cargo.toml
+wasm-pack build bridge --release --target web --out-dir ../public/compiler --locked
 npm run lint
 npm run typecheck
 npm run test
+npm run build
+npx playwright install chromium
+npm run test:e2e
 npm run dev
 ```
 
@@ -60,8 +64,9 @@ load failure — it never fakes a successful program result.
 - Ready-to-load source examples from the compiler and embedding documentation.
 - Ctrl/Command+Enter execution, source-size caps and 12-second Worker timeout.
 - A shareable URL for **one short source file only**, under a 2 KiB UTF-8 limit.
-- GitHub Actions typechecking, linting, JS tests, native Rust interpreter
-  tests, WebAssembly compilation and GitHub Pages deployment from `main`.
+- Version-controlled npm and Cargo lockfiles, GitHub Actions typechecking,
+  linting, JavaScript and native Rust tests, real Chromium end-to-end execution
+  tests, WebAssembly compilation and gated GitHub Pages deployment from `main`.
 
 Limitations: No installed packages, native executable generation, networking
 from source, host filesystem, multi-file snippet sharing or production sandbox
@@ -82,12 +87,14 @@ without a separate security design and independent review.
 
 ## Deploy and release
 
-The `Playground CI and Pages` workflow builds real WebAssembly on every
-pull request and main-branch push. After the workflow succeeds on `main`, the same
+The `Playground CI and Pages` workflow builds real WebAssembly and runs
+Chromium tests against the built interpreter on every pull request and
+main-branch push. After the workflow succeeds on `main`, the same
 workflow deploys the static site using GitHub Pages Actions. The Pages source
 must be configured to **GitHub Actions**, not branch-based publishing.
 
 The `Publish explicitly authorized alpha` workflow is manual-only,
+runs the same real browser tests before publishing,
 publishes a **pre-release**, checks version and compiler revision and packages
 the built site. It must be run only after the PR merges and validation passes.
 No stable release automation exists.
