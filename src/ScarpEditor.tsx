@@ -51,7 +51,6 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange }: Props) 
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
   const views = useRef(new Map<string, monaco.editor.ICodeEditorViewState | null>());
   const activePath = useRef(path);
-  const suppressChange = useRef(false);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
 
@@ -73,7 +72,6 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange }: Props) 
     });
     editor.current = instance;
     const listener = instance.onDidChangeModelContent(() => {
-      if (suppressChange.current) return;
       const currentFile = activePath.current;
       onChangeRef.current(currentFile, instance.getValue());
     });
@@ -102,17 +100,11 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange }: Props) 
       }
     }
 
-    // Sync external workspace changes without resetting models on tab switches.
-    // The active model already contains the current keystroke when React updates.
-    suppressChange.current = true;
-    try {
-      for (const [file, source] of Object.entries(files)) {
-        const model = models.current.get(file);
-        if (model && model.getValue() !== source) model.setValue(source);
-      }
-    } finally {
-      suppressChange.current = false;
-    }
+    // Existing models own live text and undo history. React state commits can
+    // arrive after a later Monaco keystroke; feeding an older source prop into
+    // model.setValue here would destroy undo history and can overwrite edits.
+    // New files are created above. External workspace replacements intentionally
+    // remount this component via its key in App.tsx.
 
     const next = models.current.get(path);
     if (next && instance.getModel() !== next) {
