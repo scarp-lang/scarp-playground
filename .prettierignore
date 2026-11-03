@@ -2,4 +2,7 @@ dist
 node_modules
 public/compiler
 coverage
+playwright-report
+test-results
 Cargo.lock
+package-lock.json

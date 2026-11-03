@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   build-test:
-    name: Check browser and real compiler
+    name: Verify JS, Rust, WebAssembly and real browser execution
     runs-on: ubuntu-latest
     steps:
       - name: Check out playground
@@ -25,8 +25,9 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 22
-      - name: Install JS dependencies
-        run: npm install --no-audit --no-fund
+          cache: npm
+      - name: Install locked JS dependencies
+        run: npm ci --no-audit --no-fund
       - name: Lint TypeScript
         run: npm run lint
       - name: Type-check TypeScript
@@ -38,11 +39,11 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - name: Test against the pinned real Scarp interpreter
-        run: cargo test --manifest-path bridge/Cargo.toml
+        run: cargo test --locked --manifest-path bridge/Cargo.toml
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
       - name: Compile the real interpreter to browser WebAssembly
-        run: wasm-pack build bridge --release --target web --out-dir ../public/compiler
+        run: wasm-pack build bridge --release --target web --out-dir ../public/compiler --locked
       - name: Build client with compiler bundle
         run: npm run build
       - name: Verify executable WASM and JavaScript bridge are deployed
@@ -50,7 +51,21 @@ jobs:
           test -s dist/compiler/scarp_playground_wasm_bg.wasm
           test -s dist/compiler/scarp_playground_wasm.js
           test -s dist/index.html
-      - name: Upload website for GitHub Pages
+      - name: Install headless Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Test the actual browser execution and UI
+        run: npm run test:e2e
+      - name: Upload browser failure artifacts
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-failure-artifacts
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 7
+          if-no-files-found: ignore
+      - name: Upload verified website for GitHub Pages
         uses: actions/upload-pages-artifact@v3
         with:
           path: dist
