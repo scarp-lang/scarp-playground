@@ -403,7 +403,7 @@ export function App() {
                           type="button"
                           className="diagnostic-related"
                           disabled={!Object.hasOwn(workspace.files, note.location.path)}
-                          onClick={() => setActiveFile(note.location!.path)}
+                          onClick={() => { if (note.location) setActiveFile(note.location.path); }}
                         >
                           {note.message + ' · ' + note.location.path + ':' +
                             note.location.start.line + ':' + note.location.start.column}
