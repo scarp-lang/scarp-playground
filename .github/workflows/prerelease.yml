@@ -1,13 +1,6 @@
 name: Publish explicitly authorized alpha
 
 on:
-  # The one-time, maintainer-reviewed intent file triggers the first alpha after
-  # its PR is merged into main. Subsequent pushes do not retrigger this path.
-  push:
-    branches:
-      - main
-    paths:
-      - .github/release-intents/v0.0.1.json
   workflow_dispatch:
     inputs:
       version:
@@ -27,7 +20,7 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED_VERSION: ${{ github.event_name == 'push' && 'v0.0.1' || inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           test "$REQUESTED_VERSION" = "v0.0.1"
           test "$GITHUB_REF" = "refs/heads/main"
@@ -61,7 +54,7 @@ jobs:
       - name: Publish alpha only, never stable
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED_VERSION: ${{ github.event_name == 'push' && 'v0.0.1' || inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version }}
         run: |
           gh release create "$REQUESTED_VERSION" \
             scarp-playground-v0.0.1-web.tar.gz \

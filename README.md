@@ -7,10 +7,10 @@ real diagnostics, and run programs using the **official Rust Scarp interpreter
 compiled into WebAssembly**. The application is a React/Vite/TypeScript static
 site; no application server evaluates user source.
 
-> **Release status:** v0.0.1 experimental browser preview is deployed at
-> https://scarp-lang.github.io/scarp-playground/. A versioned GitHub alpha
-> release has **not** yet been published. Real-browser end-to-end tests and
-> reproducible-build checks are mandatory gates for that release.
+> **Release status:** [v0.0.1 alpha](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
+> was published on 3 November 2026. The live experimental browser preview
+> is at https://scarp-lang.github.io/scarp-playground/. This is **not**
+> a stable or production-hardened programming environment.
 
 ## Compiler compatibility
 
@@ -93,10 +93,12 @@ main-branch push. After the workflow succeeds on `main`, the same
 workflow deploys the static site using GitHub Pages Actions. The Pages source
 must be configured to **GitHub Actions**, not branch-based publishing.
 
-The `Publish explicitly authorized alpha` workflow is manual-only,
-runs the same real browser tests before publishing,
-publishes a **pre-release**, checks version and compiler revision and packages
-the built site. It must be run only after the PR merges and validation passes.
+The first [v0.0.1 alpha release](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
+is published with a static website archive and SHA-256 checksum.
+Its release workflow ran locked JavaScript/Rust checks, compiled the actual
+WebAssembly interpreter and passed the Chromium execution tests before publication.
+The one-time automatic alpha trigger has been retired; the guarded release
+workflow is manual-only and refuses existing release tags.
 No stable release automation exists.
 
 **Critical gate:** Do not publish v1.0.0 stable until the compiler has its
