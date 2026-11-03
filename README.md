@@ -60,6 +60,11 @@ load failure — it never fakes a successful program result.
 - Monaco editor with a Scarp-specific tokenizer, tabs and selectable entrypoint.
 - Multiple virtual `.srp` files and relative imports through the official
   `MemorySourceLoader`; not an operating-system filesystem.
+- **Opt-in browser-local saving:** Save locally keeps a versioned, size-limited
+  multi-file workspace and selected editor tab across reloads, with automatic
+  local updates while enabled. Forget saved copy removes the browser snapshot.
+  No code is uploaded. Browser storage is not encrypted; do not store secrets.
+  Shared URLs temporarily override local saved state without destroying it.
 - Actual interpreter stdout, stderr and schema-1 compiler diagnostics.
 - Ready-to-load source examples from the compiler and embedding documentation.
 - Ctrl/Command+Enter execution, source-size caps and 12-second Worker timeout.

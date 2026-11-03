@@ -69,3 +69,40 @@ test('Monaco remains editable, and changed source is executed by real Scarp', as
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Editor still works\n', { timeout: 30_000 });
 });
+
+test('opt-in save restores multi-file sources and the selected tab after reload', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  await page.getByRole('tab', { name: /math.srp/ }).click();
+  await page.getByRole('button', { name: 'Save locally' }).click();
+  await expect(page.getByRole('button', { name: 'Forget saved copy' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
+});
+
+test('a shared URL does not erase the separately saved browser workspace', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  await page.getByRole('button', { name: 'Save locally' }).click();
+  await page.goto('./#code=' + encodeURIComponent('print("URL takes precedence");'));
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('URL takes precedence\n', { timeout: 30_000 });
+  await page.goto('./');
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
+});
+
+test('forgetting browser storage retains the open code but not its next-session copy', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  await page.getByRole('button', { name: 'Save locally' }).click();
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.getByRole('button', { name: 'Forget saved copy' }).click();
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveCount(0);
+});
