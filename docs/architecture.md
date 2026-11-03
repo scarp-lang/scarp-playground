@@ -52,8 +52,11 @@ diagnostic schema 1 (UTF-8 byte spans and 1-based Unicode-scalar columns).
 - Npm and Cargo dependencies are locked in `package-lock.json` and
   `bridge/Cargo.lock`; CI uses `npm ci`, `cargo test --locked` and
   `wasm-pack build --locked` to reject unreviewed resolution changes.
-- Multi-file source is supported, but snippets only share one small file and
-  projects do not persist across reloads.
+- Multi-file source is supported and can be saved locally **only after explicit
+  opt-in**. Saved workspaces are versioned, validated and byte-limited on
+  load and save. The browser can clear this unencrypted storage; no remote
+  persistence or sync exists. A shared URL never silently overwrites saved code.
+  URL sharing still supports a single small source file.
 - Monaco tokenization is an editor convenience; actual Scarp syntax is
   determined solely by the pinned compiler.
 

@@ -9,12 +9,30 @@ import { examples } from './examples';
 import { runWorkspace } from './runner/client';
 import type { RunResult } from './runner/types';
 import { makeShareUrl, MAX_FILES, sourceFromHash, validPath, type Workspace } from './workspace';
+import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
 
-function startingWorkspace(): Workspace {
+type InitialSession = { workspace: Workspace; activeFile: string; savingLocally: boolean };
+
+function startingSession(): InitialSession {
+  // A shared source never overwrites an existing locally saved project.
   const shared = sourceFromHash(window.location.hash);
-  return shared === null
-    ? { entry: examples[0].entry, files: { ...examples[0].files } }
-    : { entry: 'main.srp', files: { 'main.srp': shared } };
+  if (shared !== null) {
+    return { workspace: { entry: 'main.srp', files: { 'main.srp': shared } }, activeFile: 'main.srp', savingLocally: false };
+  }
+  try {
+    const stored = restoreLocalWorkspace(window.localStorage);
+    if (stored) {
+      return { ...stored, savingLocally: true };
+    }
+  } catch {
+    // Storage may be unavailable in private browsing or restricted contexts.
+  }
+  const initial = examples[0];
+  return {
+    workspace: { entry: initial.entry, files: { ...initial.files } },
+    activeFile: initial.entry,
+    savingLocally: false,
+  };
 }
 
 function startingTheme(): 'dark' | 'light' {
@@ -26,8 +44,10 @@ function startingTheme(): 'dark' | 'light' {
 }
 
 export function App() {
-  const [workspace, setWorkspace] = useState<Workspace>(startingWorkspace);
-  const [activeFile, setActiveFile] = useState('main.srp');
+  const [initial] = useState(startingSession);
+  const [workspace, setWorkspace] = useState<Workspace>(initial.workspace);
+  const [activeFile, setActiveFile] = useState(initial.activeFile);
+  const [savingLocally, setSavingLocally] = useState(initial.savingLocally);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
@@ -72,6 +92,87 @@ export function App() {
       // Private browsing may disable persistence; theme still works this session.
     }
   }, [dark]);
+
+  // Navigating between #code= snippets and normal URLs can be a same-document
+  // navigation (no React remount). Apply shared code without overwriting saved
+  // projects, and restore the saved project when the fragment is cleared.
+  useEffect(() => {
+    const onHashChange = () => {
+      const shared = sourceFromHash(window.location.hash);
+      if (shared !== null) {
+        setSavingLocally(false);
+        setWorkspace({ entry: 'main.srp', files: { 'main.srp': shared } });
+        setActiveFile('main.srp');
+        setResult(null);
+        setNotice('Opened shared code. Your locally saved workspace remains unchanged.');
+        return;
+      }
+      if (window.location.hash !== '') return;
+      try {
+        const saved = restoreLocalWorkspace(window.localStorage);
+        if (saved) {
+          setWorkspace(saved.workspace);
+          setActiveFile(saved.activeFile);
+          setSavingLocally(true);
+          setResult(null);
+          setNotice('Restored your locally saved workspace.');
+        }
+      } catch {
+        // No persistent access: leave the current editor intact.
+      }
+    };
+    window.addEventListener('hashchange', onHashChange);
+    return () => window.removeEventListener('hashchange', onHashChange);
+  }, []);
+
+  // Opt-in only: store source after explicit Save locally. Do not upload it.
+  useEffect(() => {
+    if (!savingLocally) return;
+    const timer = window.setTimeout(() => {
+      let error: string | null;
+      try {
+        error = saveLocalWorkspace(window.localStorage, workspace, activeFile);
+      } catch {
+        error = 'Browser storage is unavailable.';
+      }
+      if (error) {
+        setSavingLocally(false);
+        setNotice(error + ' Local autosave was disabled.');
+      }
+    }, 350);
+    return () => window.clearTimeout(timer);
+  }, [workspace, activeFile, savingLocally]);
+
+  function enableLocalSaving() {
+    let error: string | null;
+    try {
+      error = saveLocalWorkspace(window.localStorage, workspace, activeFile);
+    } catch {
+      error = 'Browser storage is unavailable.';
+    }
+    if (error) {
+      setNotice(error);
+      return;
+    }
+    setSavingLocally(true);
+    setNotice('Workspace saved on this browser. Future edits will autosave locally; storage is not encrypted.');
+  }
+
+  function forgetLocalSaving() {
+    if (!window.confirm('Remove the saved Scarp workspace from this browser? The open editor will stay unchanged.')) return;
+    let success = false;
+    try {
+      success = forgetLocalWorkspace(window.localStorage);
+    } catch {
+      // Security settings can prevent storage access.
+    }
+    if (success) {
+      setSavingLocally(false);
+      setNotice('Saved browser copy removed. The open workspace is still available until you leave.');
+    } else {
+      setNotice('Unable to remove the saved workspace from browser storage.');
+    }
+  }
 
   function selectExample(index: number) {
     const example = examples[index];
@@ -202,6 +303,9 @@ export function App() {
               <p>Write Scarp and press Ctrl + Enter to execute.</p>
             </div>
             <div className="toolbar-actions">
+              <button type="button" className="button-secondary" onClick={() => savingLocally ? forgetLocalSaving() : enableLocalSaving()}>
+                {savingLocally ? 'Forget saved copy' : 'Save locally'}
+              </button>
               <button type="button" className="button-secondary" onClick={() => void share()}>Share ↗</button>
               <button type="button" className="button-primary" onClick={() => void run()} disabled={running}>
                 <span aria-hidden="true">{running ? '◌' : '▶'}</span> {running ? 'Running…' : 'Run code'}
@@ -275,7 +379,7 @@ export function App() {
             </div>
           </section>
           {notice && <div className="notice" role="status">{notice}<button type="button" onClick={() => setNotice(null)} aria-label="Dismiss notice">×</button></div>}
-          <p className="disclaimer">Experimental preview · Browser execution has work and output limits. Do not use for untrusted high-risk code or sensitive secrets.</p>
+          <p className="disclaimer">Experimental preview · Browser execution has work and output limits. Do not use for untrusted high-risk code or sensitive secrets. {savingLocally && 'Opt-in local autosave is active: code is stored unencrypted in this browser profile.'}</p>
         </section>
       </main>
     </div>
