@@ -9,14 +9,17 @@ site; no application server evaluates user source.
 
 > **Release status:** [v0.0.1 alpha](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
 > was published on 3 November 2026. The live experimental browser preview
-> is at https://scarp-lang.github.io/scarp-playground/. This is **not**
-> a stable or production-hardened programming environment.
+> is at https://scarp-lang.github.io/scarp-playground/ and follows `main`,
+> so it may contain features added **after** the v0.0.1 tag. These are not
+> part of that immutable release artifact. This is **not** a stable or
+> production-hardened programming environment.
 
 ## Compiler compatibility
 
 | Component | Target |
 | --- | --- |
-| Playground | 0.0.1 alpha |
+| Playground live website | Unreleased development preview from `main` |
+| Latest published Playground tag | **v0.0.1** (alpha pre-release) |
 | Scarp compiler | **v0.0.5-alpha.3** |
 | Pinned compiler revision | `7715c28df09c7703b39e14fddb963275b25df476` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
@@ -54,7 +57,7 @@ not committed as an opaque binary; the CI builds it from a pinned compiler commi
 If `public/compiler` is absent, the editor renders but Run reports a genuine
 load failure — it never fakes a successful program result.
 
-## What v0.0.1 includes
+## Current development preview capabilities
 
 - React + Vite with TypeScript and Tailwind CSS, adaptive dark/light interface.
 - Monaco editor with a Scarp-specific tokenizer, tabs and selectable entrypoint.
@@ -76,7 +79,10 @@ load failure — it never fakes a successful program result.
 Limitations: No installed packages, native executable generation, networking
 from source, host filesystem, multi-file snippet sharing or production sandbox
 guarantee. If a module graph is missing an imported file, the real compiler
-reports an error. Browser reloads do not currently persist a multi-file project.
+reports an error. Multi-file projects persist across browser reloads only after the user
+explicitly clicks **Save locally**; there is no cloud sync. The published
+v0.0.1 release predates this opt-in storage feature and the Monaco bundle
+optimization; use the live website or `main` for those experimental changes.
 
 ## Safety model
 

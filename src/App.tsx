@@ -258,7 +258,7 @@ export function App() {
             <div className="brand-title">Scarp <span>Playground</span></div>
             <div className="brand-subtitle">The official interactive workspace</div>
           </div>
-          <span className="alpha-badge">v0.0.1 alpha</span>
+          <span className="alpha-badge">Development preview</span>
         </div>
         <nav className="header-actions" aria-label="Project links">
           <a href="https://scarp-lang.github.io/scarp-docs/" target="_blank" rel="noreferrer">Docs ↗</a>
