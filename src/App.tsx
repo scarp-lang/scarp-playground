@@ -1,5 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
-import { ScarpEditor } from './ScarpEditor';
+import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+
+// Keep the large Monaco code out of the initial React shell bundle.
+// The actual editor loads on demand while the rest of the UI stays interactive.
+const ScarpEditor = lazy(() =>
+  import('./ScarpEditor').then(({ ScarpEditor }) => ({ default: ScarpEditor })),
+);
 import { examples } from './examples';
 import { runWorkspace } from './runner/client';
 import type { RunResult } from './runner/types';
@@ -222,7 +227,15 @@ export function App() {
               <button type="button" className="file-add" onClick={addFile} title="Add .srp file" aria-label="Add file">+</button>
             </div>
             <div className="editor-body">
-              <ScarpEditor path={activeFile} value={workspace.files[activeFile]} dark={dark} onChange={changeSource} />
+              <Suspense
+                fallback={
+                  <div className="editor-loading" role="status">
+                    Loading Scarp editor…
+                  </div>
+                }
+              >
+                <ScarpEditor path={activeFile} value={workspace.files[activeFile]} dark={dark} onChange={changeSource} />
+              </Suspense>
             </div>
             <div className="editor-footer">
               <span><span className="online-dot" />Scarp syntax</span>

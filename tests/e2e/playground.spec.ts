@@ -58,3 +58,14 @@ test('supports a narrow mobile viewport without hiding execution controls', asyn
   const rootWidth = await page.locator('body').evaluate((element) => element.scrollWidth);
   expect(rootWidth).toBeLessThanOrEqual(375);
 });
+
+test('Monaco remains editable, and changed source is executed by real Scarp', async ({ page }) => {
+  await page.goto('./');
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await expect(editor).toBeAttached();
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText('print("Editor still works");');
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('Editor still works\n', { timeout: 30_000 });
+});
