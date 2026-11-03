@@ -60,7 +60,12 @@ load failure — it never fakes a successful program result.
 ## Current development preview capabilities
 
 - React + Vite with TypeScript and Tailwind CSS, adaptive dark/light interface.
-- Monaco editor with a Scarp-specific tokenizer, tabs and selectable entrypoint.
+- Monaco editor with a Scarp-specific tokenizer, separate text models per
+  source file (preserving per-file undo/view history), and selectable entrypoint.
+- Compiler schema-v1 errors underline their real source ranges in Monaco and
+  open the originating file, including imported modules. Related-source
+  locations are navigable; UTF-8/Unicode-scalar positions are converted to
+  Monaco UTF-16 positions rather than guessed.
 - Multiple virtual `.srp` files and relative imports through the official
   `MemorySourceLoader`; not an operating-system filesystem.
 - **Opt-in browser-local saving:** Save locally keeps a versioned, size-limited
@@ -118,6 +123,9 @@ compatibility, accessibility and quality review. Compiler stability alone
 does not authorize a Playground stable release.
 
 For architecture and next milestones see [docs/architecture.md](docs/architecture.md).
+See [compiler integration audit](docs/compiler-integration.md) for the exact
+pinned compiler and source-location contract. A newer Scarp compiler pre-release
+does not automatically update Playground's execution engine.
 
 ## Community
 

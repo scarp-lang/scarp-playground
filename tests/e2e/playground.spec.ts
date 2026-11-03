@@ -107,3 +107,60 @@ test('forgetting browser storage retains the open code but not its next-session 
   await page.reload();
   await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveCount(0);
 });
+
+
+test('keeps the main file undo history when switching to another Scarp module', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await expect(editor).toBeAttached();
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+End');
+  // Use a real keypress rather than Playwright insertText, which bypasses
+  // keydown/keyup and does not reliably create a Monaco keyboard undo entry.
+  await page.keyboard.press('x');
+  await expect(page.locator('.monaco-editor .view-lines')).toContainText('x');
+  await page.getByRole('tab', { name: /math.srp/ }).click();
+  await page.getByRole('tab', { name: /main.srp/ }).click();
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+Z');
+  await expect(page.locator('.monaco-editor .view-lines')).not.toContainText('x');
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
+});
+
+test('opens an imported module at a real compiler diagnostic', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  await page.getByRole('tab', { name: /math.srp/ }).click();
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await expect(editor).toBeAttached();
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText(
+    'pub pure funcra twice(n: integer) -> integer { return missing; }\n',
+  );
+  await page.getByRole('tab', { name: /main.srp/ }).click();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.error-title')).toContainText('E0010', { timeout: 30_000 });
+  await expect(page.locator('.error-title')).toContainText('math.srp');
+  await expect(page.getByRole('tab', { name: /math.srp/ }))
+    .toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('button', { name: 'Go to error in math.srp' })).toBeVisible();
+  await expect(page.locator('.monaco-editor .squiggly-error').first()).toBeVisible();
+});
+
+test('clears stale source markers when editing after a real compiler error', async ({ page }) => {
+  await page.goto('./#code=' + encodeURIComponent('print("😀"); print(missing);'));
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.error-title')).toContainText('E0010', { timeout: 30_000 });
+  await expect(page.locator('.monaco-editor .squiggly-error').first()).toBeVisible();
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText('print("repaired");');
+  await expect(page.locator('.error-title')).toHaveCount(0);
+  await expect(page.locator('.monaco-editor .squiggly-error')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('repaired\n', { timeout: 30_000 });
+});

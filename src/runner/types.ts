@@ -1,16 +1,25 @@
 import type { Workspace } from '../workspace';
 
+export type DiagnosticPosition = { line: number; column: number };
+
+export type DiagnosticLocation = {
+  path: string;
+  span?: [number, number];
+  start: DiagnosticPosition;
+  end: DiagnosticPosition;
+};
+
 export type CompilerDiagnostic = {
   schema_version: number;
   severity: string;
   code: string | null;
   message: string;
+  span_encoding?: string;
+  column_encoding?: string;
+  position_base?: number;
   help?: string | null;
-  primary?: {
-    path: string;
-    start: { line: number; column: number };
-    end: { line: number; column: number };
-  } | null;
+  primary?: DiagnosticLocation | null;
+  related?: Array<{ message: string; location: DiagnosticLocation | null }>;
 };
 
 export type RunResult = {
