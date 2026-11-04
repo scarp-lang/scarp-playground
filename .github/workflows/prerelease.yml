@@ -1,10 +1,8 @@
-name: Publish approved v0.0.2 alpha
+# Historical one-time v0.0.2 publishing workflow; tag and assets now exist.
+# New alpha versions require a separately reviewed release intent and workflow.
+name: Archived v0.0.2 alpha publisher
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - .github/release-intents/v0.0.2.json
   workflow_dispatch:
     inputs:
       version:

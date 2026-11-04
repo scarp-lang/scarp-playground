@@ -110,13 +110,24 @@ presented as a promise of a given load time.
 
 ## Release version accuracy
 
-The **v0.0.1 alpha** GitHub release is an immutable snapshot. The live
-GitHub Pages website deploys `main` and may include changes that are not
-part of that tagged archive, such as Monaco optimization and opt-in local
-workspace saving. The UI intentionally displays **Development preview**
-instead of claiming the live build is the original v0.0.1 release. The
-official compiler source is now pinned to `v0.0.5-alpha.4` at
-`79141329176f5dce51457e90a6652902f6432135` after separate native Rust, wasm-pack and
-real Chromium verification. The original v0.0.1 tagged archive still
-uses alpha.3. The new upstream `Scarp.project` commands require host
-filesystem access and are **not** part of the browser's in-memory runtime.
+The original [v0.0.1 alpha](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
+remains a historical snapshot that embeds compiler `v0.0.5-alpha.3`.
+The second [v0.0.2 alpha](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.2)
+was published on November 4, 2026 from commit
+`8607773cdae7ec40602784a740a29636d399ca76`; its official compiler
+is pinned to `v0.0.5-alpha.4` at source commit
+`79141329176f5dce51457e90a6652902f6432135`.
+
+The v0.0.2 release incorporates Monaco optimization, opt-in browser-local
+projects, portable JSON import/export, source-aware diagnostics, stale-run
+cancellation and bounded compiler-worker request/response validation. Its
+release workflow independently passed locked JavaScript/Rust tests, the real
+WebAssembly build and the complete Chromium suite before producing a versioned
+website archive and SHA-256 checksum. GitHub Pages deploys `main` rather than
+a release tag, so it can contain subsequent changes; the UI deliberately says
+**Development preview** rather than misrepresenting a specific tagged archive.
+
+The upstream alpha.4 `Scarp.project` commands operate on the host filesystem
+and are **not exposed** in the Playground's browser-only, in-memory runtime.
+Neither alpha is a hardened security sandbox. The original v0.0.1 archives
+and source commit are unchanged; no stable v1.0.0 release is authorized.

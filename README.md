@@ -7,19 +7,19 @@ real diagnostics, and run programs using the **official Rust Scarp interpreter
 compiled into WebAssembly**. The application is a React/Vite/TypeScript static
 site; no application server evaluates user source.
 
-> **Release status:** [v0.0.1 alpha](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
-> was published on 3 November 2026. The live experimental browser preview
-> is at https://scarp-lang.github.io/scarp-playground/ and follows `main`,
-> so it may contain features added **after** the v0.0.1 tag. These are not
-> part of that immutable release artifact. This is **not** a stable or
-> production-hardened programming environment.
+> **Latest release:** [v0.0.2 alpha](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.2),
+> published on 4 November 2026 with a verified static archive and SHA-256 checksum.
+> The live experimental browser preview at https://scarp-lang.github.io/scarp-playground/
+> follows `main` and may contain changes after the tagged release. The earlier
+> [v0.0.1 alpha](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
+> is preserved separately. **Neither release is stable or a hardened sandbox.**
 
 ## Compiler compatibility
 
 | Component | Target |
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
-| Latest published Playground tag | **v0.0.1** (alpha pre-release) |
+| Latest published Playground tag | **v0.0.2** (alpha pre-release) |
 | Scarp compiler | **v0.0.5-alpha.4** |
 | Pinned compiler revision | `79141329176f5dce51457e90a6652902f6432135` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
@@ -33,9 +33,9 @@ inside the Playground**: the browser still runs Scarp modules exclusively
 through `MemorySourceLoader` without OS or server filesystem access.
 
 Do not change the compiler Git revision without rerunning the real interpreter
-tests and updating this compatibility table. The already-published Playground
-`v0.0.1` alpha archive still embeds compiler alpha.3; it is not modified
-by updating the live development preview.
+tests and updating this compatibility table. The original Playground `v0.0.1` alpha archive embeds compiler alpha.3,
+whereas the separately tagged `v0.0.2` alpha archive embeds compiler alpha.4.
+Updating `main` does not modify either historical release.
 
 ## Local development
 
@@ -100,9 +100,9 @@ Limitations: No installed packages, native executable generation, networking
 from source, host filesystem, multi-file snippet sharing or production sandbox
 guarantee. If a module graph is missing an imported file, the real compiler
 reports an error. Multi-file projects persist across browser reloads only after the user
-explicitly clicks **Save locally**; there is no cloud sync. The published
-v0.0.1 release predates this opt-in storage feature and the Monaco bundle
-optimization; use the live website or `main` for those experimental changes.
+explicitly clicks **Save locally**; there is no cloud sync. The published v0.0.2 alpha includes local workspace saving, Monaco
+optimization and the bounded compiler-worker protocol. The original v0.0.1
+alpha predates these features.
 
 ## Safety model
 
@@ -124,12 +124,14 @@ main-branch push. After the workflow succeeds on `main`, the same
 workflow deploys the static site using GitHub Pages Actions. The Pages source
 must be configured to **GitHub Actions**, not branch-based publishing.
 
-The first [v0.0.1 alpha release](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
-is published with a static website archive and SHA-256 checksum.
-Its release workflow ran locked JavaScript/Rust checks, compiled the actual
-WebAssembly interpreter and passed the Chromium execution tests before publication.
-The one-time automatic alpha trigger has been retired; the guarded release
-workflow is manual-only and refuses existing release tags.
+Both published alphas have separate immutable tags and static website archives
+with SHA-256 checksum files: [v0.0.1](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
+and [v0.0.2](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.2).
+The v0.0.2 prerelease passed independent locked JavaScript/Rust checks,
+WebAssembly compilation, real Chromium tests and archive checksum verification
+in [the publishing workflow](https://github.com/scarp-lang/scarp-playground/actions/runs/41817109297).
+The one-time automatic intent trigger is retired after publication. The guarded
+release workflow is manual-only and refuses previously published tags.
 No stable release automation exists.
 
 **Critical gate:** Do not publish v1.0.0 stable until the compiler has its
