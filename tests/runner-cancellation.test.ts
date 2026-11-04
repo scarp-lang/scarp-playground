@@ -6,6 +6,8 @@ const workspace = { entry: 'main.srp', files: { 'main.srp': 'print("hello");' } 
 
 class FakeWorker {
   static instances: FakeWorker[] = [];
+  static failPost = false;
+  onmessageerror: (() => void) | null = null;
   onmessage: ((event: MessageEvent<RunResponse>) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
   terminated = 0;
@@ -13,7 +15,10 @@ class FakeWorker {
 
   constructor() { FakeWorker.instances.push(this); }
   terminate() { ++this.terminated; }
-  postMessage(payload: unknown) { this.posted.push(payload); }
+  postMessage(payload: unknown) {
+    if (FakeWorker.failPost) throw new Error('Clone failed');
+    this.posted.push(payload);
+  }
   send(response: RunResponse) {
     this.onmessage?.({ data: response } as MessageEvent<RunResponse>);
   }
@@ -21,6 +26,7 @@ class FakeWorker {
 
 beforeEach(() => {
   FakeWorker.instances = [];
+  FakeWorker.failPost = false;
   vi.stubGlobal('Worker', FakeWorker);
 });
 afterEach(() => {
@@ -52,6 +58,29 @@ describe('disposable compiler worker cancellation', () => {
     expect(await pending).toEqual(response);
     controller.abort();
     expect(worker.terminated).toBe(1);
+  });
+
+  it('handles a malformed worker response without hanging or displaying it', async () => {
+    const pending = runWorkspace(workspace);
+    const worker = FakeWorker.instances[0];
+    worker.send({ id: 1, result: { ok: 'not a boolean' } } as unknown as RunResponse);
+    expect((await pending).error).toMatch(/Invalid or oversized/);
+    expect(worker.terminated).toBe(1);
+  });
+
+  it('handles a browser worker message decoding error and terminates once', async () => {
+    const pending = runWorkspace(workspace);
+    const worker = FakeWorker.instances[0];
+    worker.onmessageerror?.();
+    expect((await pending).error).toMatch(/could not decode/);
+    expect(worker.terminated).toBe(1);
+  });
+
+  it('handles a synchronous postMessage cloning exception without leaking a worker', async () => {
+    FakeWorker.failPost = true;
+    const response = await runWorkspace(workspace);
+    expect(response.error).toMatch(/Unable to send/);
+    expect(FakeWorker.instances[0].terminated).toBe(1);
   });
 
   it('avoids constructing a worker for a pre-aborted request', async () => {
