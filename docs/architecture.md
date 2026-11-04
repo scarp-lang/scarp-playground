@@ -24,6 +24,14 @@ React workspace (files + entrypoint)
   -> terminal pane and source location display
 ```
 
+Each browser run is also associated with a monotonically increasing editor
+revision. Source edits, entrypoint changes, file additions/removals, example
+replacements, hash navigation and project import invalidate the prior run and
+abort its Worker. Late Promise completions cannot apply their results or
+markers to a new revision. The **Stop run** control provides explicit
+cancellation. The existing 12-second timeout and Rust resource budgets remain
+in place; aborting a Worker does not establish a hardened sandbox.
+
 The v0.0.1 proof-of-concept successfully compiled the pinned Rust interpreter
 to WebAssembly in GitHub Actions and deployed it on GitHub Pages on
 2026-11-03. The production app does not use a JavaScript parser or fake output
