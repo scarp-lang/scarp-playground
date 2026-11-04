@@ -240,7 +240,7 @@ test('editing while the actual compiler loads cancels stale execution and permit
     unblock();
   }
   await page.getByRole('button', { name: 'Run code' }).click();
-  await expect(page.locator('.stdout')).toHaveText('fresh\\n', { timeout: 30_000 });
+  await expect(page.locator('.stdout')).toHaveText('fresh\n', { timeout: 30_000 });
   await expect(page.locator('.error-title')).toHaveCount(0);
 });
 
