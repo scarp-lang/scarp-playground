@@ -74,7 +74,7 @@ export function validatedRunResult(value: unknown): RunResult | null {
        !diagnostic(value.diagnostic))) {
     return null;
   }
-  return value as RunResult;
+  return value as unknown as RunResult;
 }
 
 /** Reject oversized compiler text *before* JSON.parse allocates a response tree. */
