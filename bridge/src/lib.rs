@@ -313,7 +313,7 @@ mod tests {
             assert_atomic_failure(&stressed(source));
             let next = stressed("print(\"recovered\");");
             assert_eq!(next["ok"], true);
-            assert_eq!(next["stdout"], "recovered\\n");
+            assert_eq!(next["stdout"], "recovered\n");
             assert_eq!(next["stderr"], "");
         }
     }
