@@ -33,3 +33,31 @@ if (extras.length) {
   process.stderr.write('Unrelated language chunks detected: ' + extras.join(', ') + '\n');
   process.exitCode = 1;
 }
+
+\n// GitHub Pages cannot set CSP response headers. Require a production-only
+// meta CSP in emitted HTML before the first executable script, and reject any
+// accidental reintroduction of inline JavaScript or unrestricted eval.
+const html = readFileSync('dist/index.html', 'utf8');
+const cspMatch = html.match(/<meta\\s+http-equiv="Content-Security-Policy"\\s+content="([^"]+)"\\s*\\/?\\s*>/i);
+if (!cspMatch) {
+  process.stderr.write('Production index.html is missing the early CSP meta tag.\\n');
+  process.exitCode = 1;
+} else {
+  const csp = cspMatch[1];
+  const required = [
+    "default-src 'none'", "base-uri 'none'", "object-src 'none'",
+    "form-action 'none'", "frame-src 'none'",
+    "script-src 'self' 'wasm-unsafe-eval'",
+    "connect-src 'self'", "worker-src 'self'",
+  ];
+  const directives = csp.split(';').map((part) => part.trim());
+  const script = directives.find((part) => part.startsWith('script-src ')) ?? '';
+  if (
+    required.some((directive) => !directives.includes(directive)) ||
+    script.includes("'unsafe-inline'") || script.includes("'unsafe-eval'") ||
+    html.indexOf(cspMatch[0]) > html.indexOf('<script')
+  ) {
+    process.stderr.write('Production CSP is incomplete, too permissive, or appears after scripts.\\n');
+    process.exitCode = 1;
+  }
+}
