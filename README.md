@@ -76,6 +76,10 @@ load failure — it never fakes a successful program result.
 - Actual interpreter stdout, stderr and schema-1 compiler diagnostics.
 - Ready-to-load source examples from the compiler and embedding documentation.
 - Ctrl/Command+Enter execution, source-size caps and 12-second Worker timeout.
+- **Revision-scoped execution:** Changing source, entrypoint, examples or imported
+  project cancels the old disposable worker and prevents stale compiler output
+  and error markers from appearing on updated code. **Stop run** cancels an
+  ongoing execution; the next run uses the current source snapshot.
 - **Portable project import/export:** Download a versioned JSON file with all .srp
   sources, entrypoint and selected tab, or import one after an explicit replace
   confirmation. Imported files are type/path/byte validated before use and
