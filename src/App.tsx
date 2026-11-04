@@ -7,6 +7,7 @@ const ScarpEditor = lazy(() =>
 );
 import { examples } from './examples';
 import { runWorkspace } from './runner/client';
+import { ExecutionScope } from './runner/execution-scope';
 import type { RunResult } from './runner/types';
 import { makeShareUrl, MAX_FILES, sourceFromHash, validPath, type Workspace } from './workspace';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
@@ -55,23 +56,38 @@ export function App() {
   const [result, setResult] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
+  const executionScope = useRef(new ExecutionScope());
   const files = Object.keys(workspace.files);
 
+  function invalidateExecution() {
+    executionScope.current.invalidate();
+    setRunning(false);
+    setResult(null);
+  }
+
+  // Component teardown must also stop an in-flight browser worker.
+  useEffect(() => () => executionScope.current.invalidate(), []);
+
+
   const run = useCallback(async () => {
-    if (running) return;
+    // A synchronous guard also protects Ctrl+Enter from starting two Workers
+    // before React has committed the next disabled-button render.
+    const execution = executionScope.current.start();
+    if (!execution) return;
     setRunning(true);
     setResult(null);
     setNotice(null);
     try {
-      const response = await runWorkspace(workspace);
+      const response = await runWorkspace(workspace, execution.controller.signal);
+      if (!executionScope.current.isCurrent(execution)) return;
       setResult(response);
-      // Compiler diagnostics carry the real source path, including imports.
-      // Open that virtual file so the Monaco marker is visible immediately.
+      // Open the originating virtual file only for the snapshot that ran.
       const sourcePath = response.diagnostic?.primary?.path;
       if (!response.ok && sourcePath && Object.hasOwn(workspace.files, sourcePath)) {
         setActiveFile(sourcePath);
       }
     } catch (problem) {
+      if (!executionScope.current.isCurrent(execution)) return;
       setResult({
         ok: false,
         stdout: '',
@@ -79,9 +95,9 @@ export function App() {
         error: problem instanceof Error ? problem.message : String(problem),
       });
     } finally {
-      setRunning(false);
+      if (executionScope.current.finish(execution)) setRunning(false);
     }
-  }, [running, workspace]);
+  }, [workspace]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -110,6 +126,7 @@ export function App() {
     const onHashChange = () => {
       const shared = sourceFromHash(window.location.hash);
       if (shared !== null) {
+        invalidateExecution();
         setSavingLocally(false);
         setWorkspace({ entry: 'main.srp', files: { 'main.srp': shared } });
         setEditorSession((number) => number + 1);
@@ -122,6 +139,7 @@ export function App() {
       try {
         const saved = restoreLocalWorkspace(window.localStorage);
         if (saved) {
+          invalidateExecution();
           setWorkspace(saved.workspace);
           setEditorSession((number) => number + 1);
           setActiveFile(saved.activeFile);
@@ -187,6 +205,7 @@ export function App() {
   }
 
   function selectExample(index: number) {
+    invalidateExecution();
     const example = examples[index];
     setWorkspace({ entry: example.entry, files: { ...example.files } });
     setEditorSession((number) => number + 1);
@@ -197,6 +216,7 @@ export function App() {
   }
 
   function changeSource(path: string, source: string) {
+    invalidateExecution();
     setWorkspace((previous) => {
       if (!Object.hasOwn(previous.files, path) || previous.files[path] === source) return previous;
       return { ...previous, files: { ...previous.files, [path]: source } };
@@ -216,6 +236,7 @@ export function App() {
       setNotice('Choose a unique relative .srp path with letters, numbers, hyphens or underscores.');
       return;
     }
+    invalidateExecution();
     setWorkspace((previous) => ({
       ...previous,
       files: { ...previous.files, [name]: '// New Scarp module\n' },
@@ -230,6 +251,7 @@ export function App() {
       return;
     }
     const replacement = files.find((file) => file !== activeFile)!;
+    invalidateExecution();
     setWorkspace((previous) => {
       const nextFiles = { ...previous.files };
       delete nextFiles[activeFile];
@@ -279,6 +301,7 @@ export function App() {
       )) return;
       // A portable import is session-only until the user explicitly opts in.
       // Stop any previously enabled autosave; keep the old saved snapshot.
+      invalidateExecution();
       setSavingLocally(false);
       setWorkspace(imported.workspace);
       setEditorSession((number) => number + 1);
@@ -379,12 +402,18 @@ export function App() {
                 hidden
                 onChange={(event) => void importWorkspaceFile(event)}
               />
-              <button type="button" className="button-secondary" onClick={() => importFileRef.current?.click()} disabled={running}>Import project</button>
+              <button type="button" className="button-secondary" onClick={() => importFileRef.current?.click()}>Import project</button>
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
               <button type="button" className="button-secondary" onClick={() => void share()}>Share ↗</button>
-              <button type="button" className="button-primary" onClick={() => void run()} disabled={running}>
-                <span aria-hidden="true">{running ? '◌' : '▶'}</span> {running ? 'Running…' : 'Run code'}
-              </button>
+              {running ? (
+                <button type="button" className="button-secondary" onClick={invalidateExecution}>
+                  Stop run
+                </button>
+              ) : (
+                <button type="button" className="button-primary" onClick={() => void run()}>
+                  <span aria-hidden="true">▶</span> Run code
+                </button>
+              )}
             </div>
           </div>
 
@@ -420,7 +449,10 @@ export function App() {
               <span><span className="online-dot" />Scarp syntax</span>
               <span>UTF-8 · {activeFile}</span>
               <div className="footer-controls">
-                <button type="button" onClick={() => setWorkspace((previous) => ({ ...previous, entry: activeFile }))} disabled={workspace.entry === activeFile}>Set as entry</button>
+                <button type="button" onClick={() => {
+                  invalidateExecution();
+                  setWorkspace((previous) => ({ ...previous, entry: activeFile }));
+                }} disabled={workspace.entry === activeFile}>Set as entry</button>
                 <button type="button" onClick={removeFile} disabled={files.length < 2}>Remove file</button>
               </div>
             </div>
@@ -431,7 +463,7 @@ export function App() {
               <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">Real compiler execution</span></div>
               <div className="console-right">
                 {result && <span className={'result-status ' + (result.ok ? 'success' : 'failure')}>{result.ok ? '● Success' : '● Error'}</span>}
-                <button type="button" onClick={() => setResult(null)}>Clear</button>
+                <button type="button" onClick={invalidateExecution}>Clear</button>
               </div>
             </div>
             <div className="terminal-output" aria-live="polite">
