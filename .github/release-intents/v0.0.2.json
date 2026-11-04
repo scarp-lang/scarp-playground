@@ -1,0 +1,8 @@
+{
+  "tag": "v0.0.2",
+  "status": "alpha pre-release only",
+  "compiler_version": "v0.0.5-alpha.4",
+  "compiler_commit": "79141329176f5dce51457e90a6652902f6432135",
+  "release_gate": "Publish on main only after locked JavaScript, Rust and WebAssembly tests, real Chromium suite, packaging, SHA-256 checksum and verifying tag absence.",
+  "intent": "Authorized optional next pre-release by the user on November 4, 2026. Publish once from the dedicated intent-file main push; never modify existing v0.0.1 or issue a stable v1.0.0 tag."
+}

@@ -1,15 +1,23 @@
-name: Publish explicitly authorized alpha
+name: Publish approved v0.0.2 alpha
 
 on:
+  push:
+    branches: [main]
+    paths:
+      - .github/release-intents/v0.0.2.json
   workflow_dispatch:
     inputs:
       version:
-        description: "Pre-release tag (this preview supports v0.0.1 only)"
+        description: "Pre-release tag (this preview supports v0.0.2 only)"
         required: true
-        default: "v0.0.1"
+        default: "v0.0.2"
 
 permissions:
   contents: write
+
+concurrency:
+  group: playground-approved-v0.0.2-alpha
+  cancel-in-progress: false
 
 jobs:
   alpha:
@@ -20,13 +28,22 @@ jobs:
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED_VERSION: ${{ inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version || 'v0.0.2' }}
         run: |
-          test "$REQUESTED_VERSION" = "v0.0.1"
+          test "$REQUESTED_VERSION" = "v0.0.2"
           test "$GITHUB_REF" = "refs/heads/main"
-          test -s .github/release-intents/v0.0.1.json
-          test "$(node -p "require('./package.json').version")" = "0.0.1"
-          grep -Fq '7715c28df09c7703b39e14fddb963275b25df476' bridge/Cargo.toml
+          test -s .github/release-intents/v0.0.2.json
+          test "$(node -p "require('./package.json').version")" = "0.0.2"
+          test "$(node -p "require('./package-lock.json').version")" = "0.0.2"
+          test "$(node -p "require('./package-lock.json').packages[''].version")" = "0.0.2"
+          grep -Fq 'version = "0.0.2"' bridge/Cargo.toml
+          grep -Fq 'version = "0.0.2"' bridge/Cargo.lock
+          grep -Fq '79141329176f5dce51457e90a6652902f6432135' bridge/Cargo.toml
+          node -e "const a=require('./.github/release-intents/v0.0.2.json'); if(a.tag!=='v0.0.2'||a.compiler_commit!=='79141329176f5dce51457e90a6652902f6432135'||a.status!=='alpha pre-release only') process.exit(1)"
+          if git ls-remote --exit-code --tags origin "refs/tags/$REQUESTED_VERSION" >/dev/null 2>&1; then
+            echo "Refusing to reuse an existing tag" >&2
+            exit 1
+          fi
           if gh release view "$REQUESTED_VERSION" >/dev/null 2>&1; then
             echo "Refusing to overwrite an existing release" >&2
             exit 1
@@ -49,16 +66,17 @@ jobs:
       - name: Package verified static website
         run: |
           test -s dist/compiler/scarp_playground_wasm_bg.wasm
-          tar -czf scarp-playground-v0.0.1-web.tar.gz -C dist .
-          sha256sum scarp-playground-v0.0.1-web.tar.gz > scarp-playground-v0.0.1-web.tar.gz.sha256
+          tar -czf scarp-playground-v0.0.2-web.tar.gz -C dist .
+          sha256sum scarp-playground-v0.0.2-web.tar.gz > scarp-playground-v0.0.2-web.tar.gz.sha256
+          sha256sum -c scarp-playground-v0.0.2-web.tar.gz.sha256
       - name: Publish alpha only, never stable
         env:
           GH_TOKEN: ${{ github.token }}
-          REQUESTED_VERSION: ${{ inputs.version }}
+          REQUESTED_VERSION: ${{ inputs.version || 'v0.0.2' }}
         run: |
           gh release create "$REQUESTED_VERSION" \
-            scarp-playground-v0.0.1-web.tar.gz \
-            scarp-playground-v0.0.1-web.tar.gz.sha256 \
+            scarp-playground-v0.0.2-web.tar.gz \
+            scarp-playground-v0.0.2-web.tar.gz.sha256 \
             --prerelease --target "$GITHUB_SHA" \
-            --title "Scarp Playground v0.0.1 (alpha)" \
-            --notes-file docs/releases/v0.0.1-alpha.md
+            --title "Scarp Playground v0.0.2 (alpha)" \
+            --notes-file docs/releases/v0.0.2-alpha.md
