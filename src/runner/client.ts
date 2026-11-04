@@ -15,7 +15,19 @@ export function runWorkspace(workspace: Workspace, signal?: AbortSignal): Promis
     return Promise.resolve({ ok: false, stdout: '', stderr: '', error: problem });
   }
   return new Promise((resolve) => {
-    const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    // Browsers may reject Worker construction under resource pressure, CSP,
+    // or disabled-worker settings. Report a stable error rather than leaking
+    // implementation details or leaving the UI in a pending execution.
+    let worker: Worker;
+    try {
+      worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    } catch {
+      resolve({
+        ok: false, stdout: '', stderr: '',
+        error: 'Unable to start the Scarp compiler worker in this browser.',
+      });
+      return;
+    }
     const id = 1;
     let finished = false;
     let timeout: ReturnType<typeof setTimeout> | undefined = undefined;
