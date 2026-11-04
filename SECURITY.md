@@ -24,6 +24,21 @@ text before parsing them. Worker and main-thread checks enforce a combined
 before rendering. Invalid worker messages and cloning failures produce
 controlled errors and worker termination.
 
+## Production browser Content Security Policy
+
+The GitHub Pages production build enforces a restrictive `Content-Security-Policy`
+**meta tag** inserted before application scripts. It denies remote scripts,
+inline JavaScript, unrestricted eval, remote Worker origins and cross-origin
+network connections. Rust/WASM requires the narrowly scoped `wasm-unsafe-eval`
+exception, and Monaco requires inline styles; these are not blanket permissions
+for inline JavaScript or arbitrary dynamic code evaluation.
+
+This is a static-hosting constraint, **not** a security boundary or full
+HTTP-header policy. In particular, CSP meta cannot enforce `frame-ancestors`,
+`sandbox` or HTTP report-only reporting. The Vite dev server intentionally
+does not use the production policy. See
+[the CSP review](docs/content-security-policy.md) for directives and tests.
+
 **These are not a hardened sandbox.** No independent process memory cap,
 out-of-memory recovery guarantee, or browser-engine isolation guarantee is
 provided. The 12-second timeout cannot stop arbitrary synchronous allocations.
