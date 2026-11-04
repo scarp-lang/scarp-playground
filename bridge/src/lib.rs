@@ -193,6 +193,16 @@ mod tests {
     }
 
     #[test]
+    fn rejects_missing_virtual_import_without_fake_output() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", "import \"missing.srp\" as missing; print(1);"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], false);
+        assert_eq!(result["stdout"], "");
+        assert_ne!(result["diagnostic"], Value::Null);
+    }
+
+    #[test]
     fn rejects_nonexistent_entry_without_running() {
         let result: Value = serde_json::from_str(
             &execute_request(r#"{"entry":"no.srp","files":{"main.srp":"print(1);"}} "#)
