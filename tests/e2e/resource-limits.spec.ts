@@ -23,7 +23,7 @@ test('recursive call pressure cannot poison later browser executions', async ({ 
   const program = [
     'pure funcra dive(n: integer) -> integer {',
     'if n == 0 { return 0; }',
-    'return dive(n - 1);',
+    'return 1 + dive(n - 1);',
     '}',
     'print("before"); print(dive(1000));',
   ].join(' ');
