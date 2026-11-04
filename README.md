@@ -76,6 +76,11 @@ load failure — it never fakes a successful program result.
 - Actual interpreter stdout, stderr and schema-1 compiler diagnostics.
 - Ready-to-load source examples from the compiler and embedding documentation.
 - Ctrl/Command+Enter execution, source-size caps and 12-second Worker timeout.
+- **Portable project import/export:** Download a versioned JSON file with all .srp
+  sources, entrypoint and selected tab, or import one after an explicit replace
+  confirmation. Imported files are type/path/byte validated before use and
+  do not replace a previously saved browser copy until **Save locally** is selected.
+  Import/export uses only local browser file APIs; no code is uploaded.
 - A shareable URL for **one short source file only**, under a 2 KiB UTF-8 limit.
 - Version-controlled npm and Cargo lockfiles, GitHub Actions typechecking,
   linting, JavaScript and native Rust tests, real Chromium end-to-end execution
@@ -123,6 +128,8 @@ compatibility, accessibility and quality review. Compiler stability alone
 does not authorize a Playground stable release.
 
 For architecture and next milestones see [docs/architecture.md](docs/architecture.md).
+For the portable source-only JSON format and its import threat model see
+[docs/portable-workspaces.md](docs/portable-workspaces.md).
 See [compiler integration audit](docs/compiler-integration.md) for the exact
 pinned compiler and source-location contract. A newer Scarp compiler pre-release
 does not automatically update Playground's execution engine.
