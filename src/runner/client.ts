@@ -17,7 +17,7 @@ export function runWorkspace(workspace: Workspace, signal?: AbortSignal): Promis
     const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
     const id = 1;
     let finished = false;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined = undefined;
     const complete = (result: RunResult) => {
       if (finished) return;
       finished = true;
