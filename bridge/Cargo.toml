@@ -9,7 +9,7 @@ publish = false
 crate-type = ["cdylib", "rlib"]
 
 [dependencies]
-scarp = { git = "https://github.com/scarp-lang/scarp", rev = "7715c28df09c7703b39e14fddb963275b25df476" }
+scarp = { git = "https://github.com/scarp-lang/scarp", rev = "79141329176f5dce51457e90a6652902f6432135" }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 wasm-bindgen = "0.2.100"

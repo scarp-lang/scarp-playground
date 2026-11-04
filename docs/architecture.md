@@ -4,8 +4,8 @@
 
 - `scarp-lang/scarp-playground`: initially only `.gitignore` and Apache-2.0 license.
 - Official compiler is **`scarp-lang/scarp`**, not `scarp-lang/scarp-lang`.
-- Published compiler v0.0.5-alpha.3 commit
-  `7715c28df09c7703b39e14fddb963275b25df476`.
+- Published compiler v0.0.5-alpha.4 commit
+  `79141329176f5dce51457e90a6652902f6432135` (source pinned, not a floating branch).
 - Public Rust APIs `scarp::modules::{MemorySourceLoader, compile_with_loader}`,
   `ModuleProgram::execute`, `ExecutionOptions`, `ModuleDiagnostic::write_json`.
 - The Rust package has no third-party compiler dependencies and is not
@@ -115,5 +115,8 @@ GitHub Pages website deploys `main` and may include changes that are not
 part of that tagged archive, such as Monaco optimization and opt-in local
 workspace saving. The UI intentionally displays **Development preview**
 instead of claiming the live build is the original v0.0.1 release. The
-official compiler remains pinned to `v0.0.5-alpha.3` until separately
-validated against an updated compiler revision.
+official compiler source is now pinned to `v0.0.5-alpha.4` at
+`79141329176f5dce51457e90a6652902f6432135` after separate native Rust, wasm-pack and
+real Chromium verification. The original v0.0.1 tagged archive still
+uses alpha.3. The new upstream `Scarp.project` commands require host
+filesystem access and are **not** part of the browser's in-memory runtime.

@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published alpha.3.
+//! Browser bridge to the real Scarp interpreter, pinned to published alpha.4.
 use scarp::modules::{self, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions};
 use serde::Deserialize;
@@ -153,6 +153,53 @@ mod tests {
         assert_eq!(result["ok"], false);
         assert_eq!(result["diagnostic"]["schema_version"], 1);
         assert_eq!(result["diagnostic"]["code"], "E0010");
+    }
+
+    #[test]
+    fn preserves_real_imported_module_source_in_structured_diagnostics() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", "import \"lib/math.srp\" as math; print(math.twice(21));"),
+            ("lib/math.srp", "pub pure funcra twice(n: integer) -> integer { return missing; }"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], false);
+        assert_eq!(result["diagnostic"]["schema_version"], 1);
+        assert_eq!(result["diagnostic"]["code"], "E0010");
+        assert_eq!(result["diagnostic"]["primary"]["path"], "lib/math.srp");
+        assert_eq!(result["diagnostic"]["column_encoding"], "unicode-scalar");
+        assert_eq!(result["diagnostic"]["span_encoding"], "utf-8-bytes");
+        assert_eq!(result["diagnostic"]["position_base"], 1);
+    }
+
+    #[test]
+    fn preserves_unicode_scalar_diagnostic_contract_after_non_bmp_text() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", "print(\"😀\"); print(missing);"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], false);
+        assert_eq!(result["diagnostic"]["code"], "E0010");
+        assert_eq!(result["diagnostic"]["primary"]["path"], "main.srp");
+        assert_eq!(result["diagnostic"]["primary"]["start"]["line"], 1);
+        assert_eq!(result["diagnostic"]["column_encoding"], "unicode-scalar");
+    }
+
+    #[test]
+    fn keeps_execution_budget_errors_bounded() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", "var n = 0; while n < 1000000 { n += 1; }"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], false);
+        assert_eq!(result["diagnostic"]["code"], "E0017");
+        assert_eq!(result["stdout"], "");
+    }
+
+    #[test]
+    fn rejects_missing_virtual_import_without_fake_output() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", "import \"missing.srp\" as missing; print(1);"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], false);
+        assert_eq!(result["stdout"], "");
+        assert_ne!(result["diagnostic"], Value::Null);
     }
 
     #[test]
