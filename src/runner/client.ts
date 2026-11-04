@@ -2,9 +2,13 @@ import { validateWorkspace, type Workspace } from '../workspace';
 import type { RunResponse, RunResult } from './types';
 
 const RUN_TIMEOUT_MS = 12_000;
+const cancelled: RunResult = {
+  ok: false, stdout: '', stderr: '', error: 'Execution cancelled.',
+};
 
-/** Run in a disposable worker; never execute user code on the React thread. */
-export function runWorkspace(workspace: Workspace): Promise<RunResult> {
+/** Run in a disposable worker; abort terminates it instead of accepting stale output. */
+export function runWorkspace(workspace: Workspace, signal?: AbortSignal): Promise<RunResult> {
+  if (signal?.aborted) return Promise.resolve(cancelled);
   const problem = validateWorkspace(workspace);
   if (problem) {
     return Promise.resolve({ ok: false, stdout: '', stderr: '', error: problem });
@@ -13,14 +17,22 @@ export function runWorkspace(workspace: Workspace): Promise<RunResult> {
     const worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
     const id = 1;
     let finished = false;
+    let timeout: ReturnType<typeof setTimeout> | undefined = undefined;
     const complete = (result: RunResult) => {
       if (finished) return;
       finished = true;
-      clearTimeout(timeout);
+      if (timeout !== undefined) clearTimeout(timeout);
+      signal?.removeEventListener('abort', onAbort);
       worker.terminate();
       resolve(result);
     };
-    const timeout = setTimeout(() => {
+    const onAbort = () => complete(cancelled);
+    signal?.addEventListener('abort', onAbort, { once: true });
+    if (signal?.aborted) {
+      complete(cancelled);
+      return;
+    }
+    timeout = setTimeout(() => {
       complete({
         ok: false,
         stdout: '',

@@ -203,3 +203,76 @@ test('rejects invalid project files and never overwrites an opt-in saved copy on
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
 });
+
+
+test('editing while the actual compiler loads cancels stale execution and permits a fresh run', async ({ page }) => {
+  // Delay delivery of the genuine WASM loader, not its result. The first worker
+  // remains in flight until the user edits; its request is then cancelled.
+  let unblock!: () => void;
+  let entered!: () => void;
+  const blocked = new Promise<void>((resolve) => { unblock = resolve; });
+  const loaderRequested = new Promise<void>((resolve) => { entered = resolve; });
+  let held = false;
+  await page.route('**/compiler/scarp_playground_wasm.js', async (route) => {
+    if (!held) {
+      held = true;
+      entered();
+      await blocked;
+      try { await route.continue(); } catch { /* first worker was terminated */ }
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.goto('./#code=' + encodeURIComponent('print(missing);'));
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await expect(editor).toBeAttached();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  try {
+    await loaderRequested;
+    await expect(page.getByRole('button', { name: 'Stop run' })).toBeVisible();
+    await editor.focus();
+    await page.keyboard.press('ControlOrMeta+A');
+    await page.keyboard.insertText('print("fresh");');
+    await expect(page.getByRole('button', { name: 'Run code' })).toBeVisible();
+    await expect(page.locator('.error-title')).toHaveCount(0);
+  } finally {
+    unblock();
+  }
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('fresh\n', { timeout: 30_000 });
+  await expect(page.locator('.error-title')).toHaveCount(0);
+});
+
+test('Stop run terminates a genuinely pending compiler and keeps the next execution available', async ({ page }) => {
+  let releaseLoader!: () => void;
+  let loaderArrived!: () => void;
+  const held = new Promise<void>((resolve) => { releaseLoader = resolve; });
+  const requested = new Promise<void>((resolve) => { loaderArrived = resolve; });
+  let first = true;
+  await page.route('**/compiler/scarp_playground_wasm.js', async (route) => {
+    if (first) {
+      first = false;
+      loaderArrived();
+      await held;
+      try { await route.continue(); } catch { /* cancelled worker closed its request */ }
+    } else {
+      await route.continue();
+    }
+  });
+
+  await page.goto('./#code=' + encodeURIComponent('var n = 0; while n < 1000000 { n += 1; }'));
+  await page.getByRole('button', { name: 'Run code' }).click();
+  try {
+    await requested;
+    await page.getByRole('button', { name: 'Stop run' }).click();
+    await expect(page.getByRole('button', { name: 'Run code' })).toBeEnabled();
+    await expect(page.locator('.result-status')).toHaveCount(0);
+  } finally {
+    releaseLoader();
+  }
+
+  // The next run still uses the authentic interpreter and work-budget checks.
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.error-title')).toContainText('E0017', { timeout: 30_000 });
+});
