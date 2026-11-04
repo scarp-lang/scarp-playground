@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useState } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
 
 // Keep the large Monaco code out of the initial React shell bundle.
 // The actual editor loads on demand while the rest of the UI stays interactive.
@@ -10,6 +10,7 @@ import { runWorkspace } from './runner/client';
 import type { RunResult } from './runner/types';
 import { makeShareUrl, MAX_FILES, sourceFromHash, validPath, type Workspace } from './workspace';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
+import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
 
 type InitialSession = { workspace: Workspace; activeFile: string; savingLocally: boolean };
 
@@ -53,6 +54,7 @@ export function App() {
   const [running, setRunning] = useState(false);
   const [result, setResult] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const importFileRef = useRef<HTMLInputElement>(null);
   const files = Object.keys(workspace.files);
 
   const run = useCallback(async () => {
@@ -240,6 +242,56 @@ export function App() {
     setResult(null);
   }
 
+  function exportWorkspace() {
+    const json = serializePortableWorkspace(workspace, activeFile);
+    if (!json) {
+      setNotice('The workspace cannot be exported until its paths and source sizes are valid.');
+      return;
+    }
+    const address = URL.createObjectURL(new Blob([json], { type: 'application/json;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = address;
+    link.download = 'scarp-workspace.json';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(address), 0);
+    setNotice('Downloaded a portable copy of all .srp files. No source was uploaded.');
+  }
+
+  async function importWorkspaceFile(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    // Allow the same file to be selected again after a rejected import.
+    event.currentTarget.value = '';
+    if (!file) return;
+    if (file.size > MAX_PORTABLE_WORKSPACE_BYTES) {
+      setNotice('The selected project exceeds the 160 KiB portable workspace limit.');
+      return;
+    }
+    try {
+      const imported = parsePortableWorkspace(await file.text());
+      if (!imported) {
+        setNotice('Invalid Scarp workspace JSON. Check the format, version, source files and size limits.');
+        return;
+      }
+      if (!window.confirm(
+        'Replace the open workspace with this project? Unsaved changes to the open editor will be lost. Your locally saved browser copy will not be overwritten.',
+      )) return;
+      // A portable import is session-only until the user explicitly opts in.
+      // Stop any previously enabled autosave; keep the old saved snapshot.
+      setSavingLocally(false);
+      setWorkspace(imported.workspace);
+      setEditorSession((number) => number + 1);
+      setActiveFile(imported.activeFile);
+      setResult(null);
+      setNotice('Imported ' + Object.keys(imported.workspace.files).length +
+        ' Scarp source files. Save locally if you want this project to persist after reload.');
+      window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    } catch {
+      setNotice('The selected project could not be read.');
+    }
+  }
+
   async function share() {
     if (files.length > 1) {
       setNotice('Snippet sharing currently supports one file. Multi-file sharing is planned.');
@@ -319,6 +371,16 @@ export function App() {
               <button type="button" className="button-secondary" onClick={() => savingLocally ? forgetLocalSaving() : enableLocalSaving()}>
                 {savingLocally ? 'Forget saved copy' : 'Save locally'}
               </button>
+              <input
+                ref={importFileRef}
+                type="file"
+                accept=".json,application/json"
+                aria-label="Import project JSON"
+                hidden
+                onChange={(event) => void importWorkspaceFile(event)}
+              />
+              <button type="button" className="button-secondary" onClick={() => importFileRef.current?.click()} disabled={running}>Import project</button>
+              <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
               <button type="button" className="button-secondary" onClick={() => void share()}>Share ↗</button>
               <button type="button" className="button-primary" onClick={() => void run()} disabled={running}>
                 <span aria-hidden="true">{running ? '◌' : '▶'}</span> {running ? 'Running…' : 'Run code'}
