@@ -1,49 +1,82 @@
-# Scarp compiler integration audit — 2026-11-03
+# Official Scarp compiler integration audit — 2026-11-04
 
-This document records an independent repository inspection before modifying
-Playground's diagnostic editor integration.
+This assessment applies to the **live development preview candidate**, not
+the immutable Playground `v0.0.1` alpha archive.
 
-## Repositories and snapshots
+## Exact upstream release and source
 
 - Official compiler: https://github.com/scarp-lang/scarp
-- Playground: https://github.com/scarp-lang/scarp-playground
-- **Latest published compiler pre-release at audit time:** v0.0.5-alpha.4,
-  published November 3, 2026; release tag object references
-  c957ec8a12e40dae2e82665a73a2da79ed9b34de.
-- **Playground's actual compiler:** published v0.0.5-alpha.3, pinned to
-  7715c28df09c7703b39e14fddb963275b25df476 in bridge/Cargo.toml.
+- Published upstream release: **v0.0.5-alpha.4**, November 3, 2026
+- Annotated tag object: `c957ec8a12e40dae2e82665a73a2da79ed9b34de`
+- Tag **peels to source commit**:
+  `79141329176f5dce51457e90a6652902f6432135`
+- Former Playground compiler pin: alpha.3 at
+  `7715c28df09c7703b39e14fddb963275b25df476`.
+- New candidate dependency: **alpha.4 source commit above** in both
+  `bridge/Cargo.toml` and the resolved `bridge/Cargo.lock`. No branch
+  or moving tag is used as the runtime source.
 
-The new alpha.4 release adds the CLI commands create/launch/project-directory
-verify, and a bounded Scarp.project manifest. These are project-management CLI
-features; they do not automatically become browser features. Do not change the
-WASM dependency to a moving branch or call the browser alpha.4-compatible without
-testing exact embedding APIs and updating the version/lockfiles.
+The comparison spans **56 intervening commits**. GitHub's per-file change
+report shows modifications to `src/main.rs` and a new `src/project.rs`,
+but no changed `src/lib.rs`, `src/modules/`, `src/limits.rs`, or
+`src/diagnostics/json.rs`. The library embedding contracts below therefore
+have no changed source diff between these exact revisions. The manifest
+version changes from `0.0.5-alpha.3` to `0.0.5-alpha.4`; no new Cargo
+runtime dependency is introduced.
 
-## Diagnostic schema reviewed
+## APIs used in the WebAssembly bridge
 
-The **pinned alpha.3** and the current compiler both expose schema-v1 JSON in
-src/diagnostics/json.rs, using:
+The browser still uses only:
 
-- schema_version = 1, severity, code, message and optional help
-- span_encoding = utf-8-bytes (half-open spans local to a given source file)
-- column_encoding = unicode-scalar, position_base = 1
-- primary: { path, span, start: {line,column}, end: {line,column} } or null
-- related: zero or more { message, location }, including locations in other files
+- `MemorySourceLoader::new` and `MemorySourceLoader::insert`
+- `ModuleLimits`, `modules::compile_with_loader`
+- `ModuleProgram::execute` with bounded `ExecutionOptions`
+- `ModuleDiagnostic::write_json` and real interpreter stdout/stderr
 
-The browser consumes this from the **real Rust bridge**, not an approximate
-JavaScript parser. Monaco line/columns are UTF-16 based: every supplementary
-scalar (e.g. an emoji) occupies two UTF-16 units. Directly using Scarp's
-one-based Unicode-scalar columns would highlight the wrong character.
+The unchanged structured diagnostic contract is schema 1:
 
-The editor therefore converts only recognized schema-v1 coordinates, validates
-file identity against the in-memory source workspace, maps Unicode-scalar
-columns to UTF-16, and uses the primary and related file paths. It does not
-invent diagnostics or reinterpret schema versions it does not understand.
+- `schema_version = 1`, real `code`, `severity`, `message`, optional `help`
+- `span_encoding = utf-8-bytes` (half-open source spans)
+- `column_encoding = unicode-scalar`, `position_base = 1`
+- `primary` and `related` locations identify the virtual source-file path
 
-## Current scope
+Monaco uses UTF-16 columns. The Playground maps Unicode scalar positions
+to UTF-16 per file, including after non-BMP characters. It never infers
+diagnostics from a fake JavaScript parser.
 
-This editor improvement is targeted at the pinned alpha.3 runtime. A later
-upgrade to alpha.4 should separately establish exact tag commit, update
-bridge/Cargo.toml and bridge/Cargo.lock, and rerun native Rust, WebAssembly
-and Chromium real-execution tests. Preserve the already-published
-Playground v0.0.1 alpha tag and its immutable assets.
+## Browser vs host CLI feature boundary
+
+Alpha.4 adds the **offline `Scarp.project` CLI** create/launch/verify
+workflow. Those commands operate on the host's project directories. The
+Playground provides **in-memory virtual .srp files** and optionally
+downloads/reads browser-local portable workspace JSON; it does not offer
+operating-system filesystem, network services, or host process execution.
+The JSON workspace export is **not** a `Scarp.project` manifest.
+
+Do not claim host-project CLI interoperability merely because the embedded
+interpreter shares the alpha.4 source revision. Designing a virtual
+`Scarp.project` representation requires its own spec, security boundary,
+and compiler integration tests.
+
+## Exact acceptance gates for this upgrade
+
+This branch is not authorized to ship solely by comparing source files.
+GitHub Actions must independently pass:
+
+1. Locked `cargo test --locked --manifest-path bridge/Cargo.toml`, including
+   real hello, multi-file import, imported-module E0010 JSON, Unicode
+   diagnostic coordinates, and E0017 budget-limit checks.
+2. `wasm-pack build bridge --release --target web --locked`, using the
+   exact Git source revision.
+3. Locked TypeScript lint, typecheck, frontend tests, optimized client build
+   and emitted WebAssembly assets check.
+4. The full headless Chromium suite executing the **real** compiled Rust
+   interpreter, including import/diagnostic highlighting, Unicode source
+   mapping, work budgets, cancellation, and local project import/export.
+5. Successful post-merge main-branch build and Pages deployment.
+
+The published `v0.0.1` GitHub Release remains unchanged and embeds alpha.3.
+Playground **v1.0.0 stable is prohibited** until the compiler has an official
+stable release and independent Playground security, accessibility,
+compatibility and quality review passes. This alpha.4 update alone does not
+satisfy that policy.
