@@ -92,6 +92,10 @@ load failure — it never fakes a successful program result.
   do not replace a previously saved browser copy until **Save locally** is selected.
   Import/export uses only local browser file APIs; no code is uploaded.
 - A shareable URL for **one short source file only**, under a 2 KiB UTF-8 limit.
+- A production-only, restrictive browser Content Security Policy for GitHub
+  Pages, allowing real Rust/WebAssembly and Monaco without permitting inline
+  JavaScript, remote scripts or cross-origin fetches. See the
+  [CSP review](docs/content-security-policy.md) for exceptions and limits.
 - Version-controlled npm and Cargo lockfiles, GitHub Actions typechecking,
   linting, JavaScript and native Rust tests, real Chromium end-to-end execution
   tests, WebAssembly compilation and gated GitHub Pages deployment from `main`.
