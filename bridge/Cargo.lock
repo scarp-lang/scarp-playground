@@ -57,7 +57,7 @@ source = "git+https://github.com/scarp-lang/scarp?rev=79141329176f5dce51457e90a6
 
 [[package]]
 name = "scarp-playground-wasm"
-version = "0.0.1"
+version = "0.0.2"
 dependencies = [
  "scarp",
  "serde",
