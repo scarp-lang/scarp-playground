@@ -92,7 +92,8 @@ a { color: inherit; text-decoration: none; }
 .workspace-heading { font-size: 19px; font-weight: 750; letter-spacing: -.6px; }
 .workspace-count { margin-left: 6px; vertical-align: middle; }
 .workspace-toolbar p { color: var(--muted); font-size: 12px; margin-top: 5px; }
-.toolbar-actions { gap: 9px; }
+.toolbar-actions { gap: 9px; flex-wrap: wrap; justify-content: flex-end; }
+@media (max-width: 760px) { .toolbar-actions { justify-content: flex-start; } }
 .button-primary, .button-secondary { min-height: 37px; padding: 0 16px; border-radius: 8px; font-size: 12px; font-weight: 750; white-space: nowrap; }
 .button-primary { border: 1px solid var(--accent-strong); color: #fff; background: linear-gradient(135deg, #687ff9, #625ce0); box-shadow: 0 4px 16px #5465ec33; }
 .button-primary:hover:not(:disabled) { filter: brightness(1.1); }
