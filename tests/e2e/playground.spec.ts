@@ -189,7 +189,7 @@ test('downloads a multi-file JSON workspace and reimports it for real Scarp exec
   });
   await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('button', { name: 'Run code' }).click();
-  await expect(page.locator('.stdout')).toHaveText('42\\n', { timeout: 30_000 });
+  await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
 });
 
 test('rejects invalid project files and never overwrites an opt-in saved copy on import', async ({ page }) => {
@@ -221,5 +221,5 @@ test('rejects invalid project files and never overwrites an opt-in saved copy on
   await page.reload();
   await expect(page.getByRole('tab', { name: /math.srp/ })).toBeVisible();
   await page.getByRole('button', { name: 'Run code' }).click();
-  await expect(page.locator('.stdout')).toHaveText('42\\n', { timeout: 30_000 });
+  await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
 });
