@@ -27,8 +27,9 @@ export function serializePortableWorkspace(
     workspace: { entry: workspace.entry, files: sortedFiles },
     activeFile: Object.hasOwn(workspace.files, activeFile) ? activeFile : workspace.entry,
   });
-  return new TextEncoder().encode(serialized).byteLength <= MAX_PORTABLE_WORKSPACE_BYTES
-    ? serialized + '\n'
+  const output = serialized + '\n';
+  return new TextEncoder().encode(output).byteLength <= MAX_PORTABLE_WORKSPACE_BYTES
+    ? output
     : null;
 }
 
