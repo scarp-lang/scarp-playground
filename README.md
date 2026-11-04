@@ -20,16 +20,22 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.1** (alpha pre-release) |
-| Scarp compiler | **v0.0.5-alpha.3** |
-| Pinned compiler revision | `7715c28df09c7703b39e14fddb963275b25df476` |
+| Scarp compiler | **v0.0.5-alpha.4** |
+| Pinned compiler revision | `79141329176f5dce51457e90a6652902f6432135` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
 | Backend execution service | **None** |
 
+The pinned Scarp alpha.4 release introduces offline `Scarp.project` CLI
+create/launch/verify features. **Those host-filesystem commands are not available
+inside the Playground**: the browser still runs Scarp modules exclusively
+through `MemorySourceLoader` without OS or server filesystem access.
+
 Do not change the compiler Git revision without rerunning the real interpreter
-tests and updating this compatibility table. Development main may have additional
-unreleased CLI commands that this pinned release does not contain.
+tests and updating this compatibility table. The already-published Playground
+`v0.0.1` alpha archive still embeds compiler alpha.3; it is not modified
+by updating the live development preview.
 
 ## Local development
 
@@ -135,8 +141,8 @@ For architecture and next milestones see [docs/architecture.md](docs/architectur
 For the portable source-only JSON format and its import threat model see
 [docs/portable-workspaces.md](docs/portable-workspaces.md).
 See [compiler integration audit](docs/compiler-integration.md) for the exact
-pinned compiler and source-location contract. A newer Scarp compiler pre-release
-does not automatically update Playground's execution engine.
+pinned compiler, alpha.4 compatibility assessment and source-location contract.
+A future Scarp prerelease does not automatically update Playground's engine.
 
 ## Community
 
