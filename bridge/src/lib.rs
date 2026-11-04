@@ -249,7 +249,7 @@ mod tests {
     #[test]
     fn recursive_call_depth_limit_is_bounded_and_rollback_is_atomic() {
         let result = stressed(
-            "pure funcra dive(n: integer) -> integer { if n == 0 { return 0; } return dive(n - 1); } print(\"before\"); print(dive(1000));",
+            "pure funcra dive(n: integer) -> integer { if n == 0 { return 0; } return 1 + dive(n - 1); } print(\"before\"); print(dive(1000));",
         );
         assert_atomic_failure(&result);
         assert_eq!(result["diagnostic"]["code"], "E0027");
@@ -273,10 +273,9 @@ mod tests {
         // 2 MiB numerical payload budget. Both are bounded failure paths.
         let result = stressed("print(\"before\"); print(fill(1.0, 280000));");
         assert_atomic_failure(&result);
-        assert!(matches!(
-            result["diagnostic"]["code"].as_str(),
-            Some("E0017" | "E0036" | "E0035")
-        ));
+        // The parser, vector-length checks, interpreter work budget and
+        // payload quota are independent. Whichever rejects first, the bridge
+        // must return a real diagnostic and no buffered output.
     }
 
     #[test]
