@@ -164,3 +164,62 @@ test('clears stale source markers when editing after a real compiler error', asy
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('repaired\n', { timeout: 30_000 });
 });
+
+
+test('downloads a multi-file JSON workspace and reimports it for real Scarp execution', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  await page.getByRole('tab', { name: /math.srp/ }).click();
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export project' }).click();
+  const download = await pending;
+  expect(download.suggestedFilename()).toBe('scarp-workspace.json');
+  const { readFile } = await import('node:fs/promises');
+  const bytes = await readFile((await download.path())!);
+  const portable = JSON.parse(bytes.toString('utf8'));
+  expect(portable.format).toBe('scarp-playground-workspace');
+  expect(Object.keys(portable.workspace.files)).toEqual(['main.srp', 'math.srp']);
+  expect(portable.activeFile).toBe('math.srp');
+
+  await page.goto('./#code=' + encodeURIComponent('print("before import");'));
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveCount(0);
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.locator('input[aria-label="Import project JSON"]').setInputFiles({
+    name: 'scarp-workspace.json', mimeType: 'application/json', buffer: bytes,
+  });
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('42\\n', { timeout: 30_000 });
+});
+
+test('rejects invalid project files and never overwrites an opt-in saved copy on import', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  await page.getByRole('button', { name: 'Save locally' }).click();
+
+  const invalid = JSON.stringify({
+    format: 'scarp-playground-workspace', version: 1,
+    workspace: { entry: '../escape.srp', files: { '../escape.srp': 'print(99);' } },
+  });
+  await page.locator('input[aria-label="Import project JSON"]').setInputFiles({
+    name: 'unsafe.json', mimeType: 'application/json', buffer: Buffer.from(invalid),
+  });
+  await expect(page.locator('.notice')).toContainText('Invalid Scarp workspace JSON');
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toBeVisible();
+
+  const valid = JSON.stringify({
+    format: 'scarp-playground-workspace', version: 1,
+    workspace: { entry: 'main.srp', files: { 'main.srp': 'print("temporary");' } },
+    activeFile: 'main.srp',
+  });
+  page.once('dialog', (dialog) => void dialog.accept());
+  await page.locator('input[aria-label="Import project JSON"]').setInputFiles({
+    name: 'valid.json', mimeType: 'application/json', buffer: Buffer.from(valid),
+  });
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Save locally' })).toBeVisible();
+  await page.reload();
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('42\\n', { timeout: 30_000 });
+});
