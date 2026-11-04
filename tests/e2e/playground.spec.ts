@@ -244,17 +244,35 @@ test('editing while the actual compiler loads cancels stale execution and permit
   await expect(page.locator('.error-title')).toHaveCount(0);
 });
 
-test('Stop run cancels a pending compiler without displaying a stale result', async ({ page }) => {
+test('Stop run terminates a genuinely pending compiler and keeps the next execution available', async ({ page }) => {
+  let releaseLoader!: () => void;
+  let loaderArrived!: () => void;
+  const held = new Promise<void>((resolve) => { releaseLoader = resolve; });
+  const requested = new Promise<void>((resolve) => { loaderArrived = resolve; });
+  let first = true;
+  await page.route('**/compiler/scarp_playground_wasm.js', async (route) => {
+    if (first) {
+      first = false;
+      loaderArrived();
+      await held;
+      try { await route.continue(); } catch { /* cancelled worker closed its request */ }
+    } else {
+      await route.continue();
+    }
+  });
+
   await page.goto('./#code=' + encodeURIComponent('var n = 0; while n < 1000000 { n += 1; }'));
   await page.getByRole('button', { name: 'Run code' }).click();
-  const stop = page.getByRole('button', { name: 'Stop run' });
-  // First-run WASM startup gives the user a cancellation opportunity.
-  if (await stop.isVisible()) {
-    await stop.click();
+  try {
+    await requested;
+    await page.getByRole('button', { name: 'Stop run' }).click();
     await expect(page.getByRole('button', { name: 'Run code' })).toBeEnabled();
     await expect(page.locator('.result-status')).toHaveCount(0);
+  } finally {
+    releaseLoader();
   }
-  // The real work-budget behavior still applies on the next execution.
+
+  // The next run still uses the authentic interpreter and work-budget checks.
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.error-title')).toContainText('E0017', { timeout: 30_000 });
 });
