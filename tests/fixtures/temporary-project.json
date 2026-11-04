@@ -1,0 +1,11 @@
+{
+  "format": "scarp-playground-workspace",
+  "version": 1,
+  "workspace": {
+    "entry": "main.srp",
+    "files": {
+      "main.srp": "print(\"temporary\");"
+    }
+  },
+  "activeFile": "main.srp"
+}
