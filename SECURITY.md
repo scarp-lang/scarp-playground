@@ -39,6 +39,18 @@ HTTP-header policy. In particular, CSP meta cannot enforce `frame-ancestors`,
 does not use the production policy. See
 [the CSP review](docs/content-security-policy.md) for directives and tests.
 
+## Resource-pressure recovery and regression tests
+
+The official Rust/WASM interpreter is tested against its configured output
+statement, buffered-output, call-depth and deterministic work ceilings, plus
+bounded text, vector and nested-module stress scenarios. Tests assert that
+failed evaluations produce no partial stdout/stderr and that a subsequent
+program can execute normally. A browser-worker constructor failure returns
+a controlled error, and fake-timer tests verify that the 12-second deadline
+terminates the previous worker. The real Chromium tests exercise the actual
+compiler, not synthetic responses. See
+[resource-pressure methodology](docs/resource-pressure.md).
+
 **These are not a hardened sandbox.** No independent process memory cap,
 out-of-memory recovery guarantee, or browser-engine isolation guarantee is
 provided. The 12-second timeout cannot stop arbitrary synchronous allocations.

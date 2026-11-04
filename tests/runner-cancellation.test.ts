@@ -7,13 +7,17 @@ const workspace = { entry: 'main.srp', files: { 'main.srp': 'print("hello");' } 
 class FakeWorker {
   static instances: FakeWorker[] = [];
   static failPost = false;
+  static failConstruction = false;
   onmessageerror: (() => void) | null = null;
   onmessage: ((event: MessageEvent<RunResponse>) => void) | null = null;
   onerror: ((event: ErrorEvent) => void) | null = null;
   terminated = 0;
   posted: unknown[] = [];
 
-  constructor() { FakeWorker.instances.push(this); }
+  constructor() {
+    if (FakeWorker.failConstruction) throw new Error('Worker startup denied');
+    FakeWorker.instances.push(this);
+  }
   terminate() { ++this.terminated; }
   postMessage(payload: unknown) {
     if (FakeWorker.failPost) throw new Error('Clone failed');
@@ -27,9 +31,11 @@ class FakeWorker {
 beforeEach(() => {
   FakeWorker.instances = [];
   FakeWorker.failPost = false;
+  FakeWorker.failConstruction = false;
   vi.stubGlobal('Worker', FakeWorker);
 });
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
 });
 
@@ -81,6 +87,41 @@ describe('disposable compiler worker cancellation', () => {
     const response = await runWorkspace(workspace);
     expect(response.error).toMatch(/Unable to send/);
     expect(FakeWorker.instances[0].terminated).toBe(1);
+  });
+
+  it('handles Worker constructor failure without rejecting the execution promise', async () => {
+    FakeWorker.failConstruction = true;
+    const result = await runWorkspace(workspace);
+    expect(result).toEqual({
+      ok: false, stdout: '', stderr: '',
+      error: 'Unable to start the Scarp compiler worker in this browser.',
+    });
+    expect(FakeWorker.instances).toHaveLength(0);
+    FakeWorker.failConstruction = false;
+    const recovered = runWorkspace(workspace);
+    FakeWorker.instances[0].send({
+      id: 1, result: { ok: true, stdout: 'recovered\\n', stderr: '' },
+    });
+    expect((await recovered).stdout).toBe('recovered\\n');
+  });
+
+  it('enforces the 12-second browser deadline and permits a clean subsequent run', async () => {
+    vi.useFakeTimers();
+    const pending = runWorkspace(workspace);
+    const first = FakeWorker.instances[0];
+    await vi.advanceTimersByTimeAsync(12_000);
+    const expired = await pending;
+    expect(expired.ok).toBe(false);
+    expect(expired.error).toMatch(/12-second browser limit/);
+    expect(first.terminated).toBe(1);
+    first.send({ id: 1, result: { ok: true, stdout: 'late\\n', stderr: '' } });
+    expect(await pending).toEqual(expired);
+
+    const recovered = runWorkspace(workspace);
+    const next = FakeWorker.instances[1];
+    next.send({ id: 1, result: { ok: true, stdout: 'ready\\n', stderr: '' } });
+    expect((await recovered).stdout).toBe('ready\\n');
+    expect(next.terminated).toBe(1);
   });
 
   it('avoids constructing a worker for a pre-aborted request', async () => {

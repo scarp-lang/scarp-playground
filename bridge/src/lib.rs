@@ -216,6 +216,107 @@ mod tests {
         assert_ne!(result["diagnostic"], Value::Null);
     }
 
+    fn stressed(source: &str) -> Value {
+        serde_json::from_str(&execute_request(&request(&[("main.srp", source)]))).unwrap()
+    }
+
+    fn assert_atomic_failure(result: &Value) {
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["stdout"], "", "{result}");
+        assert_eq!(result["stderr"], "", "{result}");
+        assert_eq!(result["diagnostic"]["schema_version"], 1, "{result}");
+        assert!(result["diagnostic"]["code"].as_str().is_some(), "{result}");
+    }
+
+    #[test]
+    fn print_count_limit_is_atomic_even_after_many_selected_writes() {
+        let result = stressed("repeat 1200 as index { print(\"x\"); }");
+        assert_atomic_failure(&result);
+        assert_eq!(result["diagnostic"]["code"], "E0018");
+    }
+
+    #[test]
+    fn buffered_output_limit_is_atomic_across_repeated_large_snapshots() {
+        // The materialized text is only 60 KiB; 20 selected 60 KiB prints
+        // exhaust the 1 MiB cumulative output-capture allowance.
+        let result = stressed(
+            "bind chunk = text_repeat(\"x\", 60000); repeat 20 as index { print(chunk); }",
+        );
+        assert_atomic_failure(&result);
+        assert_eq!(result["diagnostic"]["code"], "E0029");
+    }
+
+    #[test]
+    fn recursive_call_depth_limit_is_bounded_and_rollback_is_atomic() {
+        let result = stressed(
+            "pure funcra dive(n: integer) -> integer { if n == 0 { return 0; } return 1 + dive(n - 1); } print(\"before\"); print(dive(1000));",
+        );
+        assert_atomic_failure(&result);
+        assert_eq!(result["diagnostic"]["code"], "E0027");
+    }
+
+    #[test]
+    fn large_text_construction_fails_without_releasing_partial_output() {
+        // Work can reject first, before the interpreter reaches its separate
+        // 1 MiB per-string and 2 MiB cumulative text quotas.
+        let result = stressed("print(\"before\"); print(text_repeat(\"é\", 600000));");
+        assert_atomic_failure(&result);
+        assert!(matches!(
+            result["diagnostic"]["code"].as_str(),
+            Some("E0017" | "E0048")
+        ));
+    }
+
+    #[test]
+    fn oversized_vector_request_is_rejected_without_partial_output() {
+        // The deterministic work quota can reject this before the independent
+        // 2 MiB numerical payload budget. Both are bounded failure paths.
+        let result = stressed("print(\"before\"); print(fill(1.0, 280000));");
+        assert_atomic_failure(&result);
+        // The parser, vector-length checks, interpreter work budget and
+        // payload quota are independent. Whichever rejects first, the bridge
+        // must return a real diagnostic and no buffered output.
+    }
+
+    #[test]
+    fn nested_module_pressure_rejects_excessive_import_depth_atomically() {
+        let mut files: Vec<(String, String)> = Vec::new();
+        files.push((
+            "main.srp".to_string(),
+            "import \"m1.srp\" as m; print(\"should not appear\");".to_string(),
+        ));
+        for index in 1..=9 {
+            files.push((
+                format!("m{index}.srp"),
+                if index < 9 {
+                    format!("import \"m{}.srp\" as next; pub bind value = 1;", index + 1)
+                } else {
+                    "pub bind value = 1;".to_string()
+                },
+            ));
+        }
+        let refs: Vec<(&str, &str)> = files
+            .iter()
+            .map(|(path, source)| (path.as_str(), source.as_str()))
+            .collect();
+        let result: Value = serde_json::from_str(&execute_request(&request(&refs))).unwrap();
+        assert_atomic_failure(&result);
+    }
+
+    #[test]
+    fn a_failed_bounded_execution_never_poisoned_the_next_workspace() {
+        for source in [
+            "repeat 1200 as index { print(\"x\"); }",
+            "pure funcra dive(n: integer) -> integer { return dive(n + 1); } print(dive(0));",
+        ] {
+            assert_atomic_failure(&stressed(source));
+            let next = stressed("print(\"recovered\");");
+            assert_eq!(next["ok"], true);
+            assert_eq!(next["stdout"], "recovered\n");
+            assert_eq!(next["stderr"], "");
+        }
+    }
+
     #[test]
     fn rejects_nonexistent_entry_without_running() {
         let result: Value = serde_json::from_str(

@@ -96,6 +96,11 @@ load failure — it never fakes a successful program result.
   Pages, allowing real Rust/WebAssembly and Monaco without permitting inline
   JavaScript, remote scripts or cross-origin fetches. See the
   [CSP review](docs/content-security-policy.md) for exceptions and limits.
+- Bounded resource-pressure regression tests for the real interpreter:
+  selected-output counts, buffered output, recursion, source imports and
+  numerical/text stress, plus worker construction and timeout recovery. These
+  are not physical process-memory limits. See
+  [resource-pressure test coverage](docs/resource-pressure.md).
 - Version-controlled npm and Cargo lockfiles, GitHub Actions typechecking,
   linting, JavaScript and native Rust tests, real Chromium end-to-end execution
   tests, WebAssembly compilation and gated GitHub Pages deployment from `main`.
