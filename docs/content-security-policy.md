@@ -41,6 +41,18 @@ remain outside this repository's control. If the app migrates to a host with
 configurable response headers, enforce the policy from HTTP headers and assess
 `frame-ancestors`, reporting, COOP/COEP and cross-origin isolation then.
 
+**Worker scope limitation:** `worker-src 'self'` controls where the page
+may load a Worker **from**. Browser Workers loaded by a real URL do not
+automatically inherit the creating document's meta CSP. Therefore the
+document's `connect-src` and `script-src` must **not** be represented as
+restrictions on the Worker’s own fetches or evaluation behavior; doing that
+requires a `Content-Security-Policy` **response header on the Worker script**
+or a separately assessed worker isolation design. GitHub Pages does not offer
+this header control to this repository. The bundled compiler Worker loads
+trusted local assets, and the Scarp interpreter does not expose general
+JavaScript networking to user programs, but the missing worker response header
+remains an explicit defense-in-depth gap.
+
 Because the code runs in normal browser workers and JavaScript/WASM, the CSP
 does **not** cap WebAssembly linear memory or protect against browser engine
 vulnerabilities, logic errors, or hostile unbounded programs. Scarp budgets,
