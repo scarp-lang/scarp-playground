@@ -1,5 +1,6 @@
 /// <reference lib="webworker" />
-import type { RunRequest, RunResponse, RunResult } from './types';
+import type { RunRequest, RunResponse } from './types';
+import { decodeCompilerReply } from './protocol';
 
 type CompilerBridge = {
   default: () => Promise<unknown>;
@@ -23,7 +24,7 @@ self.addEventListener('message', async (event: MessageEvent<RunRequest>) => {
   const { id, workspace } = event.data;
   try {
     const compiler = await loadCompiler();
-    const result = JSON.parse(compiler.execute(JSON.stringify(workspace))) as RunResult;
+    const result = decodeCompilerReply(compiler.execute(JSON.stringify(workspace)));
     self.postMessage({ id, result } satisfies RunResponse);
   } catch (problem) {
     self.postMessage({

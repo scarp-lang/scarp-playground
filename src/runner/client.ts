@@ -1,5 +1,6 @@
 import { validateWorkspace, type Workspace } from '../workspace';
 import type { RunResponse, RunResult } from './types';
+import { decodeWorkerResult } from './protocol';
 
 const RUN_TIMEOUT_MS = 12_000;
 const cancelled: RunResult = {
@@ -50,8 +51,21 @@ export function runWorkspace(workspace: Workspace, signal?: AbortSignal): Promis
       });
     };
     worker.onmessage = (event: MessageEvent<RunResponse>) => {
-      if (event.data.id === id) complete(event.data.result);
+      if (event.data?.id === id) complete(decodeWorkerResult(event.data.result));
     };
-    worker.postMessage({ id, workspace });
+    worker.onmessageerror = () => complete({
+      ok: false, stdout: '', stderr: '',
+      error: 'The compiler worker sent a message the browser could not decode.',
+    });
+    // postMessage itself can fail, e.g. if the browser cannot clone the payload.
+    // Never leave a running Worker or unresolved promise in that case.
+    try {
+      worker.postMessage({ id, workspace });
+    } catch {
+      complete({
+        ok: false, stdout: '', stderr: '',
+        error: 'Unable to send the source workspace to the compiler worker.',
+      });
+    }
   });
 }

@@ -9,6 +9,8 @@ use wasm_bindgen::prelude::*;
 const MAX_FILES: usize = 12;
 const MAX_FILE_BYTES: usize = 64 * 1024;
 const MAX_TOTAL_BYTES: usize = 128 * 1024;
+// Even heavily escaped but valid 128 KiB source fits in this bound.
+const MAX_REQUEST_JSON_BYTES: usize = 1024 * 1024;
 
 #[derive(Deserialize)]
 struct Request {
@@ -21,6 +23,10 @@ fn error(message: impl Into<String>) -> String {
 }
 
 fn execute_request(json_source: &str) -> String {
+    // Cap the raw JSON *before* serde allocates a decoded workspace.
+    if json_source.len() > MAX_REQUEST_JSON_BYTES {
+        return error("The compiler request exceeds the 1 MiB JSON limit.");
+    }
     let request: Request = match serde_json::from_str(json_source) {
         Ok(value) => value,
         Err(_) => return error("Malformed playground request."),
@@ -124,6 +130,14 @@ mod tests {
             "files": files.iter().map(|(p, s)| ((*p).to_string(), (*s).to_string()))
                 .collect::<BTreeMap<_, _>>()
         }).to_string()
+    }
+
+    #[test]
+    fn rejects_large_raw_requests_before_deserialization() {
+        let oversized = " ".repeat(MAX_REQUEST_JSON_BYTES + 1);
+        let response: Value = serde_json::from_str(&execute_request(&oversized)).unwrap();
+        assert_eq!(response["ok"], false);
+        assert!(response["error"].as_str().unwrap().contains("1 MiB JSON limit"));
     }
 
     #[test]
