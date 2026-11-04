@@ -1,0 +1,10 @@
+{
+  "format": "scarp-playground-workspace",
+  "version": 1,
+  "workspace": {
+    "entry": "../escape.srp",
+    "files": {
+      "../escape.srp": "print(99);"
+    }
+  }
+}
