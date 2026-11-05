@@ -7,6 +7,9 @@ const ScarpEditor = lazy(() =>
 );
 import { examples } from './examples';
 import { checkWorkspace, runWorkspace } from './runner/client';
+import { editorPositionToByteOffset } from './navigation/coordinates';
+import { findDefinition } from './navigation/client';
+import { sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
 import type { RunResult } from './runner/types';
 import { makeShareUrl, MAX_FILES, sourceFromHash, validPath, type Workspace } from './workspace';
@@ -58,16 +61,27 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const executionScope = useRef(new ExecutionScope());
+  const definitionScope = useRef(new ExecutionScope());
+  const [navigationTrigger, setNavigationTrigger] = useState(0);
+  const [navigationTarget, setNavigationTarget] = useState<{
+    path: string; line: number; column: number; sequence: number;
+  } | null>(null);
   const files = Object.keys(workspace.files);
 
   function invalidateExecution() {
+    definitionScope.current.invalidate();
+    setNavigationTarget(null);
+    setNavigationTrigger(0);
     executionScope.current.invalidate();
     setRunning(false);
     setResult(null);
   }
 
   // Component teardown must also stop an in-flight browser worker.
-  useEffect(() => () => executionScope.current.invalidate(), []);
+  useEffect(() => () => {
+    executionScope.current.invalidate();
+    definitionScope.current.invalidate();
+  }, []);
 
 
   const run = useCallback(async (mode: 'run' | 'check' = 'run') => {
@@ -100,6 +114,60 @@ export function App() {
       });
     } finally {
       if (executionScope.current.finish(execution)) setRunning(false);
+    }
+  }, [workspace]);
+
+  const navigateToDefinition = useCallback(async (
+    path: string, line: number, column: number, source: string,
+  ) => {
+    // Do not navigate a snapshot that has not yet reached the authoritative
+    // React workspace; the editor never guesses source/byte coordinates.
+    if (workspace.files[path] !== source) {
+      setNotice('Source is still changing. Retry Go to Definition.');
+      return;
+    }
+    const offset = editorPositionToByteOffset(source, line, column);
+    if (offset === null) {
+      setNotice('Place the cursor on a valid Scarp symbol.');
+      return;
+    }
+    definitionScope.current.invalidate();
+    const lookup = definitionScope.current.start();
+    if (!lookup) return;
+    setNotice('Looking up definition using the Scarp compiler…');
+    try {
+      const response = await findDefinition(workspace, path, offset, lookup.controller.signal);
+      if (!definitionScope.current.isCurrent(lookup)) return;
+      if (!response.ok) {
+        if (response.diagnostic) {
+          setResult({ ok: false, stdout: '', stderr: '',
+            error: response.error, diagnostic: response.diagnostic });
+        }
+        setNotice(response.error || 'Definition lookup failed.');
+        return;
+      }
+      if (!response.target) {
+        setNotice('No source definition at the cursor (builtins have no source declaration).');
+        return;
+      }
+      const target = response.target;
+      if (!Object.hasOwn(workspace.files, target.path)) {
+        setNotice('Compiler returned a definition outside the virtual workspace.');
+        return;
+      }
+      const range = sourceLocationToEditorRange(workspace.files[target.path], target);
+      if (!range) {
+        setNotice('Compiler returned an invalid source position.');
+        return;
+      }
+      setActiveFile(target.path);
+      setNavigationTarget(previous => ({
+        path: target.path, line: range.startLineNumber, column: range.startColumn,
+        sequence: (previous?.sequence ?? 0) + 1,
+      }));
+      setNotice('Navigated to definition in ' + target.path + '.');
+    } finally {
+      definitionScope.current.finish(lookup);
     }
   }, [workspace]);
 
@@ -449,13 +517,17 @@ export function App() {
                   </div>
                 }
               >
-                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} />
+                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} navigationTarget={navigationTarget} navigationTrigger={navigationTrigger} />
               </Suspense>
             </div>
             <div className="editor-footer">
-              <span><span className="online-dot" />Scarp syntax</span>
+              <span><span className="online-dot" />Scarp syntax · F12: Go to Definition</span>
               <span>UTF-8 · {activeFile}</span>
               <div className="footer-controls">
+                <button type="button" onClick={() => setNavigationTrigger(previous => previous + 1)}
+                  title="Navigate to the source declaration under the editor cursor (F12)">
+                  Go to definition
+                </button>
                 <button type="button" onClick={() => {
                   invalidateExecution();
                   setWorkspace((previous) => ({ ...previous, entry: activeFile }));

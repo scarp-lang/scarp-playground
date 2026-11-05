@@ -43,9 +43,12 @@ interface Props {
   dark: boolean;
   diagnostic: CompilerDiagnostic | null | undefined;
   onChange: (path: string, source: string) => void;
+  onNavigate: (path: string, line: number, column: number, source: string) => void;
+  navigationTarget: { path: string; line: number; column: number; sequence: number } | null;
+  navigationTrigger: number;
 }
 
-export function ScarpEditor({ path, files, dark, diagnostic, onChange }: Props) {
+export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, navigationTarget, navigationTrigger }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
@@ -53,6 +56,9 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange }: Props) 
   const activePath = useRef(path);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const lastNavigationTrigger = useRef(navigationTrigger);
+  const onNavigateRef = useRef(onNavigate);
+  onNavigateRef.current = onNavigate;
 
   useEffect(() => {
     if (!container.current) return;
@@ -71,6 +77,13 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange }: Props) 
       fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
     });
     editor.current = instance;
+    // Compiler-backed definition lookup, never a Monaco regex or JS symbol guess.
+    instance.addCommand(monaco.KeyCode.F12, () => {
+      const position = instance.getPosition();
+      if (position) onNavigateRef.current(
+        activePath.current, position.lineNumber, position.column, instance.getValue(),
+      );
+    });
     const listener = instance.onDidChangeModelContent(() => {
       const currentFile = activePath.current;
       onChangeRef.current(currentFile, instance.getValue());
@@ -157,6 +170,24 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange }: Props) 
       ));
     }
   }, [diagnostic, files, path]);
+
+  useEffect(() => {
+    if (navigationTrigger === lastNavigationTrigger.current) return;
+    lastNavigationTrigger.current = navigationTrigger;
+    const instance = editor.current;
+    const position = instance?.getPosition();
+    if (instance && position) onNavigateRef.current(
+      activePath.current, position.lineNumber, position.column, instance.getValue(),
+    );
+  }, [navigationTrigger]);
+
+  useEffect(() => {
+    const instance = editor.current;
+    if (!instance || !navigationTarget || navigationTarget.path !== path) return;
+    instance.setPosition({ lineNumber: navigationTarget.line, column: navigationTarget.column });
+    instance.revealPositionInCenter({ lineNumber: navigationTarget.line, column: navigationTarget.column });
+    instance.focus();
+  }, [navigationTarget, path]);
 
   useEffect(() => {
     monaco.editor.setTheme(dark ? 'vs-dark' : 'vs');
