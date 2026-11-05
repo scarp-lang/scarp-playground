@@ -62,6 +62,7 @@ export function App() {
   const importFileRef = useRef<HTMLInputElement>(null);
   const executionScope = useRef(new ExecutionScope());
   const definitionScope = useRef(new ExecutionScope());
+  const [navigationTrigger, setNavigationTrigger] = useState(0);
   const [navigationTarget, setNavigationTarget] = useState<{
     path: string; line: number; column: number; sequence: number;
   } | null>(null);
@@ -70,6 +71,7 @@ export function App() {
   function invalidateExecution() {
     definitionScope.current.invalidate();
     setNavigationTarget(null);
+    setNavigationTrigger(0);
     executionScope.current.invalidate();
     setRunning(false);
     setResult(null);
@@ -515,13 +517,17 @@ export function App() {
                   </div>
                 }
               >
-                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} navigationTarget={navigationTarget} />
+                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} navigationTarget={navigationTarget} navigationTrigger={navigationTrigger} />
               </Suspense>
             </div>
             <div className="editor-footer">
               <span><span className="online-dot" />Scarp syntax · F12: Go to Definition</span>
               <span>UTF-8 · {activeFile}</span>
               <div className="footer-controls">
+                <button type="button" onClick={() => setNavigationTrigger(previous => previous + 1)}
+                  title="Navigate to the source declaration under the editor cursor (F12)">
+                  Go to definition
+                </button>
                 <button type="button" onClick={() => {
                   invalidateExecution();
                   setWorkspace((previous) => ({ ...previous, entry: activeFile }));

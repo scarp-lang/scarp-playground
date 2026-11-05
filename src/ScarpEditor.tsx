@@ -45,9 +45,10 @@ interface Props {
   onChange: (path: string, source: string) => void;
   onNavigate: (path: string, line: number, column: number, source: string) => void;
   navigationTarget: { path: string; line: number; column: number; sequence: number } | null;
+  navigationTrigger: number;
 }
 
-export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, navigationTarget }: Props) {
+export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, navigationTarget, navigationTrigger }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
@@ -55,6 +56,7 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
   const activePath = useRef(path);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const lastNavigationTrigger = useRef(navigationTrigger);
   const onNavigateRef = useRef(onNavigate);
   onNavigateRef.current = onNavigate;
 
@@ -168,6 +170,16 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       ));
     }
   }, [diagnostic, files, path]);
+
+  useEffect(() => {
+    if (navigationTrigger === lastNavigationTrigger.current) return;
+    lastNavigationTrigger.current = navigationTrigger;
+    const instance = editor.current;
+    const position = instance?.getPosition();
+    if (instance && position) onNavigateRef.current(
+      activePath.current, position.lineNumber, position.column, instance.getValue(),
+    );
+  }, [navigationTrigger]);
 
   useEffect(() => {
     const instance = editor.current;
