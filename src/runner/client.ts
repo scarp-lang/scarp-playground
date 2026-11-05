@@ -7,8 +7,8 @@ const cancelled: RunResult = {
   ok: false, stdout: '', stderr: '', error: 'Execution cancelled.',
 };
 
-/** Run in a disposable worker; abort terminates it instead of accepting stale output. */
-export function runWorkspace(workspace: Workspace, signal?: AbortSignal): Promise<RunResult> {
+/** Both modes use disposable workers; abort terminates stale validation and output. */
+function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?: AbortSignal): Promise<RunResult> {
   if (signal?.aborted) return Promise.resolve(cancelled);
   const problem = validateWorkspace(workspace);
   if (problem) {
@@ -72,7 +72,7 @@ export function runWorkspace(workspace: Workspace, signal?: AbortSignal): Promis
     // postMessage itself can fail, e.g. if the browser cannot clone the payload.
     // Never leave a running Worker or unresolved promise in that case.
     try {
-      worker.postMessage({ id, workspace });
+      worker.postMessage({ id, workspace, mode });
     } catch {
       complete({
         ok: false, stdout: '', stderr: '',
@@ -80,4 +80,14 @@ export function runWorkspace(workspace: Workspace, signal?: AbortSignal): Promis
       });
     }
   });
+}
+
+/** Execute real Scarp and return its captured stdout/stderr. */
+export function runWorkspace(workspace: Workspace, signal?: AbortSignal): Promise<RunResult> {
+  return evaluateWorkspace(workspace, 'run', signal);
+}
+
+/** Validate Scarp with identical budgets, without emitting program output. */
+export function checkWorkspace(workspace: Workspace, signal?: AbortSignal): Promise<RunResult> {
+  return evaluateWorkspace(workspace, 'check', signal);
 }

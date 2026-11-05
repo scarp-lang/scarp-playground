@@ -6,7 +6,7 @@ const ScarpEditor = lazy(() =>
   import('./ScarpEditor').then(({ ScarpEditor }) => ({ default: ScarpEditor })),
 );
 import { examples } from './examples';
-import { runWorkspace } from './runner/client';
+import { checkWorkspace, runWorkspace } from './runner/client';
 import { ExecutionScope } from './runner/execution-scope';
 import type { RunResult } from './runner/types';
 import { makeShareUrl, MAX_FILES, sourceFromHash, validPath, type Workspace } from './workspace';
@@ -53,6 +53,7 @@ export function App() {
   const [savingLocally, setSavingLocally] = useState(initial.savingLocally);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
+  const [operation, setOperation] = useState<'run' | 'check'>('run');
   const [result, setResult] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
@@ -69,16 +70,19 @@ export function App() {
   useEffect(() => () => executionScope.current.invalidate(), []);
 
 
-  const run = useCallback(async () => {
+  const run = useCallback(async (mode: 'run' | 'check' = 'run') => {
     // A synchronous guard also protects Ctrl+Enter from starting two Workers
     // before React has committed the next disabled-button render.
     const execution = executionScope.current.start();
     if (!execution) return;
     setRunning(true);
+    setOperation(mode);
     setResult(null);
     setNotice(null);
     try {
-      const response = await runWorkspace(workspace, execution.controller.signal);
+      const response = mode === 'check'
+        ? await checkWorkspace(workspace, execution.controller.signal)
+        : await runWorkspace(workspace, execution.controller.signal);
       if (!executionScope.current.isCurrent(execution)) return;
       setResult(response);
       // Open the originating virtual file only for the snapshot that ran.
@@ -378,9 +382,9 @@ export function App() {
           </div>
           <div className="sidebar-bottom">
             <div className="section-label">COMPATIBILITY</div>
-            <strong>Scarp v0.0.5-alpha.4</strong>
-            <p>Compiler source pinned to release commit 7914132. Code runs locally inside a disposable Web Worker.</p>
-            <a href="https://github.com/scarp-lang/scarp/releases/tag/v0.0.5-alpha.4" target="_blank" rel="noreferrer">Compiler release notes ↗</a>
+            <strong>Scarp v0.0.6-alpha.1</strong>
+            <p>Compiler source pinned to release commit aa329a2. Code runs locally inside a disposable Web Worker.</p>
+            <a href="https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.1" target="_blank" rel="noreferrer">Compiler release notes ↗</a>
           </div>
         </aside>
 
@@ -405,9 +409,12 @@ export function App() {
               <button type="button" className="button-secondary" onClick={() => importFileRef.current?.click()}>Import project</button>
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
               <button type="button" className="button-secondary" onClick={() => void share()}>Share ↗</button>
+              <button type="button" className="button-secondary" onClick={() => void run('check')} disabled={running}>
+                Check code
+              </button>
               {running ? (
                 <button type="button" className="button-secondary" onClick={invalidateExecution}>
-                  Stop run
+                  Stop {operation === 'check' ? 'check' : 'run'}
                 </button>
               ) : (
                 <button type="button" className="button-primary" onClick={() => void run()}>
@@ -460,17 +467,18 @@ export function App() {
 
           <section className="console-card" aria-label="Program output">
             <div className="console-toolbar">
-              <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">Real compiler execution</span></div>
+              <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">{operation === 'check' ? 'Compiler validation' : 'Real compiler execution'}</span></div>
               <div className="console-right">
                 {result && <span className={'result-status ' + (result.ok ? 'success' : 'failure')}>{result.ok ? '● Success' : '● Error'}</span>}
                 <button type="button" onClick={invalidateExecution}>Clear</button>
               </div>
             </div>
             <div className="terminal-output" aria-live="polite">
-              {running && <p className="terminal-muted">Loading compiler and executing program…</p>}
+              {running && <p className="terminal-muted">{operation === 'check' ? 'Checking Scarp with the real compiler…' : 'Loading compiler and executing program…'}</p>}
               {!running && !result && <p className="terminal-muted">$ Select an example or write code, then click Run code.</p>}
               {result && (
                 <>
+                  {result.ok && operation === 'check' && <p className="terminal-muted">Checks passed. No program output was emitted.</p>}
                   {result.stdout && <pre className="stdout">{result.stdout}</pre>}
                   {result.stderr && <pre className="stderr">{result.stderr}</pre>}
                   {!result.ok && (

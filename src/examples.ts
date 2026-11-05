@@ -23,6 +23,14 @@ export const examples: Example[] = [
     },
   },
   {
+    title: 'Root mean square',
+    description: 'Numerical RMS from Scarp alpha.6',
+    entry: 'main.srp',
+    files: {
+      'main.srp': '// Root mean square is available in Scarp v0.0.6-alpha.1\\nprint(rms([2.0, -2.0]));\\n',
+    },
+  },
+  {
     title: 'Import a module',
     description: 'Two real .srp source files',
     entry: 'main.srp',

@@ -20,15 +20,17 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.5-alpha.4** |
-| Pinned compiler revision | `79141329176f5dce51457e90a6652902f6432135` |
+| Scarp compiler | **v0.0.6-alpha.1** |
+| Pinned compiler revision | `aa329a22cf2bf92d2c9814a26ff9c8b67a72e6e8` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
 | Backend execution service | **None** |
 
-The pinned Scarp alpha.4 release introduces offline `Scarp.project` CLI
-create/launch/verify features. **Those host-filesystem commands are not available
+The published Scarp alpha.6 introduces static source navigation and numerical
+RMS. This preview supports the new numerical intrinsic but does not yet expose
+the navigation index inside Monaco. The earlier alpha.4 introduced offline
+`Scarp.project` CLI create/launch/verify features. **Those host-filesystem commands are not available
 inside the Playground**: the browser still runs Scarp modules exclusively
 through `MemorySourceLoader` without OS or server filesystem access.
 
@@ -80,6 +82,12 @@ load failure — it never fakes a successful program result.
   No code is uploaded. Browser storage is not encrypted; do not store secrets.
   Shared URLs temporarily override local saved state without destroying it.
 - Actual interpreter stdout, stderr and schema-1 compiler diagnostics.
+- **Check code** validates the entire virtual module graph and evaluates selected
+  paths under the same work, print, call, capture and allocation budgets as Run,
+  but never returns program stdout or stderr. The real compiler reports source
+  diagnostics, including imported-module locations. Check is not a syntax-only
+  parser or an external remote service.
+- Scarp v0.0.6-alpha.1 numerical RMS example, executed in the same pinned WASM runtime.
 - Ready-to-load source examples from the compiler and embedding documentation.
 - Ctrl/Command+Enter execution, source-size caps and 12-second Worker timeout.
 - **Revision-scoped execution:** Changing source, entrypoint, examples or imported
