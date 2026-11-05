@@ -1,7 +1,12 @@
 # Official Scarp compiler integration audit — 2026-11-04
 
-This assessment applies to the **live development preview candidate**, not
-the immutable Playground `v0.0.1` alpha archive.
+> Historical assessment dated November 4, 2026, for the **alpha.4 upgrade
+> candidate**, not the current live Playground. As of November 5, the current
+> compiler revision is **v0.0.6-alpha.1** at
+> `aa329a22cf2bf92d2c9814a26ff9c8b67a72e6e8`. Refer to
+> [alpha.6 integration](compiler-alpha6-check.md) and
+> [Go to Definition](go-to-definition.md) for current capabilities.
+> This document preserves the earlier v0.0.5-alpha.4 review.
 
 ## Exact upstream release and source
 
