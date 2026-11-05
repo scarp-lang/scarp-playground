@@ -88,6 +88,10 @@ load failure — it never fakes a successful program result.
   diagnostics, including imported-module locations. Check is not a syntax-only
   parser or an external remote service.
 - Scarp v0.0.6-alpha.1 numerical RMS example, executed in the same pinned WASM runtime.
+- **Go to Definition (F12)** uses the official Rust compiler's bounded, nonexecuting
+  symbol index. Navigates across virtual .srp modules, preserves editor undo
+  history, and translates Monaco UTF-16 cursor coordinates to Scarp's UTF-8
+  offsets and Unicode-scalar source positions. Builtins have no source location.
 - Ready-to-load source examples from the compiler and embedding documentation.
 - Ctrl/Command+Enter execution, source-size caps and 12-second Worker timeout.
 - **Revision-scoped execution:** Changing source, entrypoint, examples or imported

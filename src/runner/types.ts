@@ -32,3 +32,5 @@ export type RunResult = {
 
 export type RunRequest = { id: number; workspace: Workspace; mode: 'run' | 'check' };
 export type RunResponse = { id: number; result: RunResult };
+export type DefinitionRequest = { id: number; workspace: Workspace; mode: 'definition'; path: string; offset: number };
+export type DefinitionResponse = { id: number; definition: import('../navigation/protocol').DefinitionResult };
