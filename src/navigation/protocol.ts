@@ -24,7 +24,7 @@ const record = (value: unknown): value is Record<string, unknown> =>
 
 function position(value: unknown): value is DiagnosticPosition {
   return record(value) && Number.isSafeInteger(value.line) &&
-    Number(value.line) >= 1 && Number.valueOf(value.line) <= 65537 &&
+    Number(value.line) >= 1 && Number(value.line) <= 65537 &&
     Number.isSafeInteger(value.column) && Number(value.column) >= 1 &&
     Number(value.column) <= 65537;
 }
@@ -40,7 +40,7 @@ export function validatedDefinitionResult(value: unknown): DefinitionResult {
     return { ok: false, error: decoded.error, diagnostic: decoded.diagnostic };
   }
   if (value.target === null) return { ok: true, target: null };
-  if (!record(value.target) || !validPath(value.target.path) ||
+  if (!record(value.target) || typeof value.target.path !== 'string' || !validPath(value.target.path) ||
       !position(value.target.start) || !position(value.target.end)) return errorResult();
   const target = value.target;
   if (Number(target.end.line) < Number(target.start.line) ||
