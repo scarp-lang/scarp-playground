@@ -26,11 +26,12 @@ export function findDefinition(
       return;
     }
     let done = false;
-    let deadline: ReturnType<typeof setTimeout> | undefined;
+    const deadline = setTimeout(() =>
+      complete(failed('Definition lookup exceeded the 12-second browser limit.')), TIMEOUT_MS);
     const complete = (value: DefinitionResult) => {
       if (done) return;
       done = true;
-      if (deadline !== undefined) clearTimeout(deadline);
+      clearTimeout(deadline);
       signal?.removeEventListener('abort', onAbort);
       worker.terminate();
       resolve(value);
@@ -41,8 +42,6 @@ export function findDefinition(
       complete(failed('Navigation cancelled.'));
       return;
     }
-    deadline = setTimeout(() =>
-      complete(failed('Definition lookup exceeded the 12-second browser limit.')), TIMEOUT_MS);
     worker.onerror = (event) => {
       event.preventDefault();
       complete(failed('The Scarp navigation worker failed to load or crashed.'));
