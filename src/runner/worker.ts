@@ -5,6 +5,7 @@ import { decodeCompilerReply } from './protocol';
 type CompilerBridge = {
   default: () => Promise<unknown>;
   execute: (payload: string) => string;
+  check: (payload: string) => string;
 };
 
 let loadPromise: Promise<CompilerBridge> | undefined;
@@ -21,10 +22,13 @@ async function loadCompiler(): Promise<CompilerBridge> {
 }
 
 self.addEventListener('message', async (event: MessageEvent<RunRequest>) => {
-  const { id, workspace } = event.data;
+  const { id, workspace, mode } = event.data;
   try {
     const compiler = await loadCompiler();
-    const result = decodeCompilerReply(compiler.execute(JSON.stringify(workspace)));
+    const result = decodeCompilerReply(
+      mode === 'check' ? compiler.check(JSON.stringify(workspace)) :
+        compiler.execute(JSON.stringify(workspace)),
+    );
     self.postMessage({ id, result } satisfies RunResponse);
   } catch (problem) {
     self.postMessage({

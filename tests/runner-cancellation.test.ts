@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { runWorkspace } from '../src/runner/client';
+import { checkWorkspace, runWorkspace } from '../src/runner/client';
 import type { RunResponse } from '../src/runner/types';
 
 const workspace = { entry: 'main.srp', files: { 'main.srp': 'print("hello");' } };
@@ -40,6 +40,25 @@ afterEach(() => {
 });
 
 describe('disposable compiler worker cancellation', () => {
+  it('routes checking through the isolated worker without mixing it with running', async () => {
+    const pending = checkWorkspace(workspace);
+    const worker = FakeWorker.instances[0];
+    expect(worker.posted[0]).toEqual({ id: 1, workspace, mode: 'check' });
+    worker.send({ id: 1, result: { ok: true, stdout: '', stderr: '' } });
+    expect(await pending).toEqual({ ok: true, stdout: '', stderr: '' });
+    expect(worker.terminated).toBe(1);
+  });
+
+  it('aborts an in-flight check and discards its late response', async () => {
+    const controller = new AbortController();
+    const pending = checkWorkspace(workspace, controller.signal);
+    const worker = FakeWorker.instances[0];
+    controller.abort();
+    expect((await pending).error).toMatch(/cancelled/);
+    worker.send({ id: 1, result: { ok: true, stdout: 'stale\n', stderr: '' } });
+    expect(worker.terminated).toBe(1);
+  });
+
   it('terminates immediately on source invalidation and ignores late worker responses', async () => {
     const controller = new AbortController();
     const pending = runWorkspace(workspace, controller.signal);
@@ -50,7 +69,7 @@ describe('disposable compiler worker cancellation', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/cancelled/);
     expect(worker.terminated).toBe(1);
-    worker.send({ id: 1, result: { ok: true, stdout: 'stale\\n', stderr: '' } });
+    worker.send({ id: 1, result: { ok: true, stdout: 'stale\n', stderr: '' } });
     expect(await pending).toEqual(result);
     expect(worker.terminated).toBe(1);
   });

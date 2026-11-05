@@ -30,5 +30,5 @@ export type RunResult = {
   diagnostic?: CompilerDiagnostic | null;
 };
 
-export type RunRequest = { id: number; workspace: Workspace };
+export type RunRequest = { id: number; workspace: Workspace; mode: 'run' | 'check' };
 export type RunResponse = { id: number; result: RunResult };

@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published alpha.4.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.1.
 use scarp::modules::{self, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions};
 use serde::Deserialize;
@@ -23,6 +23,14 @@ fn error(message: impl Into<String>) -> String {
 }
 
 fn execute_request(json_source: &str) -> String {
+    process_request(json_source, false)
+}
+
+fn check_request(json_source: &str) -> String {
+    process_request(json_source, true)
+}
+
+fn process_request(json_source: &str, check_only: bool) -> String {
     // Cap the raw JSON *before* serde allocates a decoded workspace.
     if json_source.len() > MAX_REQUEST_JSON_BYTES {
         return error("The compiler request exceeds the 1 MiB JSON limit.");
@@ -88,7 +96,13 @@ fn execute_request(json_source: &str) -> String {
         max_vector_bytes: 2 * 1024 * 1024,
         max_text_bytes: 2 * 1024 * 1024,
     };
-    let result = program.execute(&mut stdout, &mut stderr, options);
+    // Both modes use the same compiler, graph and execution budgets. Checking
+    // evaluates the selected program paths but suppresses all print effects.
+    let result = if check_only {
+        program.check(options).map_err(ModuleRunError::Diagnostic)
+    } else {
+        program.execute(&mut stdout, &mut stderr, options)
+    };
     match result {
         Ok(()) => json!({
             "ok": true,
@@ -119,6 +133,13 @@ fn execute_request(json_source: &str) -> String {
 #[wasm_bindgen]
 pub fn execute(request_json: &str) -> String {
     execute_request(request_json)
+}
+
+/// Validate an isolated module graph with the same interpreter budgets,
+/// without returning any program stdout or stderr.
+#[wasm_bindgen]
+pub fn check(request_json: &str) -> String {
+    check_request(request_json)
 }
 
 #[cfg(test)]
@@ -315,6 +336,45 @@ mod tests {
             assert_eq!(next["stdout"], "recovered\n");
             assert_eq!(next["stderr"], "");
         }
+    }
+
+    #[test]
+    fn check_validates_without_replaying_stdout_or_stderr() {
+        let input = request(&[("main.srp", "print(\"silent\"); eprint(\"also silent\");")]);
+        let checked: Value = serde_json::from_str(&check_request(&input)).unwrap();
+        assert_eq!(checked["ok"], true);
+        assert_eq!(checked["stdout"], "");
+        assert_eq!(checked["stderr"], "");
+        let executed: Value = serde_json::from_str(&execute_request(&input)).unwrap();
+        assert_eq!(executed["stdout"], "silent\n");
+        assert_eq!(executed["stderr"], "also silent\n");
+    }
+
+    #[test]
+    fn check_rejects_invalid_imports_and_preserves_real_locations() {
+        let response: Value = serde_json::from_str(&check_request(&request(&[
+            ("main.srp", "import \"math.srp\" as math; print(math.twice(4));"),
+            ("math.srp", "pub pure funcra twice(n: integer) -> integer { return missing; }"),
+        ]))).unwrap();
+        assert_atomic_failure(&response);
+        assert_eq!(response["diagnostic"]["code"], "E0010");
+        assert_eq!(response["diagnostic"]["primary"]["path"], "math.srp");
+    }
+
+    #[test]
+    fn check_enforces_runtime_budgets_without_output() {
+        let response: Value = serde_json::from_str(&check_request(&request(&[
+            ("main.srp", "repeat 1200 as index { print(\"silent\"); }"),
+        ]))).unwrap();
+        assert_atomic_failure(&response);
+        assert_eq!(response["diagnostic"]["code"], "E0018");
+    }
+
+    #[test]
+    fn executes_rms_added_in_scarp_alpha_six() {
+        let response = stressed("print(rms([2.0, -2.0]));");
+        assert_eq!(response["ok"], true, "{response}");
+        assert_eq!(response["stdout"], "2.0\n");
     }
 
     #[test]

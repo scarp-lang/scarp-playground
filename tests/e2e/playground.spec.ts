@@ -7,13 +7,40 @@ test('boots the real interpreter and executes the official hello sample', async 
   await expect(page.getByRole('heading', { name: 'Code. Run. Learn.' })).toBeVisible();
   await expect(page.getByText('Development preview', { exact: true })).toBeVisible();
   // The embedded compiler is pinned independently of Playground's v0.0.1 tag.
-  await expect(page.getByText('Scarp v0.0.5-alpha.4', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scarp v0.0.6-alpha.1', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /Compiler release notes/ }))
-    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.5-alpha.4');
+    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.1');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
   await expect(page.locator('.result-status.success')).toBeVisible();
   await expect(page.locator('.error-panel')).toHaveCount(0);
+});
+
+test('checks code using the real compiler without displaying print or eprint output', async ({ page }) => {
+  await page.goto('./#code=' + encodeURIComponent('print("should remain silent"); eprint("also silent");'));
+  await page.getByRole('button', { name: 'Check code' }).click();
+  await expect(page.locator('.terminal-output')).toContainText('Checks passed.', { timeout: 30_000 });
+  await expect(page.locator('.stdout')).toHaveCount(0);
+  await expect(page.locator('.stderr')).toHaveCount(0);
+  await expect(page.locator('.result-status.success')).toBeVisible();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('should remain silent\n', { timeout: 30_000 });
+  await expect(page.locator('.stderr')).toHaveText('also silent\n');
+});
+
+test('check returns real diagnostics without publishing partial output', async ({ page }) => {
+  await page.goto('./#code=' + encodeURIComponent('print("before"); print(missing);'));
+  await page.getByRole('button', { name: 'Check code' }).click();
+  await expect(page.locator('.error-title')).toContainText('E0010', { timeout: 30_000 });
+  await expect(page.locator('.stdout')).toHaveCount(0);
+  await expect(page.locator('.result-status.failure')).toBeVisible();
+});
+
+test('compiler alpha.6 numerical RMS works in a real browser worker', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Root mean square/ }).click();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('2.0\n', { timeout: 30_000 });
 });
 
 test('imports and executes another .srp source file in the real module loader', async ({ page }) => {
