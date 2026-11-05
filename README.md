@@ -27,12 +27,15 @@ site; no application server evaluates user source.
 | Native compilation | **Not supported** by this preview |
 | Backend execution service | **None** |
 
-The published Scarp alpha.6 introduces static source navigation and numerical
-RMS. This preview supports the new numerical intrinsic but does not yet expose
-the navigation index inside Monaco. The earlier alpha.4 introduced offline
-`Scarp.project` CLI create/launch/verify features. **Those host-filesystem commands are not available
-inside the Playground**: the browser still runs Scarp modules exclusively
-through `MemorySourceLoader` without OS or server filesystem access.
+Scarp alpha.6 introduces a numerical RMS intrinsic and compiler-backed source
+navigation. The current development preview exposes **Go to definition** through
+F12 and an accessible button, using the real Rust compiler's bounded symbol
+index. It does not implement a full LSP, rename or find-references UI.
+
+The earlier alpha.4 introduced offline `Scarp.project` CLI create/launch/verify
+features. **Those host-filesystem commands are not available inside the
+Playground:** the browser still runs Scarp modules exclusively through
+`MemorySourceLoader` without OS or server filesystem access.
 
 Do not change the compiler Git revision without rerunning the real interpreter
 tests and updating this compatibility table. The original Playground `v0.0.1` alpha archive embeds compiler alpha.3,
@@ -88,7 +91,7 @@ load failure — it never fakes a successful program result.
   diagnostics, including imported-module locations. Check is not a syntax-only
   parser or an external remote service.
 - Scarp v0.0.6-alpha.1 numerical RMS example, executed in the same pinned WASM runtime.
-- **Go to Definition (F12)** uses the official Rust compiler's bounded, nonexecuting
+- **Go to Definition (F12 and toolbar button)** uses the official Rust compiler's bounded, nonexecuting
   symbol index. Navigates across virtual .srp modules, preserves editor undo
   history, and translates Monaco UTF-16 cursor coordinates to Scarp's UTF-8
   offsets and Unicode-scalar source positions. Builtins have no source location.
@@ -163,8 +166,11 @@ does not authorize a Playground stable release.
 For architecture and next milestones see [docs/architecture.md](docs/architecture.md).
 For the portable source-only JSON format and its import threat model see
 [docs/portable-workspaces.md](docs/portable-workspaces.md).
-See [compiler integration audit](docs/compiler-integration.md) for the exact
-pinned compiler, alpha.4 compatibility assessment and source-location contract.
+See the [current alpha.6 compiler audit](docs/compiler-alpha6-check.md)
+and [Go to Definition contract](docs/go-to-definition.md) for the precise
+pin, safety constraints and location-mapping protocol. The
+[alpha.4 integration audit](docs/compiler-integration.md) is retained as a
+historical record; its compiler pin does not describe the current live preview.
 A future Scarp prerelease does not automatically update Playground's engine.
 
 ## Community

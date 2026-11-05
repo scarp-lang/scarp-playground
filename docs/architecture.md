@@ -1,5 +1,14 @@
 # Architecture and integration assessment — 2026-11-03
 
+> Historical architecture baseline. For the current live preview as of
+> November 5, 2026, the official Scarp compiler is pinned to
+> **v0.0.6-alpha.1** at `aa329a22cf2bf92d2c9814a26ff9c8b67a72e6e8`.
+> The browser now supports **Check code**, **RMS**, and compiler-backed
+> **Go to Definition** (F12 and toolbar button). For the current feature
+> contracts and resource budgets see [alpha.6 integration](compiler-alpha6-check.md)
+> and [source navigation](go-to-definition.md). The historical figures and
+> alpha.4 baseline below remain accurate for their dated revisions.
+
 ## What was inspected
 
 - `scarp-lang/scarp-playground`: initially only `.gitignore` and Apache-2.0 license.
