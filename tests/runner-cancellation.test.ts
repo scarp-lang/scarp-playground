@@ -55,7 +55,7 @@ describe('disposable compiler worker cancellation', () => {
     const worker = FakeWorker.instances[0];
     controller.abort();
     expect((await pending).error).toMatch(/cancelled/);
-    worker.send({ id: 1, result: { ok: true, stdout: 'stale\\n', stderr: '' } });
+    worker.send({ id: 1, result: { ok: true, stdout: 'stale\n', stderr: '' } });
     expect(worker.terminated).toBe(1);
   });
 
@@ -69,7 +69,7 @@ describe('disposable compiler worker cancellation', () => {
     expect(result.ok).toBe(false);
     expect(result.error).toMatch(/cancelled/);
     expect(worker.terminated).toBe(1);
-    worker.send({ id: 1, result: { ok: true, stdout: 'stale\\n', stderr: '' } });
+    worker.send({ id: 1, result: { ok: true, stdout: 'stale\n', stderr: '' } });
     expect(await pending).toEqual(result);
     expect(worker.terminated).toBe(1);
   });

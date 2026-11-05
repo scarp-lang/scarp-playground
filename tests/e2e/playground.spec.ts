@@ -24,8 +24,8 @@ test('checks code using the real compiler without displaying print or eprint out
   await expect(page.locator('.stderr')).toHaveCount(0);
   await expect(page.locator('.result-status.success')).toBeVisible();
   await page.getByRole('button', { name: 'Run code' }).click();
-  await expect(page.locator('.stdout')).toHaveText('should remain silent\\n', { timeout: 30_000 });
-  await expect(page.locator('.stderr')).toHaveText('also silent\\n');
+  await expect(page.locator('.stdout')).toHaveText('should remain silent\n', { timeout: 30_000 });
+  await expect(page.locator('.stderr')).toHaveText('also silent\n');
 });
 
 test('check returns real diagnostics without publishing partial output', async ({ page }) => {
@@ -40,7 +40,7 @@ test('compiler alpha.6 numerical RMS works in a real browser worker', async ({ p
   await page.goto('./');
   await page.getByRole('button', { name: /Root mean square/ }).click();
   await page.getByRole('button', { name: 'Run code' }).click();
-  await expect(page.locator('.stdout')).toHaveText('2.0\\n', { timeout: 30_000 });
+  await expect(page.locator('.stdout')).toHaveText('2.0\n', { timeout: 30_000 });
 });
 
 test('imports and executes another .srp source file in the real module loader', async ({ page }) => {

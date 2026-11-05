@@ -346,8 +346,8 @@ mod tests {
         assert_eq!(checked["stdout"], "");
         assert_eq!(checked["stderr"], "");
         let executed: Value = serde_json::from_str(&execute_request(&input)).unwrap();
-        assert_eq!(executed["stdout"], "silent\\n");
-        assert_eq!(executed["stderr"], "also silent\\n");
+        assert_eq!(executed["stdout"], "silent\n");
+        assert_eq!(executed["stderr"], "also silent\n");
     }
 
     #[test]
@@ -374,7 +374,7 @@ mod tests {
     fn executes_rms_added_in_scarp_alpha_six() {
         let response = stressed("print(rms([2.0, -2.0]));");
         assert_eq!(response["ok"], true, "{response}");
-        assert_eq!(response["stdout"], "2.0\\n");
+        assert_eq!(response["stdout"], "2.0\n");
     }
 
     #[test]
