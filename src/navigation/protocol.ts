@@ -40,9 +40,10 @@ export function validatedDefinitionResult(value: unknown): DefinitionResult {
     return { ok: false, error: decoded.error, diagnostic: decoded.diagnostic };
   }
   if (value.target === null) return { ok: true, target: null };
-  if (!record(value.target) || typeof value.target.path !== 'string' || !validPath(value.target.path) ||
-      !position(value.target.start) || !position(value.target.end)) return errorResult();
   const target = value.target;
+  // Narrow each unknown property on one stable local record before reading it.
+  if (!record(target) || typeof target.path !== 'string' || !validPath(target.path) ||
+      !position(target.start) || !position(target.end)) return errorResult();
   if (Number(target.end.line) < Number(target.start.line) ||
       (target.end.line === target.start.line &&
        Number(target.end.column) < Number(target.start.column))) return errorResult();
