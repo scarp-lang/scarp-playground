@@ -1,5 +1,5 @@
 //! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.1.
-use scarp::modules::{self, MemorySourceLoader, ModuleLimits, ModuleRunError};
+use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions};
 use serde::Deserialize;
 use serde_json::{json, Value};
@@ -18,8 +18,128 @@ struct Request {
     files: BTreeMap<String, String>,
 }
 
+#[derive(Deserialize)]
+struct DefinitionRequest {
+    entry: String,
+    files: BTreeMap<String, String>,
+    path: String,
+    offset: usize,
+}
+
 fn error(message: impl Into<String>) -> String {
     json!({ "ok": false, "stdout": "", "stderr": "", "error": message.into() }).to_string()
+}
+
+
+fn module_limits() -> ModuleLimits {
+    ModuleLimits {
+        max_files: MAX_FILES,
+        max_depth: 8,
+        max_file_bytes: MAX_FILE_BYTES,
+        max_total_bytes: MAX_TOTAL_BYTES,
+        max_imports: 64,
+        max_expansion_bytes: 1024 * 1024,
+    }
+}
+
+/// The navigator and executor consume the exact same validated virtual workspace.
+fn load_workspace(request: Request) -> Result<(String, MemorySourceLoader), String> {
+    if request.files.is_empty() || request.files.len() > MAX_FILES {
+        return Err("The playground accepts between 1 and 12 source files.".into());
+    }
+    if !request.files.contains_key(&request.entry) {
+        return Err("The selected entrypoint must exist in the workspace.".into());
+    }
+    let mut loader = MemorySourceLoader::new();
+    let mut size = 0_usize;
+    for (path, source) in request.files {
+        if !path.ends_with(".srp") || path.len() > 128 || source.len() > MAX_FILE_BYTES {
+            return Err("Invalid file name or a source exceeds the 64 KiB limit.".into());
+        }
+        size += source.len();
+        if size > MAX_TOTAL_BYTES {
+            return Err("The combined project sources exceed 128 KiB.".into());
+        }
+        loader.insert(&path, source).map_err(|problem| problem.to_string())?;
+    }
+    Ok((request.entry, loader))
+}
+
+fn compiler_error(problem: modules::ModuleDiagnostic) -> String {
+    let mut encoded = Vec::new();
+    let diagnostic = if problem.write_json(&mut encoded).is_ok() {
+        serde_json::from_slice::<Value>(&encoded).ok()
+    } else {
+        None
+    };
+    json!({
+        "ok": false, "stdout": "", "stderr": "",
+        "error": problem.to_string(), "diagnostic": diagnostic
+    }).to_string()
+}
+
+/// Build an opt-in static compiler index; never execute runtime statements.
+fn definition_request(json_source: &str) -> String {
+    if json_source.len() > MAX_REQUEST_JSON_BYTES {
+        return error("The compiler request exceeds the 1 MiB JSON limit.");
+    }
+    let request: DefinitionRequest = match serde_json::from_str(json_source) {
+        Ok(value) => value,
+        Err(_) => return error("Malformed definition request."),
+    };
+    let selected_source = match request.files.get(&request.path) {
+        Some(source) if request.offset <= source.len() &&
+            source.is_char_boundary(request.offset) => source,
+        _ => return error("Invalid navigation source or UTF-8 byte offset."),
+    };
+    // An out-of-token offset (including EOF) is a successful 'no definition'
+    // result, but invalid source paths and non-character boundaries are rejected.
+    if selected_source.len() > MAX_FILE_BYTES {
+        return error("Invalid navigation source or UTF-8 byte offset.");
+    }
+    let path = request.path.clone();
+    let (entry, loader) = match load_workspace(Request {
+        entry: request.entry,
+        files: request.files,
+    }) {
+        Ok(result) => result,
+        Err(problem) => return error(problem),
+    };
+    let limits = IndexLimits {
+        max_symbols: 4096,
+        max_references: 16_384,
+        max_name_bytes: 256 * 1024,
+        max_work: 100_000,
+    };
+    let indexed = match modules::compile_indexed_with_loader(
+        &entry, &loader, module_limits(), limits,
+    ) {
+        Ok(program) => program,
+        Err(problem) => return compiler_error(problem),
+    };
+    let index = indexed.index();
+    let Some(source_id) = index.sources().files().iter().position(|file| file.name == path) else {
+        // A virtual but unreachable .srp file is not in the compiled import graph.
+        return json!({ "ok": true, "target": null }).to_string();
+    };
+    let Some(symbol) = index.goto_definition(source_id, request.offset) else {
+        return json!({ "ok": true, "target": null }).to_string();
+    };
+    let Some(location) = symbol.location else {
+        // Never invent definition locations for builtins or implicit values.
+        return json!({ "ok": true, "target": null }).to_string();
+    };
+    let Some(file) = index.sources().files().get(location.source) else {
+        return error("Invalid compiler source location.");
+    };
+    json!({
+        "ok": true,
+        "target": {
+            "path": file.name,
+            "start": { "line": location.start.line, "column": location.start.column },
+            "end": { "line": location.end.line, "column": location.end.column }
+        }
+    }).to_string()
 }
 
 fn execute_request(json_source: &str) -> String {
@@ -39,35 +159,12 @@ fn process_request(json_source: &str, check_only: bool) -> String {
         Ok(value) => value,
         Err(_) => return error("Malformed playground request."),
     };
-    if request.files.is_empty() || request.files.len() > MAX_FILES {
-        return error("The playground accepts between 1 and 12 source files.");
-    }
-    if !request.files.contains_key(&request.entry) {
-        return error("The selected entrypoint must exist in the workspace.");
-    }
-    let mut loader = MemorySourceLoader::new();
-    let mut size = 0_usize;
-    for (path, source) in request.files {
-        if !path.ends_with(".srp") || path.len() > 128 || source.len() > MAX_FILE_BYTES {
-            return error("Invalid file name or a source exceeds the 64 KiB limit.");
-        }
-        size += source.len();
-        if size > MAX_TOTAL_BYTES {
-            return error("The combined project sources exceed 128 KiB.");
-        }
-        if let Err(problem) = loader.insert(&path, source) {
-            return error(problem.to_string());
-        }
-    }
-    let limits = ModuleLimits {
-        max_files: MAX_FILES,
-        max_depth: 8,
-        max_file_bytes: MAX_FILE_BYTES,
-        max_total_bytes: MAX_TOTAL_BYTES,
-        max_imports: 64,
-        max_expansion_bytes: 1024 * 1024,
+    let (entry, loader) = match load_workspace(request) {
+        Ok(result) => result,
+        Err(problem) => return error(problem),
     };
-    let program = match modules::compile_with_loader(&request.entry, &loader, limits) {
+    let limits = module_limits();
+    let program = match modules::compile_with_loader(&entry, &loader, limits) {
         Ok(program) => program,
         Err(problem) => {
             let mut encoded = Vec::new();
@@ -140,6 +237,13 @@ pub fn execute(request_json: &str) -> String {
 #[wasm_bindgen]
 pub fn check(request_json: &str) -> String {
     check_request(request_json)
+}
+
+/// Resolve a source token to its compiler-owned declaration (not a JS guess).
+/// Source coordinates are file-local UTF-8 byte offsets, not UTF-16 columns.
+#[wasm_bindgen]
+pub fn definition(request_json: &str) -> String {
+    definition_request(request_json)
 }
 
 #[cfg(test)]
@@ -375,6 +479,83 @@ mod tests {
         let response = stressed("print(rms([2.0, -2.0]));");
         assert_eq!(response["ok"], true, "{response}");
         assert_eq!(response["stdout"], "2.0\n");
+    }
+
+
+    fn definition_test(files: &[(&str, &str)], path: &str, offset: usize) -> Value {
+        let input = request(files);
+        let mut request: Value = serde_json::from_str(&input).unwrap();
+        request["path"] = json!(path);
+        request["offset"] = json!(offset);
+        serde_json::from_str(&definition_request(&request.to_string())).unwrap()
+    }
+
+    #[test]
+    fn definition_uses_the_real_cross_module_index_without_execution() {
+        let main = "import \"lib/math.srp\" as math; print(math.twice(21));";
+        let module = "pub pure funcra twice(n: integer) -> integer { return n * 2; }";
+        let offset = main.find("twice(21)").unwrap();
+        let result = definition_test(
+            &[("main.srp", main), ("lib/math.srp", module)],
+            "main.srp", offset,
+        );
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["target"]["path"], "lib/math.srp");
+        assert_eq!(result["target"]["start"]["line"], 1);
+        assert!(result["target"]["start"]["column"].as_u64().unwrap() > 1);
+    }
+
+    #[test]
+    fn definition_handles_missing_tokens_and_unreachable_files_without_running() {
+        let main = "bind value = 3; print(value); print(1 / 0);";
+        let empty = definition_test(
+            &[("main.srp", main)], "main.srp", main.len(),
+        );
+        assert_eq!(empty["ok"], true, "{empty}");
+        assert_eq!(empty["target"], Value::Null);
+        let unrelated = definition_test(
+            &[("main.srp", main), ("hidden.srp", "bind x = 1;")],
+            "hidden.srp", 5,
+        );
+        assert_eq!(unrelated["ok"], true, "{unrelated}");
+        assert_eq!(unrelated["target"], Value::Null);
+    }
+
+    #[test]
+    fn definition_respects_unicode_offsets_and_rejects_non_boundaries() {
+        let main = "print(\"😀\"); bind value = 3; print(value);";
+        let token = main.rfind("value").unwrap();
+        let result = definition_test(&[("main.srp", main)], "main.srp", token);
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["target"]["path"], "main.srp");
+        let invalid = definition_test(&[("main.srp", main)], "main.srp", 8);
+        assert_eq!(invalid["ok"], false, "{invalid}");
+    }
+
+    #[test]
+    fn definition_does_not_leak_partial_index_for_compiler_errors() {
+        let main = "import \"lib/math.srp\" as math; print(math.twice(3));";
+        let module = "pub pure funcra twice(n: integer) -> integer { return missing; }";
+        let result = definition_test(
+            &[("main.srp", main), ("lib/math.srp", module)],
+            "main.srp", main.find("twice(3)").unwrap(),
+        );
+        assert_eq!(result["ok"], false);
+        assert_eq!(result["diagnostic"]["code"], "E0010");
+        assert_eq!(result["diagnostic"]["primary"]["path"], "lib/math.srp");
+        assert_eq!(result["target"], Value::Null);
+    }
+
+    #[test]
+    fn definition_index_limits_are_bounded_and_atomic() {
+        let mut main = String::new();
+        for i in 0..4100 {
+            main.push_str(&format!("bind a{i}=0;"));
+        }
+        let result = definition_test(&[("main.srp", &main)], "main.srp", 5);
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["diagnostic"]["code"], "E0050");
+        assert_eq!(result["target"], Value::Null);
     }
 
     #[test]
