@@ -14,7 +14,15 @@ export default defineConfig({
     trace: 'retain-on-failure',
     screenshot: 'only-on-failure',
   },
-  projects: [{ name: 'chromium', use: { ...devices['Desktop Chrome'] } }],
+  projects: [
+    // Keep the comprehensive suite on Chromium. The other browser engines
+    // run a small shared suite against the exact same real Rust/WASM build.
+    { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
+    { name: 'firefox', testMatch: '**/compatibility.spec.ts',
+      use: { ...devices['Desktop Firefox'] } },
+    { name: 'webkit', testMatch: '**/compatibility.spec.ts',
+      use: { ...devices['Desktop Safari'] } },
+  ],
   webServer: {
     command: 'npm run preview -- --host 127.0.0.1 --port 4173 --strictPort',
     url: baseURL,
