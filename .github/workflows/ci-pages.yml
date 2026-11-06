@@ -51,9 +51,9 @@ jobs:
           test -s dist/compiler/scarp_playground_wasm_bg.wasm
           test -s dist/compiler/scarp_playground_wasm.js
           test -s dist/index.html
-      - name: Install headless Chromium
-        run: npx playwright install --with-deps chromium
-      - name: Test the actual browser execution and UI
+      - name: Install Chromium, Firefox and WebKit with system dependencies
+        run: npx playwright install --with-deps chromium firefox webkit
+      - name: Test actual WASM, UI and CSP in three browser engines
         run: npm run test:e2e
       - name: Upload browser failure artifacts
         if: failure()
