@@ -6,7 +6,7 @@ import { expect, test } from '@playwright/test';
 test('loads Monaco and runs the real compiler under production CSP', async ({ page }) => {
   await page.goto('./');
   const policy = page.locator('meta[http-equiv="Content-Security-Policy"]');
-  await expect(policy).toHaveAttribute('content', /default-src 'self'/);
+  await expect(policy).toHaveAttribute('content', /default-src 'none'/);
   await expect(page.locator('.monaco-editor textarea.inputarea')).toBeAttached({ timeout: 30_000 });
 
   // A policy allowing arbitrary inline code is not an acceptable workaround
