@@ -1,6 +1,7 @@
 import { validateWorkspace, type Workspace } from '../workspace';
 import type { RunResponse, RunResult } from './types';
 import { decodeWorkerResult } from './protocol';
+import { claimCompilerWorker } from './worker-slot';
 
 const RUN_TIMEOUT_MS = 12_000;
 const cancelled: RunResult = {
@@ -15,31 +16,36 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?:
     return Promise.resolve({ ok: false, stdout: '', stderr: '', error: problem });
   }
   return new Promise((resolve) => {
-    // Browsers may reject Worker construction under resource pressure, CSP,
-    // or disabled-worker settings. Report a stable error rather than leaking
-    // implementation details or leaving the UI in a pending execution.
-    let worker: Worker;
-    try {
-      worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
-    } catch {
-      resolve({
-        ok: false, stdout: '', stderr: '',
-        error: 'Unable to start the Scarp compiler worker in this browser.',
-      });
-      return;
-    }
-    const id = 1;
+    let worker: Worker | undefined;
     let finished = false;
-    let timeout: ReturnType<typeof setTimeout> | undefined = undefined;
+    let timeout: ReturnType<typeof setTimeout> | undefined;
+    let releaseSlot = () => {};
     const complete = (result: RunResult) => {
       if (finished) return;
       finished = true;
       if (timeout !== undefined) clearTimeout(timeout);
       signal?.removeEventListener('abort', onAbort);
-      worker.terminate();
+      worker?.terminate();
+      releaseSlot();
       resolve(result);
     };
     const onAbort = () => complete(cancelled);
+
+    // Claim capacity BEFORE constructing WASM Worker. A new Run, Check or
+    // Definition lookup cancels the previous one synchronously, so users
+    // cannot accumulate expensive compiler Workers by rapid interaction.
+    releaseSlot = claimCompilerWorker(onAbort);
+    try {
+      worker = new Worker(new URL('./worker.ts', import.meta.url), { type: 'module' });
+    } catch {
+      complete({
+        ok: false, stdout: '', stderr: '',
+        error: 'Unable to start the Scarp compiler worker in this browser.',
+      });
+      return;
+    }
+    const activeWorker = worker;
+    const id = 1;
     signal?.addEventListener('abort', onAbort, { once: true });
     if (signal?.aborted) {
       complete(cancelled);
@@ -53,7 +59,7 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?:
         error: 'Execution exceeded the 12-second browser limit and was stopped.',
       });
     }, RUN_TIMEOUT_MS);
-    worker.onerror = (event) => {
+    activeWorker.onerror = (event) => {
       event.preventDefault();
       complete({
         ok: false,
@@ -62,17 +68,15 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?:
         error: 'The compiler worker failed to load or crashed. See the browser console.',
       });
     };
-    worker.onmessage = (event: MessageEvent<RunResponse>) => {
+    activeWorker.onmessage = (event: MessageEvent<RunResponse>) => {
       if (event.data?.id === id) complete(decodeWorkerResult(event.data.result));
     };
-    worker.onmessageerror = () => complete({
+    activeWorker.onmessageerror = () => complete({
       ok: false, stdout: '', stderr: '',
       error: 'The compiler worker sent a message the browser could not decode.',
     });
-    // postMessage itself can fail, e.g. if the browser cannot clone the payload.
-    // Never leave a running Worker or unresolved promise in that case.
     try {
-      worker.postMessage({ id, workspace, mode });
+      activeWorker.postMessage({ id, workspace, mode });
     } catch {
       complete({
         ok: false, stdout: '', stderr: '',
