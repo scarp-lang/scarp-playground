@@ -1,12 +1,10 @@
 # Official Scarp compiler integration audit — 2026-11-04
 
 > Historical assessment dated November 4, 2026, for the **alpha.4 upgrade
-> candidate**, not the current live Playground. As of November 5, the current
-> compiler revision is **v0.0.6-alpha.1** at
-> `aa329a22cf2bf92d2c9814a26ff9c8b67a72e6e8`. Refer to
-> [alpha.6 integration](compiler-alpha6-check.md) and
-> [Go to Definition](go-to-definition.md) for current capabilities.
-> This document preserves the earlier v0.0.5-alpha.4 review.
+> candidate**, not the current live Playground. The current browser compiler
+> is reviewed separately in the [alpha.2 pinned integration](compiler-alpha6-2-check.md)
+> and [Go to Definition](go-to-definition.md) contracts. This document preserves
+> the earlier v0.0.5-alpha.4 review without retroactive changes.
 
 ## Exact upstream release and source
 
