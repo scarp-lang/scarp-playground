@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.1.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.2.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions};
 use serde::Deserialize;
@@ -565,6 +565,51 @@ mod tests {
         ).unwrap();
         assert_eq!(result["ok"], false);
     }
+    /// Compiler alpha.2 adds opt-in caches. The Playground deliberately uses
+    /// cold, disposable module graphs; edits must never inherit stale results.
+    #[test]
+    fn alpha_two_fresh_workspace_edits_do_not_reuse_old_compiler_results() {
+        let main = "import \"lib/ops.srp\" as ops; print(ops.twice(21));";
+        let valid = "pub pure funcra twice(n: integer) -> integer { return n * 2; }";
+        let edited = "pub pure funcra twice(n: integer) -> integer { return n * 3; }";
+        let invalid = "pub pure funcra twice(n: integer) -> integer { return missing; }";
+        let original = request(&[("main.srp", main), ("lib/ops.srp", valid)]);
+        let changed = request(&[("main.srp", main), ("lib/ops.srp", edited)]);
+        let corrupted = request(&[("main.srp", main), ("lib/ops.srp", invalid)]);
+
+        let first: Value = serde_json::from_str(&execute_request(&original)).unwrap();
+        assert_eq!(first["ok"], true, "{first}");
+        assert_eq!(first["stdout"], "42\n");
+
+        let next: Value = serde_json::from_str(&execute_request(&changed)).unwrap();
+        assert_eq!(next["ok"], true, "{next}");
+        assert_eq!(next["stdout"], "63\n");
+        let checked: Value = serde_json::from_str(&check_request(&changed)).unwrap();
+        assert_eq!(checked["ok"], true, "{checked}");
+        assert_eq!(checked["stdout"], "");
+        assert_eq!(checked["stderr"], "");
+
+        let broken: Value = serde_json::from_str(&execute_request(&corrupted)).unwrap();
+        assert_eq!(broken["ok"], false, "{broken}");
+        assert_eq!(broken["diagnostic"]["code"], "E0010");
+        assert_eq!(broken["diagnostic"]["primary"]["path"], "lib/ops.srp");
+        assert_eq!(broken["stdout"], "");
+        assert_eq!(broken["stderr"], "");
+
+        let lookup = definition_test(
+            &[("main.srp", main), ("lib/ops.srp", edited)],
+            "main.srp",
+            main.find("twice(21)").unwrap(),
+        );
+        assert_eq!(lookup["ok"], true, "{lookup}");
+        assert_eq!(lookup["target"]["path"], "lib/ops.srp");
+
+        // Reusing the previous source in another request must still work.
+        let restored: Value = serde_json::from_str(&execute_request(&original)).unwrap();
+        assert_eq!(restored["ok"], true, "{restored}");
+        assert_eq!(restored["stdout"], "42\n");
+    }
+
 }
 
 #[cfg(test)]

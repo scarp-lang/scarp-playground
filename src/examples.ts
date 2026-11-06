@@ -27,7 +27,7 @@ export const examples: Example[] = [
     description: 'Numerical RMS from Scarp alpha.6',
     entry: 'main.srp',
     files: {
-      'main.srp': '// Root mean square is available in Scarp v0.0.6-alpha.1\nprint(rms([2.0, -2.0]));\n',
+      'main.srp': '// Root mean square was introduced in alpha.1 and remains in Scarp alpha.2\nprint(rms([2.0, -2.0]));\n',
     },
   },
   {

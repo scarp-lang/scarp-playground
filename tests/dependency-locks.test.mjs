@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
   validateCargoLock, validateNpmLock, validateProjectFiles,
-  REVIEWED_SCARP_COMMIT,
+  REVIEWED_SCARP_COMMIT, REVIEWED_SCARP_VERSION,
 } from '../scripts/check-dependency-locks.mjs';
 
 const manifest = {
@@ -30,7 +30,7 @@ const cargo = '[package]\nname = "scarp-playground-wasm"\nversion = "0.0.2"\n' +
   'scarp = { git = "https://github.com/scarp-lang/scarp", rev = "' +
   REVIEWED_SCARP_COMMIT + '" }\n';
 const cargoLock = 'version = 4\n[[package]]\nname = "scarp"\n' +
-  'version = "0.0.6-alpha.1"\nsource = "git+https://github.com/scarp-lang/scarp?rev=' +
+  'version = "' + REVIEWED_SCARP_VERSION + '"\nsource = "git+https://github.com/scarp-lang/scarp?rev=' +
   REVIEWED_SCARP_COMMIT + '#' + REVIEWED_SCARP_COMMIT +
   '"\n\n[[package]]\nname = "scarp-playground-wasm"\nversion = "0.0.2"\n' +
   '\n[[package]]\nname = "serde"\nversion = "1.0.229"\n' +

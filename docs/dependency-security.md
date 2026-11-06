@@ -36,8 +36,8 @@ The deterministic local checker rejects:
 - A Cargo registry crate whose origin differs from crates.io's official
   index or whose entry omits a 64-digit SHA-256 checksum.
 - The Scarp compiler moving away from the published
-  **v0.0.6-alpha.1** revision
-  `aa329a22cf2bf92d2c9814a26ff9c8b67a72e6e8`.
+  **v0.0.6-alpha.2** revision
+  `398b8ff705154a02423fe458ce3a427401e81e31`.
   Both the Cargo manifest and lockfile must match this reviewed revision.
 - Any unexpected extra local Cargo crate or alternate Git dependency.
 

@@ -20,15 +20,16 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.1** |
-| Pinned compiler revision | `aa329a22cf2bf92d2c9814a26ff9c8b67a72e6e8` |
+| Scarp compiler | **v0.0.6-alpha.2** (published prerelease) |
+| Pinned compiler revision | `398b8ff705154a02423fe458ce3a427401e81e31` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
 | Backend execution service | **None** |
 
-Scarp alpha.6 introduces a numerical RMS intrinsic and compiler-backed source
-navigation. The current development preview exposes **Go to definition** through
+Scarp alpha.1 introduced numerical RMS and compiler-backed source
+navigation. Alpha.2 adds opt-in Rust caching APIs; this disposable-Worker
+browser preview does **not** activate or persist those caches. The current development preview exposes **Go to definition** through
 F12 and an accessible button, using the real Rust compiler's bounded symbol
 index. It does not implement a full LSP, rename or find-references UI.
 
@@ -90,7 +91,7 @@ load failure — it never fakes a successful program result.
   but never returns program stdout or stderr. The real compiler reports source
   diagnostics, including imported-module locations. Check is not a syntax-only
   parser or an external remote service.
-- Scarp v0.0.6-alpha.1 numerical RMS example, executed in the same pinned WASM runtime.
+- Numerical RMS from Scarp alpha.1, retained in the pinned alpha.2 WASM runtime.
 - **Go to Definition (F12 and toolbar button)** uses the official Rust compiler's bounded, nonexecuting
   symbol index. Navigates across virtual .srp modules, preserves editor undo
   history, and translates Monaco UTF-16 cursor coordinates to Scarp's UTF-8
@@ -175,7 +176,7 @@ cases and browser smoke recovery, see [compiler regression fuzzing](docs/determi
 certify browser process-memory safety.
 For the portable source-only JSON format and its import threat model see
 [docs/portable-workspaces.md](docs/portable-workspaces.md).
-See the [current alpha.6 compiler audit](docs/compiler-alpha6-check.md)
+See the [current alpha.2 compiler integration audit](docs/compiler-alpha6-2-check.md)
 and [Go to Definition contract](docs/go-to-definition.md) for the precise
 pin, safety constraints and location-mapping protocol. The
 [alpha.4 integration audit](docs/compiler-integration.md) is retained as a
