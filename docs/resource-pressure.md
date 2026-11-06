@@ -72,6 +72,15 @@ The remaining physical-memory and fuzz-review gates in issue #3 are open.
   exposed by the Playground. This is not proof that the browser engine itself
   is secure.
 
+## Cross-browser compatibility regression
+
+The real browser smoke suite now runs the pinned Scarp WASM interpreter in
+Chromium, Firefox and WebKit. Each verifies CSP behavior, imports, Unicode
+diagnostics and recovery after a bounded output error. See
+[browser compatibility](browser-compatibility.md). These are behavioral tests,
+not proof of a browser process-memory quota or recovery from operating-system
+OOM; issue #3 stays open.
+
 ## Follow-up criteria for security issue #3
 
 Before any stable release, add independent browser-memory telemetry under
