@@ -48,6 +48,17 @@ RustSec advisory scan. The separately CI-gated [RustSec locked graph scan](docs/
 checks known Rust advisories; independent source review, native tooling and
 all other issue #3 threat-model gates remain open.
 
+## Browser memory-pressure baseline
+
+A real Chromium E2E regression now observes Linux process RSS (which may
+double-count shared pages), main-page JS heap (which excludes Worker/WASM
+heap) and exact compiler Worker lifecycle during bounded failures and
+recovery. The CI artifact is diagnostic, not a fixed heap ceiling or a
+promise that an OS-level out-of-memory condition cannot crash the page.
+See [browser memory-pressure observations](docs/browser-memory-pressure.md).
+The hostile-source, browser OOM/panic and independent review requirements
+in security issue #3 remain open.
+
 ## Input and result protocol checks
 
 The Rust bridge rejects raw JSON requests larger than **1 MiB** before

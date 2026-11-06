@@ -94,10 +94,22 @@ The harness is CI-reproducible **rather than coverage-guided**. It cannot
 verify behavior under a real process OOM or prove the absence of WASM panic
 sites. Keep those independent review gates open.
 
+## Measured Chromium memory-pressure baseline
+
+The Chromium E2E suite now adds a test that records actual process RSS
+observations from Linux procfs and the browser DevTools Protocol, alongside
+main-page JavaScript heap used bytes. The same test verifies that no compiler
+Worker remains active after each bounded failure and subsequent recovery. It
+provides an inspectable CI JSON artifact rather than claiming a hard threshold.
+See [browser memory pressure](browser-memory-pressure.md) for the measurement
+methodology and critical omissions: it is not per-Worker heap accounting or an
+operating-system OOM recovery test.
+
 ## Follow-up criteria for security issue #3
 
-Before any stable release, add independent browser-memory telemetry under
-controlled resource ceilings, separate Chrome/Firefox/WebKit compatibility
-testing, longer random/reproducible compiler fuzz suites, a dependency audit,
-Worker-response-header isolation review and a documented incident/security
-response procedure. Keep the independent security review gate open.
+Before any stable release, add independent peak WASM/Worker memory accounting and
+constrained-memory/OOM experiments, deeper reproducible and coverage-guided fuzzing,
+Worker-response-header and origin isolation review, and independent security review.
+The new Chromium RSS/page-heap baseline, three-engine behavior suite, RustSec
+and npm audit gates, and initial incident-reporting process are partial progress,
+not replacements for those remaining requirements. Keep the independent security review gate open.

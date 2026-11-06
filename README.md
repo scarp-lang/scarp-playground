@@ -176,6 +176,9 @@ For the real Chromium/Firefox/WebKit execution, CSP and recovery smoke gate see
 For reproducible fixed-seed native compiler input mutations, raw JSON edge
 cases and browser smoke recovery, see [compiler regression fuzzing](docs/deterministic-fuzzing.md). These tests do not
 certify browser process-memory safety.
+For observed Chromium process RSS, main-page JavaScript heap and real Worker
+termination under bounded pressure, see [browser memory-pressure telemetry](docs/browser-memory-pressure.md).
+These observations do not establish a hard memory cap.
 For the portable source-only JSON format and its import threat model see
 [docs/portable-workspaces.md](docs/portable-workspaces.md).
 See the [current alpha.2 compiler integration audit](docs/compiler-alpha6-2-check.md)
