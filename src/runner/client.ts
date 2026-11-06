@@ -18,12 +18,12 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?:
   return new Promise((resolve) => {
     let worker: Worker | undefined;
     let finished = false;
-    let timeout: ReturnType<typeof setTimeout> | undefined;
+    const timer: { handle?: ReturnType<typeof setTimeout> } = {};
     let releaseSlot = () => {};
     const complete = (result: RunResult) => {
       if (finished) return;
       finished = true;
-      if (timeout !== undefined) clearTimeout(timeout);
+      if (timer.handle !== undefined) clearTimeout(timer.handle);
       signal?.removeEventListener('abort', onAbort);
       worker?.terminate();
       releaseSlot();
@@ -51,7 +51,7 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?:
       complete(cancelled);
       return;
     }
-    timeout = setTimeout(() => {
+    timer.handle = setTimeout(() => {
       complete({
         ok: false,
         stdout: '',
