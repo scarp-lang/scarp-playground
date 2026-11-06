@@ -36,7 +36,7 @@ No response-time SLA or hardened isolation guarantee is asserted.
 
 `npm run verify:locks` checks npm tarball integrity/provenance, manifest-lock
 consistency, Cargo registry checksums and the reviewed immutable Scarp
-`v0.0.6-alpha.1` source commit. `npm run test:locks` verifies that
+`v0.0.6-alpha.2` source commit. `npm run test:locks` verifies that
 registry substitution, removed integrity and compiler pin drift are rejected.
 CI also runs `npm audit --audit-level=high` against the complete locked npm
 build/development graph before packaging. See
