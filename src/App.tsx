@@ -89,6 +89,8 @@ export function App() {
     // before React has committed the next disabled-button render.
     const execution = executionScope.current.start();
     if (!execution) return;
+    // The new execution owns the single WASM slot; retire any pending lookup.
+    definitionScope.current.invalidate();
     setRunning(true);
     setOperation(mode);
     setResult(null);
@@ -131,6 +133,11 @@ export function App() {
       setNotice('Place the cursor on a valid Scarp symbol.');
       return;
     }
+    // A source navigation request supersedes Run/Check rather than keeping
+    // two memory-intensive WASM workers alive simultaneously.
+    executionScope.current.invalidate();
+    setRunning(false);
+    setResult(null);
     definitionScope.current.invalidate();
     const lookup = definitionScope.current.start();
     if (!lookup) return;
