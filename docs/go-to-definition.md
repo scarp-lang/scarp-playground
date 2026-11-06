@@ -1,8 +1,8 @@
-# Compiler-backed Go to Definition — Scarp v0.0.6-alpha.1
+# Compiler-backed Go to Definition — Scarp v0.0.6-alpha.2
 
 The browser loads the official compiler source at commit
-`aa329a22cf2bf92d2c9814a26ff9c8b67a72e6e8` from
-[the annotated v0.0.6-alpha.1 release](https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.1).
+`398b8ff705154a02423fe458ce3a427401e81e31` from
+[the annotated v0.0.6-alpha.2 release](https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.2).
 
 - Place the cursor within a value/function/import symbol and press **F12** in
   Monaco. The browser creates a disposable worker and asks the compiled Rust
