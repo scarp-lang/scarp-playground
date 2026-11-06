@@ -76,9 +76,28 @@ jobs:
         with:
           path: dist
 
+  rustsec-audit:
+    name: Audit exact locked Rust dependency graph against RustSec
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Check out immutable compiler and crate lockfile inputs
+        uses: actions/checkout@v4
+      - name: Set up stable Rust for cargo-audit
+        uses: dtolnay/rust-toolchain@stable
+      - name: Verify committed npm, Cargo and compiler provenance before auditing
+        run: node scripts/check-dependency-locks.mjs
+      - name: Install reviewed cargo-audit release
+        run: cargo install cargo-audit --locked --version 0.22.2
+      - name: Audit full locked Rust dependency graph using fresh RustSec advisories
+        run: |
+          cargo audit --version
+          cargo audit --file bridge/Cargo.lock
+
   deploy:
     name: Deploy verified preview
-    needs: build-test
+    needs: [build-test, rustsec-audit]
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     environment:
