@@ -16,10 +16,14 @@ npm run verify:locks
 npm run test:locks
 npm audit --audit-level=high
 cargo test --locked --manifest-path bridge/Cargo.toml
+cargo install cargo-audit --locked --version 0.22.2
+cargo audit --file bridge/Cargo.lock
 ```
 
-The regular **Playground CI and Pages** workflow runs these checks before
-the real WebAssembly compilation and browser suites. The npm audit checks
+The regular **Playground CI and Pages** workflow gates deployment on both
+the full Rust/WebAssembly/browser checks and a separate RustSec advisory scan
+of the exact bridge Cargo.lock. The RustSec job uses a fresh advisory database
+and runs in parallel with the browser build. The npm audit checks
 both production and development dependencies used to produce the served
 bundle. A high- or critical-severity advisory **fails the workflow**;
 do not introduce broad silent ignores merely to keep publishing green.
@@ -58,11 +62,12 @@ use the exact package paths and affected versions from the CI log.
 
 - Checksums verify artifact identity; they do **not** guarantee that a
   dependency or its installation scripts are trustworthy.
-- npm advisories do not cover Rust crates. A dedicated RustSec audit
-  of the current Cargo graph and the Git-pinned Scarp compiler remains a
-  separate requirement. Source, native tooling, GitHub Actions, the
-  `wasm-pack` installation and build-service infrastructure are also
-  supply-chain inputs.
+- The [RustSec audit gate](rustsec-advisory-gate.md) checks known advisory
+  matches for the pinned Cargo dependency graph; it does not scan source
+  for undisclosed vulnerabilities, nor does it fully cover dynamically
+  installed native tooling. The `wasm-pack` installer, GitHub Actions,
+  the source of the Git-pinned compiler and the build-service infrastructure
+  remain separate supply-chain inputs.
 - The checker cannot detect malicious code inserted into the npm registry
   before a checksum was originally recorded, upstream compiler semantic
   vulnerabilities, compromised build agents or browser process-memory OOM.
@@ -83,5 +88,5 @@ review and documented regression evidence, not just a dependency refresh.
 For security-sensitive findings, use the private vulnerability reporting and
 triage process in [SECURITY.md](../SECURITY.md). Security issue
 [#3](https://github.com/scarp-lang/scarp-playground/issues/3) stays open
-until RustSec checks, worker/origin security, memory testing and independent
+until worker/origin security, memory testing, remaining advisories and independent
 review are complete.
