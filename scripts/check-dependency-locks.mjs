@@ -5,8 +5,8 @@ import { resolve } from 'node:path';
 
 // Independent guard for every transitive dependency admitted into the build.
 // An advisory scan is still needed: checksums and pins do not prove safety.
-export const REVIEWED_SCARP_COMMIT = 'aa329a22cf2bf92d2c9814a26ff9c8b67a72e6e8';
-export const REVIEWED_SCARP_VERSION = '0.0.6-alpha.1';
+export const REVIEWED_SCARP_COMMIT = '398b8ff705154a02423fe458ce3a427401e81e31';
+export const REVIEWED_SCARP_VERSION = '0.0.6-alpha.2';
 const NPM_REGISTRY = 'https://registry.npmjs.org/';
 const CARGO_REGISTRY = 'registry+https://github.com/rust-lang/crates.io-index';
 
