@@ -27,6 +27,21 @@ official compiler. `tests/e2e/resource-limits.spec.ts` independently checks
 output, call-depth and capture failure **in the production Chromium browser**
 under the actual Rust/WASM Worker, then checks recovery with a fresh Worker.
 
+## One active compiler Worker (development hardening)
+
+Run, Check and Go to Definition now share a single browser-side Worker
+capacity slot. A newer valid request synchronously terminates the older
+compiler Worker before constructing its own. Source changes and explicit
+Stop actions continue to abort their Worker, while stale replies and
+late cleanup cannot release the newer request's slot.
+
+This prevents accidental **simultaneous compiler Workers** from a burst
+of editor requests; it is not a strict WASM linear-memory cap, per-worker
+heap budget or promise that a single hostile request cannot exhaust the
+browser process. Unit tests verify Run-to-Definition, Definition-to-Check,
+Run-to-Run preemption, ignored stale responses and stale lease cleanup.
+The remaining physical-memory and fuzz-review gates in issue #3 are open.
+
 ## What the tests prove
 
 - The compiler emits a **structured, source-aware diagnostic** for bounded
