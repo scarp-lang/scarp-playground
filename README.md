@@ -166,7 +166,9 @@ does not authorize a Playground stable release.
 
 For architecture and next milestones see [docs/architecture.md](docs/architecture.md).
 For the real Chromium/Firefox/WebKit execution, CSP and recovery smoke gate see
-[real-browser compatibility](docs/browser-compatibility.md). These tests do not
+[real-browser compatibility](docs/browser-compatibility.md).
+For reproducible fixed-seed native compiler input mutations, raw JSON edge
+cases and browser smoke recovery, see [compiler regression fuzzing](docs/deterministic-fuzzing.md). These tests do not
 certify browser process-memory safety.
 For the portable source-only JSON format and its import threat model see
 [docs/portable-workspaces.md](docs/portable-workspaces.md).
