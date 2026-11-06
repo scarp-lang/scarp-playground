@@ -2,7 +2,7 @@
 
 > Historical architecture baseline. For the current live preview as of
 > November 5, 2026, the official Scarp compiler is pinned to
-> **v0.0.6-alpha.1** at `aa329a22cf2bf92d2c9814a26ff9c8b67a72e6e8`.
+> **v0.0.6-alpha.2** at `398b8ff705154a02423fe458ce3a427401e81e31`.
 > The browser now supports **Check code**, **RMS**, and compiler-backed
 > **Go to Definition** (F12 and toolbar button). For the current feature
 > contracts and resource budgets see [alpha.6 integration](compiler-alpha6-check.md)
