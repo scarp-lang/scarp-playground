@@ -21,12 +21,12 @@ export function findDefinition(
   return new Promise((resolve) => {
     let worker: Worker | undefined;
     let done = false;
-    let deadline: ReturnType<typeof setTimeout> | undefined;
+    const timer: { deadline?: ReturnType<typeof setTimeout> } = {};
     let releaseSlot = () => {};
     const complete = (value: DefinitionResult) => {
       if (done) return;
       done = true;
-      if (deadline !== undefined) clearTimeout(deadline);
+      if (timer.deadline !== undefined) clearTimeout(timer.deadline);
       signal?.removeEventListener('abort', onAbort);
       worker?.terminate();
       releaseSlot();
@@ -49,7 +49,7 @@ export function findDefinition(
       complete(failed('Navigation cancelled.'));
       return;
     }
-    deadline = setTimeout(() =>
+    timer.deadline = setTimeout(() =>
       complete(failed('Definition lookup exceeded the 12-second browser limit.')), TIMEOUT_MS);
     activeWorker.onerror = (event) => {
       event.preventDefault();
