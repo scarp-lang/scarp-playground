@@ -18,7 +18,7 @@ const lock = {
     'node_modules/react': {
       version: '19.1.1',
       resolved: 'https://registry.npmjs.org/react/-/react-19.1.1.tgz',
-      integrity: 'sha512-' + Buffer.from('test integrity').toString('base64'),
+      integrity: 'sha512-' + 'dGVzdCBpbnRlZ3JpdHk=',
     },
     'node_modules/runtime-bundled': {
       version: '1.0.0',
@@ -51,7 +51,7 @@ test('accepts verified npm packages and explicitly bundled subdependencies', () 
 });
 
 test('refuses changed root dependency ranges', () => {
-  const changed = structuredClone(lock);
+  const changed = JSON.parse(JSON.stringify(lock));
   changed.packages[''].dependencies.react = '^99.0.0';
   assert.match(validateNpmLock(manifest, changed).errors.join(' '), /root dependencies/);
 });
@@ -64,7 +64,7 @@ test('refuses registry substitution, insecure tarballs, or stripped SRI', () => 
     { integrity: 'sha1-unreviewed' },
     { link: true },
   ]) {
-    const changed = structuredClone(lock);
+    const changed = JSON.parse(JSON.stringify(lock));
     Object.assign(changed.packages['node_modules/react'], change);
     assert.ok(validateNpmLock(manifest, changed).errors.length > 0);
   }
