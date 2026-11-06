@@ -3,7 +3,7 @@
 **Status:** Development preview hardening for [security issue #3](https://github.com/scarp-lang/scarp-playground/issues/3).
 
 `bridge/src/fuzz_regression.rs` tests the **actual pinned Scarp
-v0.0.6-alpha.1 interpreter**, the bridge's raw JSON validation, its
+v0.0.6-alpha.2 interpreter**, the bridge's raw JSON validation, its
 check-only mode, and the compiler-owned Go to Definition index.
 The harness intentionally has **no** external fuzzer dependency, random OS
 source, third-party runner or networked corpus.
