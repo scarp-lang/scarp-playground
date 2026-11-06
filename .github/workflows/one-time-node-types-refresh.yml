@@ -1,0 +1,37 @@
+name: One-time Node typings lockfile refresh
+
+on:
+  push:
+    branches:
+      - test/chromium-worker-memory-pressure-telemetry
+
+permissions:
+  contents: write
+
+jobs:
+  update-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out audit branch
+        uses: actions/checkout@v4
+        with:
+          ref: test/chromium-worker-memory-pressure-telemetry
+          persist-credentials: true
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Add matching Node 22 development typings via npm
+        run: npm install --package-lock-only --ignore-scripts --save-dev '@types/node@^22.0.0' --no-audit --no-fund
+      - name: Audit newly resolved locked npm dependency graph
+        run: npm audit --audit-level=high
+      - name: Commit only package.json and npm lockfile
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git add -- package.json package-lock.json
+          if ! git diff --cached --quiet; then
+            git commit -m 'build(types): lock Node 22 development typings'
+            git push origin HEAD:test/chromium-worker-memory-pressure-telemetry
+          fi
