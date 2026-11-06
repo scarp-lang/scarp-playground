@@ -57,7 +57,7 @@ npm run lint
 npm run typecheck
 npm run test
 npm run build
-npx playwright install chromium
+npx playwright install chromium firefox webkit
 npm run test:e2e
 npm run dev
 ```
@@ -117,8 +117,9 @@ load failure — it never fakes a successful program result.
   are not physical process-memory limits. See
   [resource-pressure test coverage](docs/resource-pressure.md).
 - Version-controlled npm and Cargo lockfiles, GitHub Actions typechecking,
-  linting, JavaScript and native Rust tests, real Chromium end-to-end execution
-  tests, WebAssembly compilation and gated GitHub Pages deployment from `main`.
+  linting, JavaScript and native Rust tests, comprehensive Chromium end-to-end
+  tests plus Firefox/WebKit compatibility smoke tests, WebAssembly compilation
+  and gated GitHub Pages deployment from `main`.
 
 Limitations: No installed packages, native executable generation, networking
 from source, host filesystem, multi-file snippet sharing or production sandbox
@@ -164,6 +165,9 @@ compatibility, accessibility and quality review. Compiler stability alone
 does not authorize a Playground stable release.
 
 For architecture and next milestones see [docs/architecture.md](docs/architecture.md).
+For the real Chromium/Firefox/WebKit execution, CSP and recovery smoke gate see
+[real-browser compatibility](docs/browser-compatibility.md). These tests do not
+certify browser process-memory safety.
 For the portable source-only JSON format and its import threat model see
 [docs/portable-workspaces.md](docs/portable-workspaces.md).
 See the [current alpha.6 compiler audit](docs/compiler-alpha6-check.md)
