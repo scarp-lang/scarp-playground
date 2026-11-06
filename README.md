@@ -165,6 +165,9 @@ compatibility, accessibility and quality review. Compiler stability alone
 does not authorize a Playground stable release.
 
 For architecture and next milestones see [docs/architecture.md](docs/architecture.md).
+For locked npm and Cargo dependency provenance, live npm vulnerability
+auditing and the limitations of this gate, see
+[dependency security](docs/dependency-security.md).
 For the real Chromium/Firefox/WebKit execution, CSP and recovery smoke gate see
 [real-browser compatibility](docs/browser-compatibility.md).
 For reproducible fixed-seed native compiler input mutations, raw JSON edge
