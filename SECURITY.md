@@ -44,8 +44,9 @@ build/development graph before packaging. See
 
 These checks cannot prove that a checksummed package is safe, that an upstream
 compiler release is free of vulnerabilities, or that Rust crates have passed a
-RustSec advisory scan. The full Rust/advisory and independent review gates in
-issue #3 remain open.
+RustSec advisory scan. The separately CI-gated [RustSec locked graph scan](docs/rustsec-advisory-gate.md)
+checks known Rust advisories; independent source review, native tooling and
+all other issue #3 threat-model gates remain open.
 
 ## Input and result protocol checks
 
