@@ -566,3 +566,6 @@ mod tests {
         assert_eq!(result["ok"], false);
     }
 }
+
+#[cfg(test)]
+mod fuzz_regression;

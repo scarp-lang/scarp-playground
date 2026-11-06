@@ -48,6 +48,17 @@ Aborts, timeouts and failed starts release capacity; stale worker replies
 are ignored. This limits concurrent WASM resource pressure but does not
 bound the memory used by **one** Worker or guarantee survival of a browser OOM.
 
+## Reproducible compiler mutation regressions
+
+The native bridge runs a fixed-seed mutation corpus through the real pinned
+Scarp compiler for Execute, Check and Go to Definition. It rejects panics,
+malformed JSON replies, output-budget violations and any partial stdout/stderr
+on a failed operation. The CI-gated Chromium regression additionally sends
+malformed source through real WASM and verifies successful subsequent execution.
+Read the [reproduction instructions](docs/deterministic-fuzzing.md) and
+its explicit limitations. This is not coverage-guided fuzzing or a physical
+browser-process memory limit.
+
 ## Resource-pressure recovery and regression tests
 
 The official Rust/WASM interpreter is tested against its configured output
