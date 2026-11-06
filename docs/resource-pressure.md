@@ -81,6 +81,19 @@ diagnostics and recovery after a bounded output error. See
 not proof of a browser process-memory quota or recovery from operating-system
 OOM; issue #3 stays open.
 
+## Seeded compiler and protocol fuzz regressions
+
+The native bridge now tests fixed-seed Unicode/punctuation mutations in
+`bridge/src/fuzz_regression.rs` across execution, check and definition paths;
+malformed JSON is separately mutated before deserialization. The browser suite
+also exercises a short malformed-source corpus and recovery in the actual
+Rust/WASM worker. See [deterministic fuzzing](deterministic-fuzzing.md) for the
+seed, case counts, reproduction procedure and limits.
+
+The harness is CI-reproducible **rather than coverage-guided**. It cannot
+verify behavior under a real process OOM or prove the absence of WASM panic
+sites. Keep those independent review gates open.
+
 ## Follow-up criteria for security issue #3
 
 Before any stable release, add independent browser-memory telemetry under
