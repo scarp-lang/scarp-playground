@@ -15,7 +15,7 @@ class FakeWorker {
   onerror: ((event: ErrorEvent) => void) | null = null;
   terminated = 0;
   constructor() { FakeWorker.instances.push(this); }
-  postMessage(_payload: unknown) {}
+  postMessage(payload: unknown) { void payload; }
   terminate() { this.terminated += 1; }
   emit(data: unknown) { this.onmessage?.({ data } as MessageEvent<unknown>); }
 }
