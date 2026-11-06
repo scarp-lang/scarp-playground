@@ -19,7 +19,7 @@ test('records browser memory while bounded failures recover with no retained com
     const trackedWindow = window as Window & { __scarpCompilerWorkers?: State };
     trackedWindow.__scarpCompilerWorkers = state;
 
-    Worker.prototype.postMessage = function (payload: unknown) {
+    Worker.prototype.postMessage = function (payload: unknown, ...additional: unknown[]) {
       const message = payload as { mode?: unknown; workspace?: unknown } | null;
       if (message && (message.mode === 'run' || message.mode === 'check' ||
           message.mode === 'definition') && message.workspace &&
@@ -30,14 +30,14 @@ test('records browser memory while bounded failures recover with no retained com
         state.active = active.size;
         state.peakActive = Math.max(state.peakActive, state.active);
       }
-      return Reflect.apply(send, this, arguments);
+      return Reflect.apply(send, this, [payload, ...additional]);
     };
-    Worker.prototype.terminate = function () {
+    Worker.prototype.terminate = function (...additional: unknown[]) {
       if (active.delete(this)) {
         state.terminated += 1;
         state.active = active.size;
       }
-      return Reflect.apply(terminate, this, arguments);
+      return Reflect.apply(terminate, this, additional);
     };
   });
 
