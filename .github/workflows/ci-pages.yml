@@ -28,6 +28,12 @@ jobs:
           cache: npm
       - name: Install locked JS dependencies
         run: npm ci --no-audit --no-fund
+      - name: Verify pinned npm and Cargo dependency provenance
+        run: npm run verify:locks
+      - name: Test lockfile tampering detection
+        run: npm run test:locks
+      - name: Audit locked npm dependencies for known high or critical advisories
+        run: npm audit --audit-level=high
       - name: Lint TypeScript
         run: npm run lint
       - name: Type-check TypeScript

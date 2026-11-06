@@ -14,6 +14,39 @@ not add one without dedicated review.
 Please open a non-sensitive security report through the repository's GitHub
 security advisory interface rather than a public issue.
 
+## Reporting, triage and release response
+
+For potentially exploitable vulnerabilities, prefer the repository's **private
+GitHub security advisory** reporting workflow rather than a public issue.
+Include a minimal reproduction, affected browser/compiler revisions, expected
+vs observed behavior and impact; remove any secrets or personal data first.
+For non-sensitive correctness or accessibility bugs, a normal GitHub issue is
+appropriate. Avoid publishing a working exploit for an unpatched issue.
+
+The maintainers should reproduce and scope the issue, mark affected Playground
+and pinned compiler revisions, evaluate exposure, prepare a fix with a bounded
+regression test, run all existing browser/Rust tests and coordinate public
+disclosure with the reporter. For urgent issues affecting the hosted preview,
+maintainers should consider disabling affected functionality or the deployment
+rather than relying on a future compiler release. Publish a security advisory
+and identify corrected tags or a fixed deployment once remediation is verified.
+No response-time SLA or hardened isolation guarantee is asserted.
+
+## Dependency and build-chain review
+
+`npm run verify:locks` checks npm tarball integrity/provenance, manifest-lock
+consistency, Cargo registry checksums and the reviewed immutable Scarp
+`v0.0.6-alpha.1` source commit. `npm run test:locks` verifies that
+registry substitution, removed integrity and compiler pin drift are rejected.
+CI also runs `npm audit --audit-level=high` against the complete locked npm
+build/development graph before packaging. See
+[dependency integrity and advisory review](docs/dependency-security.md).
+
+These checks cannot prove that a checksummed package is safe, that an upstream
+compiler release is free of vulnerabilities, or that Rust crates have passed a
+RustSec advisory scan. The full Rust/advisory and independent review gates in
+issue #3 remain open.
+
 ## Input and result protocol checks
 
 The Rust bridge rejects raw JSON requests larger than **1 MiB** before
