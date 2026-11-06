@@ -39,6 +39,15 @@ HTTP-header policy. In particular, CSP meta cannot enforce `frame-ancestors`,
 does not use the production policy. See
 [the CSP review](docs/content-security-policy.md) for directives and tests.
 
+## Cross-operation compiler Worker capacity
+
+The Run, Check and Go to Definition browser clients share a single
+active compiler Worker slot. Starting a different valid operation cancels
+the previous one and terminates that Worker before allocating another.
+Aborts, timeouts and failed starts release capacity; stale worker replies
+are ignored. This limits concurrent WASM resource pressure but does not
+bound the memory used by **one** Worker or guarantee survival of a browser OOM.
+
 ## Resource-pressure recovery and regression tests
 
 The official Rust/WASM interpreter is tested against its configured output
