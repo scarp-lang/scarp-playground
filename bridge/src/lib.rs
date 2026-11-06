@@ -579,11 +579,11 @@ mod tests {
 
         let first: Value = serde_json::from_str(&execute_request(&original)).unwrap();
         assert_eq!(first["ok"], true, "{first}");
-        assert_eq!(first["stdout"], "42\\n");
+        assert_eq!(first["stdout"], "42\n");
 
         let next: Value = serde_json::from_str(&execute_request(&changed)).unwrap();
         assert_eq!(next["ok"], true, "{next}");
-        assert_eq!(next["stdout"], "63\\n");
+        assert_eq!(next["stdout"], "63\n");
         let checked: Value = serde_json::from_str(&check_request(&changed)).unwrap();
         assert_eq!(checked["ok"], true, "{checked}");
         assert_eq!(checked["stdout"], "");
@@ -607,7 +607,7 @@ mod tests {
         // Reusing the previous source in another request must still work.
         let restored: Value = serde_json::from_str(&execute_request(&original)).unwrap();
         assert_eq!(restored["ok"], true, "{restored}");
-        assert_eq!(restored["stdout"], "42\\n");
+        assert_eq!(restored["stdout"], "42\n");
     }
 
 }
