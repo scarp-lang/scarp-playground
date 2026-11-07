@@ -1,3 +1,7 @@
+> Historical integration record for the November 6 alpha.2 pin. Current `main` uses
+> [v0.0.6-alpha.3](compiler-alpha6-3-check.md). The original alpha.2
+> source identity and test criteria below are preserved for audit.
+
 # Scarp v0.0.6-alpha.2 — pinned browser integration review (2026-11-06)
 
 ## Verified upstream publication
