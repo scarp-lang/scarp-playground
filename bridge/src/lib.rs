@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.2.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.3.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions};
 use serde::Deserialize;
@@ -608,6 +608,57 @@ mod tests {
         let restored: Value = serde_json::from_str(&execute_request(&original)).unwrap();
         assert_eq!(restored["ok"], true, "{restored}");
         assert_eq!(restored["stdout"], "42\n");
+    }
+
+    /// Exact-output fixtures from the published Scarp v0.0.6-alpha.3 source.
+    #[test]
+    fn alpha_three_topk_fixture_runs_and_check_is_silent() {
+        let source = r#"// Deterministic candidate ranking for finite model scores.
+bind scores = [1.0, 5.0, 5.0, -2.0, 3.0];
+print(topk(scores, 3));
+print(topk_values(scores, 3));
+print(topk(softmax(scores), 2));
+print(topk([], 0));
+"#;
+        let payload = request(&[("main.srp", source)]);
+        let run: Value = serde_json::from_str(&execute_request(&payload)).unwrap();
+        assert_eq!(run["ok"], true, "{run}");
+        assert_eq!(run["stdout"], "[integer: 1, 2, 4]\n[5.0, 5.0, 3.0]\n[integer: 1, 2]\n[integer:]\n");
+        let checked: Value = serde_json::from_str(&check_request(&payload)).unwrap();
+        assert_eq!(checked["ok"], true, "{checked}");
+        assert_eq!(checked["stdout"], "");
+        assert_eq!(checked["stderr"], "");
+
+        let invalid = request(&[("main.srp", "print(topk([1.0], 2));")]);
+        let rejected: Value = serde_json::from_str(&execute_request(&invalid)).unwrap();
+        assert_eq!(rejected["ok"], false, "{rejected}");
+        assert_eq!(rejected["diagnostic"]["code"], "E0033");
+        assert_eq!(rejected["stdout"], "");
+    }
+
+    #[test]
+    fn alpha_three_temperature_fixture_and_invalid_domain_are_atomic() {
+        let source = r#"// Temperature controls softmax concentration without random sampling.
+print(softmax_temp([2.0, 2.0], 0.5));
+print(logsoftmax_temp([5.0], 2.0));
+bind logits = [1.0, 4.0, 4.0, 2.0];
+print(topk(softmax_temp(logits, 0.5), 3));
+"#;
+        let payload = request(&[("main.srp", source)]);
+        let run: Value = serde_json::from_str(&execute_request(&payload)).unwrap();
+        assert_eq!(run["ok"], true, "{run}");
+        assert_eq!(run["stdout"], "[0.5, 0.5]\n[0.0]\n[integer: 1, 2, 3]\n");
+        let checked: Value = serde_json::from_str(&check_request(&payload)).unwrap();
+        assert_eq!(checked["ok"], true, "{checked}");
+        assert_eq!(checked["stdout"], "");
+        assert_eq!(checked["stderr"], "");
+
+        let invalid = request(&[("main.srp", "print(\"before\"); print(softmax_temp([1.0], 0.0));")]);
+        let rejected: Value = serde_json::from_str(&execute_request(&invalid)).unwrap();
+        assert_eq!(rejected["ok"], false, "{rejected}");
+        assert_eq!(rejected["diagnostic"]["code"], "E0034");
+        assert_eq!(rejected["stdout"], "");
+        assert_eq!(rejected["stderr"], "");
     }
 
 }

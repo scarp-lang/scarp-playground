@@ -7,9 +7,9 @@ test('boots the real interpreter and executes the official hello sample', async 
   await expect(page.getByRole('heading', { name: 'Code. Run. Learn.' })).toBeVisible();
   await expect(page.getByText('Development preview', { exact: true })).toBeVisible();
   // The embedded compiler is pinned independently of Playground's v0.0.1 tag.
-  await expect(page.getByText('Scarp v0.0.6-alpha.2', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scarp v0.0.6-alpha.3', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /Compiler release notes/ }))
-    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.2');
+    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.3');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
   await expect(page.locator('.result-status.success')).toBeVisible();
@@ -41,6 +41,35 @@ test('compiler alpha.6 numerical RMS works in a real browser worker', async ({ p
   await page.getByRole('button', { name: /Root mean square/ }).click();
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('2.0\n', { timeout: 30_000 });
+});
+
+test('runs official alpha.3 Top-K and temperature fixtures in the real WASM interpreter', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Top-K score ranking/ }).click();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText(
+    '[integer: 1, 2, 4]\n[5.0, 5.0, 3.0]\n[integer: 1, 2]\n[integer:]\n',
+    { timeout: 30_000 },
+  );
+  await page.getByRole('button', { name: /Temperature softmax/ }).click();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText(
+    '[0.5, 0.5]\n[0.0]\n[integer: 1, 2, 3]\n',
+    { timeout: 30_000 },
+  );
+});
+
+test('alpha.3 rejects an invalid temperature without partial output and recovers', async ({ page }) => {
+  await page.goto('./#code=' + encodeURIComponent('print("before"); print(softmax_temp([1.0], 0.0));'));
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.error-title')).toContainText('E0034', { timeout: 30_000 });
+  await expect(page.locator('.stdout')).toHaveCount(0);
+  await page.getByRole('button', { name: /Temperature softmax/ }).click();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText(
+    '[0.5, 0.5]\n[0.0]\n[integer: 1, 2, 3]\n',
+    { timeout: 30_000 },
+  );
 });
 
 test('imports and executes another .srp source file in the real module loader', async ({ page }) => {
