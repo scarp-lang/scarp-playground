@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.3** (published prerelease) |
-| Pinned compiler revision | `ceff07d9014f466974e0c9e02fc5d23573f55777` |
+| Scarp compiler | **v0.0.6-alpha.4** (published prerelease) |
+| Pinned compiler revision | `f04be0758cbce405ddcdb229699b0ff83c09d207` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -32,7 +32,7 @@ navigation. Alpha.2 added opt-in Rust caching APIs; this disposable-Worker
 browser preview does **not** activate or persist those caches. Alpha.3 adds
 pure, deterministic Top-K ranking and temperature-aware softmax helpers; the
 Playground runs their published examples through the same interpreter.
-Alpha.3's private scalar IR is not a browser native-code generator. The current development preview exposes **Go to definition** through
+The latest published alpha.4 adds sampled calculus and cosine similarity; the updated WebAssembly preview must pass independent real-browser tests before merge. Its limited native ELF64 writer is a Rust embedding API, not a browser-native executable compiler. Alpha.3's private scalar IR is not a browser native-code generator. The current development preview exposes **Go to definition** through
 F12 and an accessible button, using the real Rust compiler's bounded symbol
 index. It does not implement a full LSP, rename or find-references UI.
 
@@ -94,7 +94,7 @@ load failure — it never fakes a successful program result.
   but never returns program stdout or stderr. The real compiler reports source
   diagnostics, including imported-module locations. Check is not a syntax-only
   parser or an external remote service.
-- Numerical RMS from Scarp alpha.1, retained in the pinned alpha.3 WASM runtime.
+- Numerical RMS from Scarp alpha.1, retained in the pinned alpha.4 WASM runtime.
 - **Deterministic Top-K and temperature softmax** from Scarp alpha.3, with official exact-output examples verified through native Rust and real browser WASM regression tests. These are finite vector functions, not an AI model runtime or random sampling.
 - **Go to Definition (F12 and toolbar button)** uses the official Rust compiler's bounded, nonexecuting
   symbol index. Navigates across virtual .srp modules, preserves editor undo
@@ -185,7 +185,7 @@ termination under bounded pressure, see [browser memory-pressure telemetry](docs
 These observations do not establish a hard memory cap.
 For the portable source-only JSON format and its import threat model see
 [docs/portable-workspaces.md](docs/portable-workspaces.md).
-See the [current alpha.3 compiler integration audit](docs/compiler-alpha6-3-check.md)
+See the [historical alpha.3 compiler integration audit](docs/compiler-alpha6-3-check.md) and the [alpha.4 WASM upgrade gate](docs/compiler-alpha6-4-check.md)
 and [Go to Definition contract](docs/go-to-definition.md) for the precise
 pin, safety constraints and location-mapping protocol. The
 [alpha.4 integration audit](docs/compiler-integration.md) is retained as a
