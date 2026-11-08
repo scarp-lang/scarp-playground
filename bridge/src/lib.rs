@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.3.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.4.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions};
 use serde::Deserialize;
@@ -481,6 +481,27 @@ mod tests {
         assert_eq!(response["stdout"], "2.0\n");
     }
 
+
+    #[test]
+    fn executes_published_alpha4_scientific_examples() {
+        // Expected output matches the official alpha.4 .stdout fixtures.
+        let cases = [
+            ("bind time = [0.0, 1.0, 3.0]; bind velocity = [0.0, 2.0, 6.0]; print(sample_area(time, velocity)); print(sample_slopes(time, velocity));", "9.0\n[2.0, 2.0]\n"),
+            ("bind time = [0.0, 1.0, 3.0, 4.0]; bind speed = [0.0, 2.0, 6.0, 8.0]; print(sample_cumulative_area(time, speed)); print(sample_area(time, speed));", "[0.0, 1.0, 9.0, 16.0]\n16.0\n"),
+            ("bind direction = [3.0, 4.0]; print(cosine_similarity(direction, [6.0, 8.0])); print(cosine_similarity([1.0, 0.0], [0.0, 1.0])); print(cosine_similarity([3.0], [-4.0]));", "1.0\n0.0\n-1.0\n"),
+        ];
+        for (source, expected) in cases {
+            let response = stressed(source);
+            assert_eq!(response["ok"], true, "{response}");
+            assert_eq!(response["stdout"], expected);
+        }
+    }
+
+    #[test]
+    fn alpha4_rejects_invalid_cosine_domain_without_partial_output() {
+        let response = stressed("print(\"before\"); print(cosine_similarity([0.0, 0.0], [1.0, 2.0]));");
+        assert_atomic_failure(&response);
+    }
 
     fn definition_test(files: &[(&str, &str)], path: &str, offset: usize) -> Value {
         let input = request(files);

@@ -7,9 +7,9 @@ test('boots the real interpreter and executes the official hello sample', async 
   await expect(page.getByRole('heading', { name: 'Code. Run. Learn.' })).toBeVisible();
   await expect(page.getByText('Development preview', { exact: true })).toBeVisible();
   // The embedded compiler is pinned independently of Playground's v0.0.1 tag.
-  await expect(page.getByText('Scarp v0.0.6-alpha.3', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scarp v0.0.6-alpha.4', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /Compiler release notes/ }))
-    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.3');
+    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.4');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
   await expect(page.locator('.result-status.success')).toBeVisible();
@@ -70,6 +70,31 @@ test('alpha.3 rejects an invalid temperature without partial output and recovers
     '[0.5, 0.5]\n[0.0]\n[integer: 1, 2, 3]\n',
     { timeout: 30_000 },
   );
+});
+
+test('executes published alpha.4 scientific examples through the real WASM worker', async ({ page }) => {
+  await page.goto('./');
+  const cases = [
+    ['Sampled calculus', '9.0\n[2.0, 2.0]\n'],
+    ['Cumulative sampled area', '[0.0, 1.0, 9.0, 16.0]\n16.0\n'],
+    ['Cosine similarity', '1.0\n0.0\n-1.0\n'],
+  ] as const;
+  for (const [name, expected] of cases) {
+    await page.getByRole('button', { name: new RegExp(name) }).click();
+    await page.getByRole('button', { name: 'Run code' }).click();
+    await expect(page.locator('.stdout')).toHaveText(expected, { timeout: 30_000 });
+    await expect(page.locator('.result-status.success')).toBeVisible();
+  }
+});
+
+test('alpha.4 rejects zero-vector cosine inputs atomically and recovers', async ({ page }) => {
+  await page.goto('./#code=' + encodeURIComponent('print("before"); print(cosine_similarity([0.0, 0.0], [1.0, 2.0]));'));
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.result-status.failure')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.stdout')).toHaveCount(0);
+  await page.getByRole('button', { name: /Cosine similarity/ }).click();
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('1.0\n0.0\n-1.0\n', { timeout: 30_000 });
 });
 
 test('imports and executes another .srp source file in the real module loader', async ({ page }) => {
