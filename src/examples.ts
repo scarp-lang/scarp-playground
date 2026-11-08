@@ -47,6 +47,30 @@ export const examples: Example[] = [
     },
   },
   {
+    "title": "Sampled calculus",
+    "description": "Trapezoidal integration and interval slopes (alpha.4)",
+    "entry": "main.srp",
+    "files": {
+      "main.srp": "// Official Scarp v0.0.6-alpha.4 examples/sampled_calculus.srp\nbind time = [0.0, 1.0, 3.0];\nbind velocity = [0.0, 2.0, 6.0];\nprint(sample_area(time, velocity));\nprint(sample_slopes(time, velocity));\n"
+    }
+  },
+  {
+    "title": "Cumulative sampled area",
+    "description": "Finite prefix integrals (alpha.4)",
+    "entry": "main.srp",
+    "files": {
+      "main.srp": "// Official Scarp v0.0.6-alpha.4 examples/sample_cumulative_area.srp\nbind time = [0.0, 1.0, 3.0, 4.0];\nbind speed = [0.0, 2.0, 6.0, 8.0];\nprint(sample_cumulative_area(time, speed));\nprint(sample_area(time, speed));\n"
+    }
+  },
+  {
+    "title": "Cosine similarity",
+    "description": "Finite vector direction comparison (alpha.4)",
+    "entry": "main.srp",
+    "files": {
+      "main.srp": "// Official Scarp v0.0.6-alpha.4 examples/cosine_similarity.srp\nbind direction = [3.0, 4.0];\nprint(cosine_similarity(direction, [6.0, 8.0]));\nprint(cosine_similarity([1.0, 0.0], [0.0, 1.0]));\nprint(cosine_similarity([3.0], [-4.0]));\n"
+    }
+  },
+  {
     title: 'Import a module',
     description: 'Two real .srp source files',
     entry: 'main.srp',

@@ -457,9 +457,9 @@ export function App() {
           </div>
           <div className="sidebar-bottom">
             <div className="section-label">COMPATIBILITY</div>
-            <strong>Scarp v0.0.6-alpha.3</strong>
-            <p>Compiler source pinned to release commit ceff07d. Code runs locally inside a disposable Web Worker.</p>
-            <a href="https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.3" target="_blank" rel="noreferrer">Compiler release notes ↗</a>
+            <strong>Scarp v0.0.6-alpha.4</strong>
+            <p>Compiler source pinned to release commit f04be07. Code runs locally inside a disposable Web Worker.</p>
+            <a href="https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.4" target="_blank" rel="noreferrer">Compiler release notes ↗</a>
           </div>
         </aside>
 
