@@ -182,6 +182,38 @@ test('a shared URL does not erase the separately saved browser workspace', async
   await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
 });
 
+test('switching built-in examples preserves saved projects until explicitly saved again', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  await page.getByRole('tab', { name: /math.srp/ }).click();
+  await page.getByRole('button', { name: 'Save locally' }).click();
+  const originalSnapshot = await page.evaluate(() =>
+    localStorage.getItem('scarp-playground-workspace-v1'));
+  expect(originalSnapshot).not.toBeNull();
+
+  // A new example is temporary; the previously saved multi-file project must
+  // not be silently replaced by the 350ms autosave debounce.
+  await page.getByRole('button', { name: /Cosine similarity/ }).click();
+  await expect(page.locator('.notice')).toContainText('locally saved workspace is preserved');
+  await expect(page.getByRole('button', { name: 'Save locally' })).toBeVisible();
+  await page.waitForTimeout(600);
+  expect(await page.evaluate(() =>
+    localStorage.getItem('scarp-playground-workspace-v1'))).toBe(originalSnapshot);
+
+  await page.reload();
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveAttribute('aria-selected', 'true');
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
+
+  // Intentional replacement still works: Save locally is the explicit opt-in.
+  await page.getByRole('button', { name: /Sampled calculus/ }).click();
+  await page.getByRole('button', { name: 'Save locally' }).click();
+  await page.reload();
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('9.0\n[2.0, 2.0]\n', { timeout: 30_000 });
+});
+
 test('forgetting browser storage retains the open code but not its next-session copy', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: /Import a module/ }).click();
