@@ -71,6 +71,18 @@ export const examples: Example[] = [
     }
   },
   {
+    title: 'Top-P nucleus ranking',
+    description: 'Deterministic probability prefix selection (alpha.5)',
+    entry: 'main.srp',
+    files: { 'main.srp': "// Deterministic nucleus selection: rank the smallest probability prefix\n// covering the specified cumulative mass without random sampling.\nbind probabilities = [0.5, 0.25, 0.25];\nprint(top_p(probabilities, 0.75));\nprint(top_p_values(probabilities, 0.75));\nprint(top_p(probabilities, 1.0));\n\nbind logits = [1.0, 4.0, 4.0, 2.0];\nprint(top_p(softmax_temp(logits, 0.5), 0.9));\n" },
+  },
+  {
+    title: 'Pearson correlation',
+    description: 'Centered linear relationship of paired vectors (alpha.5)',
+    entry: 'main.srp',
+    files: { 'main.srp': "// Pearson correlation: centered scientific statistics, not cosine similarity.\nbind measurements = [1.0, 2.0, 3.0];\nprint(pearson_correlation(measurements, [10.0, 20.0, 30.0]));\nprint(pearson_correlation(measurements, [30.0, 20.0, 10.0]));\nprint(pearson_correlation([-1.0, 0.0, 1.0], [1.0, -2.0, 1.0]));\n" },
+  },
+  {
     title: 'Import a module',
     description: 'Two real .srp source files',
     entry: 'main.srp',
