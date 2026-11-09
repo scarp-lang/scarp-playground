@@ -286,11 +286,18 @@ export function App() {
   function selectExample(index: number) {
     invalidateExecution();
     const example = examples[index];
+    // Loading a sample replaces the editor session, not the user's saved
+    // project. Stop autosaving before switching workspaces; explicit Save
+    // locally is required to replace the browser's previous snapshot.
+    setSavingLocally(false);
     setWorkspace({ entry: example.entry, files: { ...example.files } });
     setEditorSession((number) => number + 1);
     setActiveFile(example.entry);
     setResult(null);
-    setNotice('Loaded ' + example.title + ' — ready to execute with the real compiler.');
+    setNotice('Loaded ' + example.title +
+      (savingLocally
+        ? ' — your locally saved workspace is preserved. Choose Save locally to replace it.'
+        : ' — ready to execute with the real compiler.'));
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
   }
 
