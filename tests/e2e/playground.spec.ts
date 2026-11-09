@@ -7,9 +7,9 @@ test('boots the real interpreter and executes the official hello sample', async 
   await expect(page.getByRole('heading', { name: 'Code. Run. Learn.' })).toBeVisible();
   await expect(page.getByText('Development preview', { exact: true })).toBeVisible();
   // The embedded compiler is pinned independently of Playground's v0.0.1 tag.
-  await expect(page.getByText('Scarp v0.0.6-alpha.4', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scarp v0.0.6-alpha.5', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /Compiler release notes/ }))
-    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.4');
+    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.5');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
   await expect(page.locator('.result-status.success')).toBeVisible();
@@ -95,6 +95,37 @@ test('alpha.4 rejects zero-vector cosine inputs atomically and recovers', async 
   await page.getByRole('button', { name: /Cosine similarity/ }).click();
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('1.0\n0.0\n-1.0\n', { timeout: 30_000 });
+});
+
+test('runs the exact published alpha.5 Top-P and Pearson fixtures in real WASM', async ({ page }) => {
+  await page.goto('./');
+  const cases = [
+    ['Top-P nucleus ranking', '[integer: 0, 1]\n[0.5, 0.25]\n[integer: 0, 1, 2]\n[integer: 1, 2]\n'],
+    ['Pearson correlation', '1.0\n-1.0\n0.0\n'],
+  ] as const;
+  for (const [name, expected] of cases) {
+    await page.getByRole('button', { name: new RegExp(name) }).click();
+    await page.getByRole('button', { name: 'Run code' }).click();
+    await expect(page.locator('.stdout')).toHaveText(expected, { timeout: 30_000 });
+    await expect(page.locator('.result-status.success')).toBeVisible();
+  }
+});
+
+test('alpha.5 rejects invalid Top-P and zero-variance Pearson atomically, then recovers', async ({ page }) => {
+  const invalidPrograms = [
+    'print("before"); print(top_p([0.5, 0.25, 0.25], 0.0));',
+    'print("before"); print(pearson_correlation([1.0, 1.0], [1.0, 2.0]));',
+  ];
+  for (const source of invalidPrograms) {
+    await page.goto('./#code=' + encodeURIComponent(source));
+    await page.getByRole('button', { name: 'Run code' }).click();
+    await expect(page.locator('.error-title')).toContainText('E0034', { timeout: 30_000 });
+    await expect(page.locator('.stdout')).toHaveCount(0);
+    await expect(page.locator('.result-status.failure')).toBeVisible();
+    await page.getByRole('button', { name: /Pearson correlation/ }).click();
+    await page.getByRole('button', { name: 'Run code' }).click();
+    await expect(page.locator('.stdout')).toHaveText('1.0\n-1.0\n0.0\n', { timeout: 30_000 });
+  }
 });
 
 test('imports and executes another .srp source file in the real module loader', async ({ page }) => {
