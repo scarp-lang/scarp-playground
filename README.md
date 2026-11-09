@@ -89,7 +89,9 @@ load failure — it never fakes a successful program result.
   multi-file workspace and selected editor tab across reloads, with automatic
   local updates while enabled. Forget saved copy removes the browser snapshot.
   No code is uploaded. Browser storage is not encrypted; do not store secrets.
-  Shared URLs temporarily override local saved state without destroying it.
+  Shared URLs, imported projects and newly selected built-in examples open
+  temporarily without overwriting a saved project. Choose **Save locally**
+  again to explicitly replace the existing browser copy.
 - Actual interpreter stdout, stderr and schema-1 compiler diagnostics.
 - **Check code** validates the entire virtual module graph and evaluates selected
   paths under the same work, print, call, capture and allocation budgets as Run,
