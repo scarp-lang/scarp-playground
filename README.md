@@ -221,3 +221,8 @@ A future Scarp prerelease does not automatically update Playground's engine.
 [Issues](https://github.com/scarp-lang/scarp-playground/issues)
 
 Licensed under [Apache-2.0](LICENSE).
+
+
+Use **Find in project** (Ctrl+Shift+F) for bounded local text search across
+all virtual `.srp` files, including clickable, Unicode-aware source locations.
+See [docs/project-search.md](docs/project-search.md).

@@ -1,4 +1,4 @@
-import { lazy, Suspense, useCallback, useEffect, useRef, useState, type ChangeEvent } from 'react';
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } from 'react';
 
 // Keep the large Monaco code out of the initial React shell bundle.
 // The actual editor loads on demand while the rest of the UI stays interactive.
@@ -14,6 +14,7 @@ import { ExecutionScope } from './runner/execution-scope';
 import type { RunResult } from './runner/types';
 import { MAX_FILES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
+import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
 import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
 
@@ -60,6 +61,9 @@ export function App() {
   const [operation, setOperation] = useState<'run' | 'check'>('run');
   const [result, setResult] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const executionScope = useRef(new ExecutionScope());
   const definitionScope = useRef(new ExecutionScope());
@@ -68,6 +72,23 @@ export function App() {
     path: string; line: number; column: number; sequence: number;
   } | null>(null);
   const files = Object.keys(workspace.files);
+  const searchResult = useMemo(() =>
+    searchProjectFiles(workspace.files, searchQuery), [workspace.files, searchQuery]);
+
+  useEffect(() => {
+    if (searchOpen) searchInputRef.current?.focus();
+  }, [searchOpen]);
+
+  function jumpToSearchHit(hit: ProjectSearchHit) {
+    if (!Object.hasOwn(workspace.files, hit.path)) return;
+    // Any delayed definition result must not replace explicit text navigation.
+    definitionScope.current.invalidate();
+    setActiveFile(hit.path);
+    setNavigationTarget(previous => ({
+      path: hit.path, line: hit.line, column: hit.column,
+      sequence: (previous?.sequence ?? 0) + 1,
+    }));
+  }
 
   function invalidateExecution() {
     definitionScope.current.invalidate();
@@ -181,7 +202,12 @@ export function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+      if ((event.ctrlKey || event.metaKey) && event.shiftKey &&
+          event.key.toLowerCase() === 'f') {
+        event.preventDefault();
+        setSearchOpen(true);
+        searchInputRef.current?.focus();
+      } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         event.preventDefault();
         void run();
       }
@@ -486,6 +512,11 @@ export function App() {
               />
               <button type="button" className="button-secondary" onClick={() => importFileRef.current?.click()}>Import project</button>
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
+              <button type="button" className="button-secondary"
+                aria-expanded={searchOpen} aria-controls="project-search-panel"
+                onClick={() => setSearchOpen(open => !open)}>
+                Find in project
+              </button>
               <button type="button" className="button-secondary" onClick={() => void share()} title="Copy a link to the complete project when it fits the URL limit">Share ↗</button>
               <button type="button" className="button-secondary" onClick={() => void run('check')} disabled={running}>
                 Check code
@@ -501,6 +532,42 @@ export function App() {
               )}
             </div>
           </div>
+
+          {searchOpen && (
+            <section id="project-search-panel" className="project-search" aria-label="Search Scarp project">
+              <div className="project-search-bar">
+                <label htmlFor="project-search-input">Find in all .srp files</label>
+                <input id="project-search-input" ref={searchInputRef} type="search"
+                  value={searchQuery} maxLength={MAX_SEARCH_QUERY}
+                  onChange={event => setSearchQuery(event.target.value)}
+                  placeholder="Search source text…"
+                  aria-label="Search text in project" />
+                <button type="button" onClick={() => setSearchQuery('')}
+                  disabled={!searchQuery}>Clear</button>
+                <button type="button" onClick={() => setSearchOpen(false)}
+                  aria-label="Close project search">Close</button>
+              </div>
+              <p className="project-search-status" role="status">
+                {searchQuery.length < 2
+                  ? 'Enter at least two characters. Searches are local and case-insensitive.'
+                  : searchResult.matches.length + (searchResult.truncated ? '+' : '') +
+                    ' matching locations' + (searchResult.truncated ? ' (limit reached)' : '')}
+              </p>
+              {searchQuery.length >= 2 && searchResult.matches.length > 0 && (
+                <div className="project-search-results" aria-label="Project search matches">
+                  {searchResult.matches.map((hit, index) => (
+                    <button key={hit.path + ':' + hit.line + ':' + hit.column + ':' + index}
+                      type="button" className="project-search-hit"
+                      aria-label={'Open ' + hit.path + ' line ' + hit.line + ' column ' + hit.column}
+                      onClick={() => jumpToSearchHit(hit)}>
+                      <strong>{hit.path}:{hit.line}:{hit.column}</strong>
+                      <span>{hit.preview}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </section>
+          )}
 
           <div className="editor-card">
             <div className="file-tabs" role="tablist" aria-label="Scarp source files">
