@@ -95,7 +95,7 @@ describe('compiler schema-v1 diagnostic coordinates', () => {
   });
 
   it('understands lone-CR lines and refuses positions beyond source text', () => {
-    expect(sourceLocationToEditorRange('one\\rtwo😀', {
+    expect(sourceLocationToEditorRange('one\rtwo😀', {
       path: 'main.srp',
       start: { line: 2, column: 4 },
       end: { line: 2, column: 5 },
