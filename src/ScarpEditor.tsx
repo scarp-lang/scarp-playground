@@ -4,6 +4,7 @@ import 'monaco-editor/esm/vs/editor/editor.all.js';
 import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import { diagnosticLocations, sourceLocationToEditorRange } from './diagnostics';
+import { editorCompletionHints } from './editor-completions';
 import type { CompilerDiagnostic } from './runner/types';
 
 const environment = globalThis as typeof globalThis & {
@@ -16,7 +17,8 @@ monaco.languages.setMonarchTokensProvider('scarp', {
   keywords: [
     'bind', 'var', 'funcra', 'pure', 'pub', 'return', 'if', 'elif', 'else', 'while',
     'repeat', 'as', 'break', 'continue', 'import', 'and', 'or', 'not', 'true',
-    'false', 'integer', 'float', 'boolean', 'string', 'unit',
+    'false', 'integer', 'float', 'boolean', 'string', 'unit', 'vector', 'tile',
+    'needs', 'ensures', 'println', 'print', 'write', 'eprint', 'ewrite',
   ],
   tokenizer: {
     root: [
@@ -54,6 +56,8 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
   const views = useRef(new Map<string, monaco.editor.ICodeEditorViewState | null>());
   const activePath = useRef(path);
+  const filesRef = useRef(files);
+  filesRef.current = files;
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const lastNavigationTrigger = useRef(navigationTrigger);
@@ -84,12 +88,43 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
         activePath.current, position.lineNumber, position.column, instance.getValue(),
       );
     });
+    const completionProvider = monaco.languages.registerCompletionItemProvider('scarp', {
+      triggerCharacters: ['"', '/', '.'],
+      provideCompletionItems: (model, position) => {
+        // Only suggest source files belonging to this mounted Playground editor.
+        if (model.uri.scheme !== 'inmemory' || model.uri.authority !== 'scarp' ||
+            model.uri.path !== '/' + activePath.current ||
+            !Object.hasOwn(filesRef.current, activePath.current)) {
+          return { suggestions: [] };
+        }
+        const prefix = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
+        const hints = editorCompletionHints(prefix, activePath.current, filesRef.current);
+        return {
+          suggestions: hints.map((hint) => ({
+            label: hint.label,
+            kind: hint.kind === 'file'
+              ? monaco.languages.CompletionItemKind.File
+              : monaco.languages.CompletionItemKind.Snippet,
+            insertText: hint.insertText,
+            insertTextRules: hint.kind === 'snippet'
+              ? monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet
+              : undefined,
+            detail: hint.detail,
+            range: new monaco.Range(
+              position.lineNumber, position.column - hint.replaceLength,
+              position.lineNumber, position.column,
+            ),
+          })),
+        };
+      },
+    });
     const listener = instance.onDidChangeModelContent(() => {
       const currentFile = activePath.current;
       onChangeRef.current(currentFile, instance.getValue());
     });
     return () => {
       listener.dispose();
+      completionProvider.dispose();
       instance.dispose();
       for (const model of models.current.values()) {
         monaco.editor.setModelMarkers(model, MARKER_OWNER, []);

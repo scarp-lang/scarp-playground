@@ -531,7 +531,7 @@ export function App() {
               </Suspense>
             </div>
             <div className="editor-footer">
-              <span><span className="online-dot" />Scarp syntax · F12: Go to Definition</span>
+              <span><span className="online-dot" />Scarp syntax · Ctrl+Space: Completion · F12: Go to Definition</span>
               <span>UTF-8 · {activeFile}</span>
               <div className="footer-controls">
                 <button type="button" onClick={() => setNavigationTrigger(previous => previous + 1)}
