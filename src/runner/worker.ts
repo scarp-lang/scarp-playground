@@ -36,7 +36,7 @@ self.addEventListener('message', async (event: MessageEvent<RunRequest | Definit
     } else {
       const result = decodeCompilerReply(
         mode === 'check' ? compiler.check(JSON.stringify(workspace)) :
-          compiler.execute(JSON.stringify(workspace)),
+          compiler.execute(JSON.stringify({ ...workspace, stdin: request.stdin ?? '' })),
       );
       self.postMessage({ id, result } satisfies RunResponse);
     }

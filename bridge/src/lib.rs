@@ -1,6 +1,6 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.4.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.6.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
-use scarp::{ExecutionLimits, ExecutionOptions};
+use scarp::{ExecutionLimits, ExecutionOptions, InputLimits};
 use serde::Deserialize;
 use serde_json::{json, Value};
 use std::collections::BTreeMap;
@@ -11,11 +11,21 @@ const MAX_FILE_BYTES: usize = 64 * 1024;
 const MAX_TOTAL_BYTES: usize = 128 * 1024;
 // Even heavily escaped but valid 128 KiB source fits in this bound.
 const MAX_REQUEST_JSON_BYTES: usize = 1024 * 1024;
+// In-memory stdin is neither terminal access nor an interactive prompt.
+const MAX_STDIN_BYTES: usize = 16 * 1024;
 
 #[derive(Deserialize)]
 struct Request {
     entry: String,
     files: BTreeMap<String, String>,
+}
+
+#[derive(Deserialize)]
+struct ExecutionRequest {
+    #[serde(flatten)]
+    workspace: Request,
+    #[serde(default)]
+    stdin: String,
 }
 
 #[derive(Deserialize)]
@@ -155,11 +165,14 @@ fn process_request(json_source: &str, check_only: bool) -> String {
     if json_source.len() > MAX_REQUEST_JSON_BYTES {
         return error("The compiler request exceeds the 1 MiB JSON limit.");
     }
-    let request: Request = match serde_json::from_str(json_source) {
+    let request: ExecutionRequest = match serde_json::from_str(json_source) {
         Ok(value) => value,
         Err(_) => return error("Malformed playground request."),
     };
-    let (entry, loader) = match load_workspace(request) {
+    if request.stdin.len() > MAX_STDIN_BYTES {
+        return error("Program input exceeds the 16 KiB browser limit.");
+    }
+    let (entry, loader) = match load_workspace(request.workspace) {
         Ok(result) => result,
         Err(problem) => return error(problem),
     };
@@ -192,13 +205,24 @@ fn process_request(json_source: &str, check_only: bool) -> String {
         max_capture_bytes: 1024 * 1024,
         max_vector_bytes: 2 * 1024 * 1024,
         max_text_bytes: 2 * 1024 * 1024,
+        max_tuple_bytes: 1024 * 1024,
     };
-    // Both modes use the same compiler, graph and execution budgets. Checking
-    // evaluates the selected program paths but suppresses all print effects.
+    // Input is supplied ONLY from this request's bounded, copied text. Never
+    // borrow process stdin, user filesystem, or a remote service in WebAssembly.
+    // Historical check mode evaluates selected paths but cannot read input;
+    // the compiler correctly reports E0054 for a selected read_line().
+    let mut stdin = std::io::Cursor::new(request.stdin.as_bytes());
     let result = if check_only {
         program.check(options).map_err(ModuleRunError::Diagnostic)
     } else {
-        program.execute(&mut stdout, &mut stderr, options)
+        program.execute_with_input(
+            &mut stdin, &mut stdout, &mut stderr, options,
+            InputLimits {
+                max_line_bytes: MAX_STDIN_BYTES,
+                max_total_bytes: MAX_STDIN_BYTES,
+                max_reads: 128,
+            },
+        )
     };
     match result {
         Ok(()) => json!({
@@ -272,6 +296,56 @@ mod tests {
         ]))).unwrap();
         assert_eq!(result["ok"], true);
         assert_eq!(result["stdout"], "Hello from Scarp!\n");
+    }
+
+    #[test]
+    fn runs_bounded_unicode_input_and_tuple_conversion_without_host_stdin() {
+        let request = json!({
+            "entry": "main.srp",
+            "files": {
+                "main.srp": "bind name = read_line(); bind pair: tuple<integer, string> = (7, name); print(pair[0], text_trim(pair[1]));"
+            },
+            "stdin": "  नमस्ते  \r\n"
+        }).to_string();
+        let result: Value = serde_json::from_str(&execute_request(&request)).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "7 नमस्ते\n");
+    }
+
+    #[test]
+    fn check_rejects_selected_input_without_consumer_or_partial_output() {
+        let request = json!({
+            "entry": "main.srp",
+            "files": { "main.srp": "print(read_line());" },
+            "stdin": "hello\n"
+        }).to_string();
+        let result: Value = serde_json::from_str(&check_request(&request)).unwrap();
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["diagnostic"]["code"], "E0054");
+        assert_eq!(result["stdout"], "");
+        assert_eq!(result["stderr"], "");
+    }
+
+    #[test]
+    fn empty_input_yields_real_eof_diagnostic() {
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", "print(read_line());")]),
+        )).unwrap();
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["diagnostic"]["code"], "E0055");
+    }
+
+    #[test]
+    fn oversized_input_rejected_before_interpreter_invocation() {
+        let request = json!({
+            "entry": "main.srp",
+            "files": { "main.srp": "print(\"should not run\");" },
+            "stdin": "x".repeat(MAX_STDIN_BYTES + 1),
+        }).to_string();
+        let result: Value = serde_json::from_str(&execute_request(&request)).unwrap();
+        assert_eq!(result["ok"], false);
+        assert!(result["error"].as_str().unwrap().contains("16 KiB"));
+        assert_eq!(result["stdout"], "");
     }
 
     #[test]
