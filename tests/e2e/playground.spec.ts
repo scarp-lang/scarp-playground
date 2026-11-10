@@ -7,9 +7,9 @@ test('boots the real interpreter and executes the official hello sample', async 
   await expect(page.getByRole('heading', { name: 'Code. Run. Learn.' })).toBeVisible();
   await expect(page.getByText('Development preview', { exact: true })).toBeVisible();
   // The embedded compiler is pinned independently of Playground's v0.0.1 tag.
-  await expect(page.getByText('Scarp v0.0.6-alpha.5', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scarp v0.0.6-alpha.6', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /Compiler release notes/ }))
-    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.5');
+    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.6');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
   await expect(page.locator('.result-status.success')).toBeVisible();
@@ -36,7 +36,7 @@ test('check returns real diagnostics without publishing partial output', async (
   await expect(page.locator('.result-status.failure')).toBeVisible();
 });
 
-test('compiler alpha.6 numerical RMS works in a real browser worker', async ({ page }) => {
+test('compiler numerical RMS works in a real browser worker', async ({ page }) => {
   await page.goto('./');
   await page.getByRole('button', { name: /Root mean square/ }).click();
   await page.getByRole('button', { name: 'Run code' }).click();

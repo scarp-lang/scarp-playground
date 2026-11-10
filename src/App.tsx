@@ -6,7 +6,7 @@ const ScarpEditor = lazy(() =>
   import('./ScarpEditor').then(({ ScarpEditor }) => ({ default: ScarpEditor })),
 );
 import { examples } from './examples';
-import { checkWorkspace, runWorkspace } from './runner/client';
+import { checkWorkspace, runWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
 import { editorPositionToByteOffset } from './navigation/coordinates';
 import { findDefinition } from './navigation/client';
 import { sourceLocationToEditorRange } from './diagnostics';
@@ -61,6 +61,8 @@ export function App() {
   const [operation, setOperation] = useState<'run' | 'check'>('run');
   const [result, setResult] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Runtime input is intentionally ephemeral: never saved or placed in shared links.
+  const [programInput, setProgramInput] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -120,7 +122,7 @@ export function App() {
     try {
       const response = mode === 'check'
         ? await checkWorkspace(workspace, execution.controller.signal)
-        : await runWorkspace(workspace, execution.controller.signal);
+        : await runWorkspace(workspace, execution.controller.signal, programInput);
       if (!executionScope.current.isCurrent(execution)) return;
       setResult(response);
       // Open the originating virtual file only for the snapshot that ran.
@@ -139,7 +141,7 @@ export function App() {
     } finally {
       if (executionScope.current.finish(execution)) setRunning(false);
     }
-  }, [workspace]);
+  }, [workspace, programInput]);
 
   const navigateToDefinition = useCallback(async (
     path: string, line: number, column: number, source: string,
@@ -234,6 +236,7 @@ export function App() {
         invalidateExecution();
         setSavingLocally(false);
         setWorkspace(shared.workspace);
+        setProgramInput('');
         setEditorSession((number) => number + 1);
         setActiveFile(shared.activeFile);
         setResult(null);
@@ -246,6 +249,7 @@ export function App() {
         if (saved) {
           invalidateExecution();
           setWorkspace(saved.workspace);
+          setProgramInput('');
           setEditorSession((number) => number + 1);
           setActiveFile(saved.activeFile);
           setSavingLocally(true);
@@ -317,6 +321,7 @@ export function App() {
     // locally is required to replace the browser's previous snapshot.
     setSavingLocally(false);
     setWorkspace({ entry: example.entry, files: { ...example.files } });
+    setProgramInput(example.stdin ?? '');
     setEditorSession((number) => number + 1);
     setActiveFile(example.entry);
     setResult(null);
@@ -416,6 +421,7 @@ export function App() {
       invalidateExecution();
       setSavingLocally(false);
       setWorkspace(imported.workspace);
+      setProgramInput('');
       setEditorSession((number) => number + 1);
       setActiveFile(imported.activeFile);
       setResult(null);
@@ -486,9 +492,9 @@ export function App() {
           </div>
           <div className="sidebar-bottom">
             <div className="section-label">COMPATIBILITY</div>
-            <strong>Scarp v0.0.6-alpha.5</strong>
-            <p>Compiler source pinned to release commit 205e92f. Code runs locally inside a disposable Web Worker.</p>
-            <a href="https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.5" target="_blank" rel="noreferrer">Compiler release notes ↗</a>
+            <strong>Scarp v0.0.6-alpha.6</strong>
+            <p>Compiler source pinned to release commit cdf6a39. Code runs locally inside a disposable Web Worker.</p>
+            <a href="https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.6" target="_blank" rel="noreferrer">Compiler release notes ↗</a>
           </div>
         </aside>
 
@@ -613,6 +619,23 @@ export function App() {
               </div>
             </div>
           </div>
+
+          <section className="stdin-panel" aria-label="Buffered program input">
+            <div className="stdin-heading">
+              <label htmlFor="scarp-program-input">Program input (stdin)</label>
+              <span>{new TextEncoder().encode(programInput).byteLength} / {MAX_PROGRAM_INPUT_BYTES} UTF-8 bytes</span>
+            </div>
+            <textarea id="scarp-program-input" rows={3} spellCheck={false}
+              aria-label="Program input (stdin)"
+              value={programInput} maxLength={MAX_PROGRAM_INPUT_BYTES}
+              placeholder={'Text consumed by read_line(), one line per call…'}
+              onChange={event => {
+                invalidateExecution();
+                setProgramInput(event.target.value);
+              }} />
+            <p>Buffered input is supplied only when you run the program. It is not
+              interactive, is not saved or shared, and cannot be read in Check code mode.</p>
+          </section>
 
           <section className="console-card" aria-label="Program output">
             <div className="console-toolbar">

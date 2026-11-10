@@ -10,6 +10,9 @@ describe('shipped compiler-backed learning examples', () => {
       expect(validateWorkspace({ entry: example.entry, files: example.files })).toBeNull();
       expect(Object.keys(example.files).length).toBeGreaterThan(0);
       expect(Object.values(example.files).every((source) => source.length > 0)).toBe(true);
+      if (example.stdin !== undefined) {
+        expect(new TextEncoder().encode(example.stdin).byteLength).toBeLessThanOrEqual(16 * 1024);
+      }
     }
   });
 });

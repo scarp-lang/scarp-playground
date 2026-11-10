@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.5** (published prerelease) |
-| Pinned compiler revision | `205e92f166f186c3905e5880d41c31717b697b8e` |
+| Scarp compiler | **v0.0.6-alpha.6** (published prerelease) |
+| Pinned compiler revision | `cdf6a3924ec2a36c7beca5a9aec4f01a0bce515e` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -44,6 +44,15 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.6 adds explicit buffered `read_line()` input, six scalar/text
+conversion intrinsics, and structural heterogeneous tuples. The Playground
+runs these through the pinned WebAssembly interpreter, including a separate
+ephemeral **Program input (stdin)** text area with a **16 KiB** UTF-8 limit.
+It never reads terminal stdin or displays interactive prompts. **Check code**
+still evaluates and rejects a selected input read with E0054, as the upstream
+compiler specifies. The input text is not shared, exported or autosaved.
+Read [the alpha.6 browser integration notes](docs/compiler-alpha6-input.md).
 
 The earlier alpha.4 introduced offline `Scarp.project` CLI create/launch/verify
 features. **Those host-filesystem commands are not available inside the
@@ -204,7 +213,8 @@ For the portable source-only JSON format and its import threat model see
 Start with compiler-verified conditionals, while/repeat loops, typed functions and
 output examples in the Playground's **Example Programs** section. See
 [docs/beginner-examples.md](docs/beginner-examples.md).
-See the [alpha.5 compiler integration gate](docs/compiler-alpha6-5-check.md),
+See the [alpha.6 compiler integration notes](docs/compiler-alpha6-input.md),
+[historical alpha.5 integration gate](docs/compiler-alpha6-5-check.md),
 [historical alpha.4 integration](docs/compiler-alpha6-4-check.md) and
 [historical alpha.3 audit](docs/compiler-alpha6-3-check.md)
 and [Go to Definition contract](docs/go-to-definition.md) for the precise
