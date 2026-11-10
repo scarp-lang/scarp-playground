@@ -57,10 +57,10 @@ export function validatedReferencesResult(value: unknown): ReferenceResult {
       typeof value.truncated !== 'boolean') return invalid();
   const sites: ReferenceSite[] = [];
   for (const item of value.references) {
-    if (!range(item) || !record(item) ||
+    if (!record(item) || !range(item) ||
         typeof item.kind !== 'string' || item.kind.length > 32) return invalid();
     sites.push({
-      path: item.path, start: item.start, end: item.end, kind: item.kind,
+      path: item.path, start: item.start, end: item.end, kind: item.kind as string,
     });
   }
   return {
