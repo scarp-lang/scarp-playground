@@ -18,7 +18,9 @@ monaco.languages.setMonarchTokensProvider('scarp', {
     'bind', 'var', 'funcra', 'pure', 'pub', 'return', 'if', 'elif', 'else', 'while',
     'repeat', 'as', 'break', 'continue', 'import', 'and', 'or', 'not', 'true',
     'false', 'integer', 'float', 'boolean', 'string', 'unit', 'vector', 'tile',
-    'needs', 'ensures', 'println', 'print', 'write', 'eprint', 'ewrite',
+    'needs', 'ensures', 'tuple', 'read_line', 'text_to_integer', 'text_to_float',
+    'integer_to_text', 'float_to_text', 'text_trim', 'text_replace',
+    'println', 'print', 'write', 'eprint', 'ewrite',
   ],
   tokenizer: {
     root: [

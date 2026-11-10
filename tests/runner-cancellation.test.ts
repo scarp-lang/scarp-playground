@@ -49,6 +49,23 @@ describe('disposable compiler worker cancellation', () => {
     expect(worker.terminated).toBe(1);
   });
 
+  it('passes explicitly supplied buffered stdin only to Run workers', async () => {
+    const pending = runWorkspace(workspace, undefined, 'नमस्ते\\n');
+    const worker = FakeWorker.instances[0];
+    expect(worker.posted[0]).toEqual({
+      id: 1, workspace, mode: 'run', stdin: 'नमस्ते\\n',
+    });
+    worker.send({ id: 1, result: { ok: true, stdout: '', stderr: '' } });
+    expect((await pending).ok).toBe(true);
+  });
+
+  it('rejects oversized UTF-8 input before constructing any Worker', async () => {
+    const result = await runWorkspace(workspace, undefined, '😀'.repeat(5000));
+    expect(result.ok).toBe(false);
+    expect(result.error).toContain('16 KiB');
+    expect(FakeWorker.instances).toHaveLength(0);
+  });
+
   it('aborts an in-flight check and discards its late response', async () => {
     const controller = new AbortController();
     const pending = checkWorkspace(workspace, controller.signal);

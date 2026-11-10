@@ -4,16 +4,23 @@ import { decodeWorkerResult } from './protocol';
 import { claimCompilerWorker } from './worker-slot';
 
 const RUN_TIMEOUT_MS = 12_000;
+export const MAX_PROGRAM_INPUT_BYTES = 16 * 1024;
 const cancelled: RunResult = {
   ok: false, stdout: '', stderr: '', error: 'Execution cancelled.',
 };
 
 /** Both modes use disposable workers; abort terminates stale validation and output. */
-function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?: AbortSignal): Promise<RunResult> {
+function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?: AbortSignal, stdin = ''): Promise<RunResult> {
   if (signal?.aborted) return Promise.resolve(cancelled);
   const problem = validateWorkspace(workspace);
   if (problem) {
     return Promise.resolve({ ok: false, stdout: '', stderr: '', error: problem });
+  }
+  if (new TextEncoder().encode(stdin).byteLength > MAX_PROGRAM_INPUT_BYTES) {
+    return Promise.resolve({
+      ok: false, stdout: '', stderr: '',
+      error: 'Program input exceeds the 16 KiB browser limit.',
+    });
   }
   return new Promise((resolve) => {
     let worker: Worker | undefined;
@@ -76,7 +83,9 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?:
       error: 'The compiler worker sent a message the browser could not decode.',
     });
     try {
-      activeWorker.postMessage({ id, workspace, mode });
+      activeWorker.postMessage(mode === 'run'
+        ? { id, workspace, mode, stdin }
+        : { id, workspace, mode });
     } catch {
       complete({
         ok: false, stdout: '', stderr: '',
@@ -87,8 +96,8 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?:
 }
 
 /** Execute real Scarp and return its captured stdout/stderr. */
-export function runWorkspace(workspace: Workspace, signal?: AbortSignal): Promise<RunResult> {
-  return evaluateWorkspace(workspace, 'run', signal);
+export function runWorkspace(workspace: Workspace, signal?: AbortSignal, stdin = ''): Promise<RunResult> {
+  return evaluateWorkspace(workspace, 'run', signal, stdin);
 }
 
 /** Validate Scarp with identical budgets, without emitting program output. */

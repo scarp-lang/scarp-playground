@@ -3,6 +3,8 @@ export type Example = {
   description: string;
   entry: string;
   files: Record<string, string>;
+  // Ephemeral fixture input: never becomes part of a shareable source workspace.
+  stdin?: string;
 };
 
 export const examples: Example[] = [
@@ -194,6 +196,32 @@ write("done");
     description: 'Centered linear relationship of paired vectors (alpha.5)',
     entry: 'main.srp',
     files: { 'main.srp': "// Pearson correlation: centered scientific statistics, not cosine similarity.\nbind measurements = [1.0, 2.0, 3.0];\nprint(pearson_correlation(measurements, [10.0, 20.0, 30.0]));\nprint(pearson_correlation(measurements, [30.0, 20.0, 10.0]));\nprint(pearson_correlation([-1.0, 0.0, 1.0], [1.0, -2.0, 1.0]));\n" },
+  },
+  {
+    title: 'Program input',
+    description: 'Read lines from explicit UTF-8 stdin (alpha.6)',
+    entry: 'main.srp',
+    files: {
+      'main.srp': '// Official compiler alpha.6 examples/program_input.srp\nbind name: string = read_line();\nprint("Hello", name);\nrepeat 2 as index {\n    print(index, read_line());\n}\n',
+    },
+    // Exact text from examples/program_input.stdin, including the trailing LF.
+    stdin: 'संस्कार\nfirst line\nlast line\n',
+  },
+  {
+    title: 'Tuple values',
+    description: 'Typed immutable heterogeneous tuples (alpha.6)',
+    entry: 'main.srp',
+    files: {
+      'main.srp': '// Tuples have fixed member types and literal projection indices.\nbind pair: tuple<integer, string> = (7, "नमस्ते");\nprint(pair);\nprint(pair[0], pair[1]);\nprint((42,), (42));\n',
+    },
+  },
+  {
+    title: 'Text conversions',
+    description: 'Explicit integer/float parsing and Unicode trim (alpha.6)',
+    entry: 'main.srp',
+    files: {
+      'main.srp': '// Official alpha.6 text foundations: conversions are explicit.\nbind count: integer = text_to_integer(text_trim(" 42 "));\nbind value: float = text_to_float("1.25e2");\nprint(integer_to_text(count), float_to_text(value));\n',
+    },
   },
   {
     title: 'Import a module',
