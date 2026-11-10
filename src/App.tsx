@@ -12,17 +12,18 @@ import { findDefinition } from './navigation/client';
 import { sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
 import type { RunResult } from './runner/types';
-import { makeShareUrl, MAX_FILES, sourceFromHash, validPath, type Workspace } from './workspace';
+import { MAX_FILES, validPath, type Workspace } from './workspace';
+import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
 import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
 
 type InitialSession = { workspace: Workspace; activeFile: string; savingLocally: boolean };
 
 function startingSession(): InitialSession {
-  // A shared source never overwrites an existing locally saved project.
-  const shared = sourceFromHash(window.location.hash);
+  // Shared snippets or projects never overwrite an existing local saved copy.
+  const shared = readSharedWorkspace(window.location.hash);
   if (shared !== null) {
-    return { workspace: { entry: 'main.srp', files: { 'main.srp': shared } }, activeFile: 'main.srp', savingLocally: false };
+    return { ...shared, savingLocally: false };
   }
   try {
     const stored = restoreLocalWorkspace(window.localStorage);
@@ -198,20 +199,19 @@ export function App() {
     }
   }, [dark]);
 
-  // Navigating between #code= snippets and normal URLs can be a same-document
-  // navigation (no React remount). Apply shared code without overwriting saved
-  // projects, and restore the saved project when the fragment is cleared.
+  // Both legacy #code= and versioned #project= links can navigate within the
+  // same document. Opening one never replaces the opt-in local saved copy.
   useEffect(() => {
     const onHashChange = () => {
-      const shared = sourceFromHash(window.location.hash);
+      const shared = readSharedWorkspace(window.location.hash);
       if (shared !== null) {
         invalidateExecution();
         setSavingLocally(false);
-        setWorkspace({ entry: 'main.srp', files: { 'main.srp': shared } });
+        setWorkspace(shared.workspace);
         setEditorSession((number) => number + 1);
-        setActiveFile('main.srp');
+        setActiveFile(shared.activeFile);
         setResult(null);
-        setNotice('Opened shared code. Your locally saved workspace remains unchanged.');
+        setNotice('Opened shared project. Your locally saved workspace remains unchanged.');
         return;
       }
       if (window.location.hash !== '') return;
@@ -402,20 +402,16 @@ export function App() {
   }
 
   async function share() {
-    if (files.length > 1) {
-      setNotice('Snippet sharing currently supports one file. Multi-file sharing is planned.');
-      return;
-    }
-    const url = makeShareUrl(window.location.origin, window.location.pathname, workspace.files[activeFile]);
+    const url = makeWorkspaceShareUrl(window.location.origin, window.location.pathname, workspace, activeFile);
     if (!url) {
-      setNotice('This snippet is too large for safe URL sharing (2 KiB maximum).');
+      setNotice('This project exceeds the 8 KiB share-link limit or has invalid sources. Use Export project instead.');
       return;
     }
     try {
       await navigator.clipboard.writeText(url);
-      setNotice('A shareable URL for this source file was copied to your clipboard.');
+      setNotice('Copied a shareable project link with all source files. The link contains unencrypted code.');
     } catch {
-      setNotice('Clipboard access was blocked by the browser. You can copy the URL from the address bar after sharing is enabled.');
+      setNotice('Clipboard access was blocked. Use Export project to share your code instead.');
     }
   }
 
@@ -490,7 +486,7 @@ export function App() {
               />
               <button type="button" className="button-secondary" onClick={() => importFileRef.current?.click()}>Import project</button>
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
-              <button type="button" className="button-secondary" onClick={() => void share()}>Share ↗</button>
+              <button type="button" className="button-secondary" onClick={() => void share()} title="Copy a link to the complete project when it fits the URL limit">Share ↗</button>
               <button type="button" className="button-secondary" onClick={() => void run('check')} disabled={running}>
                 Check code
               </button>

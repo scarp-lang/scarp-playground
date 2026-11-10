@@ -126,7 +126,7 @@ load failure — it never fakes a successful program result.
   confirmation. Imported files are type/path/byte validated before use and
   do not replace a previously saved browser copy until **Save locally** is selected.
   Import/export uses only local browser file APIs; no code is uploaded.
-- A shareable URL for **one short source file only**, under a 2 KiB UTF-8 limit.
+- Share **complete multi-file projects** with a source-only URL fragment (8 KiB URL limit), preserving the entrypoint and selected tab. Short one-file `#code=` links remain compatible; larger projects use **Export project**.
 - A production-only, restrictive browser Content Security Policy for GitHub
   Pages, allowing real Rust/WebAssembly and Monaco without permitting inline
   JavaScript, remote scripts or cross-origin fetches. See the
