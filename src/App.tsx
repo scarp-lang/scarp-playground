@@ -10,6 +10,7 @@ import { checkWorkspace, runWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/
 import { editorPositionToByteOffset } from './navigation/coordinates';
 import { findDefinition } from './navigation/client';
 import { findReferences, type SourceRange } from './navigation/references';
+import { initialReferenceIndex, stepReferenceIndex } from './navigation/reference-view';
 import { sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
 import type { RunResult } from './runner/types';
@@ -72,6 +73,7 @@ export function App() {
   const definitionScope = useRef(new ExecutionScope());
   const [navigationTrigger, setNavigationTrigger] = useState(0);
   const [referenceTrigger, setReferenceTrigger] = useState(0);
+  const [selectedReferenceIndex, setSelectedReferenceIndex] = useState(-1);
   const [referenceResult, setReferenceResult] = useState<{
     name: string; kind: string; sites: Array<SourceRange & { kind: string }>; truncated: boolean;
   } | null>(null);
@@ -99,6 +101,7 @@ export function App() {
 
   function invalidateExecution() {
     setReferenceResult(null);
+    setSelectedReferenceIndex(-1);
     definitionScope.current.invalidate();
     setNavigationTarget(null);
     setNavigationTrigger(0);
@@ -126,6 +129,7 @@ export function App() {
     setResult(null);
     setNotice(null);
     setReferenceResult(null);
+    setSelectedReferenceIndex(-1);
     try {
       const response = mode === 'check'
         ? await checkWorkspace(workspace, execution.controller.signal)
@@ -166,6 +170,7 @@ export function App() {
     setRunning(false);
     setResult(null);
     setReferenceResult(null);
+    setSelectedReferenceIndex(-1);
     definitionScope.current.invalidate();
     const lookup = definitionScope.current.start();
     if (!lookup) return;
@@ -198,6 +203,7 @@ export function App() {
       setReferenceResult({
         name: answer.symbol.name, kind: answer.symbol.kind, sites, truncated: answer.truncated,
       });
+      setSelectedReferenceIndex(initialReferenceIndex(sites, path, source, line, column));
       setNotice('Found ' + answer.references.length + (answer.truncated ? '+' : '') +
         ' references for ' + answer.symbol.name + '.');
     } finally {
@@ -205,17 +211,27 @@ export function App() {
     }
   }, [workspace]);
 
-  function jumpToReference(site: SourceRange) {
+  function jumpToReference(site: SourceRange, index: number) {
     const source = workspace.files[site.path];
     if (source === undefined) return;
     const range = sourceLocationToEditorRange(source, site);
     if (!range) return;
     definitionScope.current.invalidate();
+    setSelectedReferenceIndex(index);
     setActiveFile(site.path);
     setNavigationTarget(previous => ({
       path: site.path, line: range.startLineNumber, column: range.startColumn,
       sequence: (previous?.sequence ?? 0) + 1,
     }));
+  }
+
+  function moveReference(direction: -1 | 1) {
+    if (!referenceResult || referenceResult.sites.length === 0) return;
+    const next = stepReferenceIndex(
+      selectedReferenceIndex, referenceResult.sites.length, direction,
+    );
+    const site = referenceResult.sites[next];
+    if (site) jumpToReference(site, next);
   }
 
   const navigateToDefinition = useCallback(async (
@@ -656,19 +672,33 @@ export function App() {
                 <strong>References: {referenceResult.name}</strong>
                 <span>{referenceResult.kind} · {referenceResult.sites.length} location(s)
                   {referenceResult.truncated ? ' (additional references omitted)' : ''}</span>
-                <button type="button" aria-label="Close references" onClick={() => setReferenceResult(null)}>
-                  Close
-                </button>
+                <span role="status" className="reference-position">
+                  {referenceResult.sites.length
+                    ? 'Selected ' + (selectedReferenceIndex + 1) + ' of ' + referenceResult.sites.length
+                    : 'No source locations'}
+                </span>
+                <button type="button" aria-label="Previous reference"
+                  disabled={referenceResult.sites.length < 2}
+                  onClick={() => moveReference(-1)}>Previous</button>
+                <button type="button" aria-label="Next reference"
+                  disabled={referenceResult.sites.length < 2}
+                  onClick={() => moveReference(1)}>Next</button>
+                <button type="button" aria-label="Close references" onClick={() => {
+                  setReferenceResult(null);
+                  setSelectedReferenceIndex(-1);
+                }}>Close</button>
               </div>
               <div className="project-search-results" aria-label="Resolved reference locations">
                 {referenceResult.sites.map((site, index) => {
                   const location = sourceLocationToEditorRange(workspace.files[site.path], site);
                   return (
-                    <button type="button" className="project-search-hit"
+                    <button type="button"
+                      className={'project-search-hit ' + (selectedReferenceIndex === index ? 'reference-selected' : '')}
+                      aria-current={selectedReferenceIndex === index ? 'location' : undefined}
                       key={site.path + ':' + site.start.line + ':' + site.start.column + ':' + index}
                       aria-label={'Go to ' + site.kind + ' at ' + site.path + ' line ' +
                         site.start.line + ' column ' + site.start.column}
-                      onClick={() => jumpToReference(site)}>
+                      onClick={() => jumpToReference(site, index)}>
                       <strong>{site.path}:{site.start.line}:{location?.startColumn ?? site.start.column}
                         {' · '}{site.kind}</strong>
                       <span>{workspace.files[site.path].split(/\r\n|\n|\r/)[site.start.line - 1]?.trim().slice(0, 170) ?? ''}</span>
@@ -705,7 +735,9 @@ export function App() {
                 }
               >
                 <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} onFindReferences={locateReferences} navigationTarget={navigationTarget}
-                  navigationTrigger={navigationTrigger} referenceTrigger={referenceTrigger} />
+                  navigationTrigger={navigationTrigger} referenceTrigger={referenceTrigger}
+                  referenceSites={referenceResult?.sites ?? null}
+                  selectedReferenceIndex={selectedReferenceIndex} />
               </Suspense>
             </div>
             <div className="editor-footer">

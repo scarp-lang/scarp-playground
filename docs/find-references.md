@@ -9,6 +9,11 @@ Place the cursor inside a resolved symbol and press Shift+F12, or select
 declaration separately and lists actual read/write/call/namespace/import
 reference sites across all reachable virtual `.srp` modules.
 Select a site to open the file at the compiler-owned location.
+**Previous** and **Next** cycle through results, wrapping at either end.
+The panel announces the selected result, marks it in the list, and highlights
+compiler-owned references in the currently open Monaco tab. The current site
+is visually distinct from other occurrences. Switching tabs updates the
+decorations; editing source clears them so stale results cannot persist.
 
 Implementation and limits:
 

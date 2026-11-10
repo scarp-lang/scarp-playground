@@ -34,7 +34,8 @@ pure, deterministic Top-K ranking and temperature-aware softmax helpers; the
 Playground runs their published examples through the same interpreter.
 Alpha.3's private scalar IR is not a browser native-code generator. The current development preview exposes **Go to definition** through
 F12 and an accessible button, using the real Rust compiler's bounded symbol
-index. It does not implement a full LSP, rename or find-references UI.
+index. It does not implement a full LSP or rename engine; compiler-backed Find References
+is available through Shift+F12.
 
 Alpha.4 publishes bounded sampled integration (`sample_area`), prefix area (`sample_cumulative_area`), secant slopes (`sample_slopes`) and finite `cosine_similarity`. Three new browser examples use official alpha.4 source and expected output. The Rust-only ELF64 object emitter is **not** exposed as a browser native compiler or CLI.
 

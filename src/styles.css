@@ -235,3 +235,22 @@ a { color: inherit; text-decoration: none; }
 }
 .stdin-panel textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .stdin-panel p { margin: 8px 0 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
+
+
+/* Non-editing, compiler-owned reference decorations. Colors retain contrast
+   in both dark and light Monaco themes without hiding the source glyphs. */
+.monaco-editor .scarp-reference-match {
+  background: rgba(70, 148, 222, 0.20);
+  border-bottom: 1px solid rgba(70, 148, 222, 0.70);
+  border-radius: 2px;
+}
+.monaco-editor .scarp-reference-current {
+  background: rgba(242, 174, 62, 0.32);
+  outline: 1px solid rgba(242, 174, 62, 0.85);
+  border-radius: 2px;
+}
+.reference-position { color: var(--muted); font-size: 11px; }
+.project-search-hit.reference-selected {
+  border-color: var(--accent);
+  background: var(--panel-2);
+}
