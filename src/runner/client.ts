@@ -83,7 +83,9 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?:
       error: 'The compiler worker sent a message the browser could not decode.',
     });
     try {
-      activeWorker.postMessage({ id, workspace, mode, stdin: mode === 'run' ? stdin : '' });
+      activeWorker.postMessage(mode === 'run'
+        ? { id, workspace, mode, stdin }
+        : { id, workspace, mode });
     } catch {
       complete({
         ok: false, stdout: '', stderr: '',
