@@ -94,12 +94,12 @@ export function findReferences(
   return new Promise(resolve => {
     let worker: Worker | undefined;
     let done = false;
-    let timer: ReturnType<typeof setTimeout> | undefined;
+    const timer: { deadline?: ReturnType<typeof setTimeout> } = {};
     let release = () => {};
     const complete = (answer: ReferenceResult) => {
       if (done) return;
       done = true;
-      if (timer !== undefined) clearTimeout(timer);
+      if (timer.deadline !== undefined) clearTimeout(timer.deadline);
       signal?.removeEventListener('abort', onAbort);
       worker?.terminate();
       release();
@@ -118,7 +118,7 @@ export function findReferences(
       complete(failure('Reference lookup cancelled.'));
       return;
     }
-    timer = setTimeout(() => complete(failure('Reference lookup exceeded the 12-second browser limit.')), TIMEOUT_MS);
+    timer.deadline = setTimeout(() => complete(failure('Reference lookup exceeded the 12-second browser limit.')), TIMEOUT_MS);
     worker.onerror = e => {
       e.preventDefault();
       complete(failure('Scarp reference lookup worker failed or crashed.'));
