@@ -23,6 +23,119 @@ export const examples: Example[] = [
     },
   },
   {
+    title: 'If / elif / else',
+    description: 'Choose a branch using boolean conditions',
+    entry: 'main.srp',
+    files: {
+      // Source copied from the official compiler fixture examples/decisions.srp.
+      'main.srp': `// Conditions are booleans; each body introduces a lexical scope.
+bind score = 73;
+var grade = "pending";
+if score >= 90 {
+    grade = "A";
+} elif score >= 60 and score < 90 {
+    grade = "B";
+} else {
+    grade = "C";
+}
+print(grade);
+if true or 1 / 0 == 0 {
+    bind message = "Selected safely.";
+    print(message);
+}
+`,
+    },
+  },
+  {
+    title: 'While loops',
+    description: 'Mutate a counter; use break and continue',
+    entry: 'main.srp',
+    files: {
+      // Source copied from the official compiler fixture examples/loops.srp.
+      'main.srp': `// Iteration with nearest-loop control and checked accumulator arithmetic.
+var index = 0;
+var total = 0;
+while index < 10 {
+    index += 1;
+    if index == 3 { continue; }
+    if index > 5 { break; }
+    total += index;
+}
+print(total);
+`,
+    },
+  },
+  {
+    title: 'Counted repeat',
+    description: 'Run a fixed number of iterations',
+    entry: 'main.srp',
+    files: {
+      // Source copied from the official compiler fixture examples/repeat.srp.
+      'main.srp': `// The count is saved once; changing count does not shorten this loop.
+var count = 5;
+var total = 0;
+repeat count as index {
+    count = 0;
+    if index == 2 { continue; }
+    total += index;
+}
+print(total);
+print(count);
+`,
+    },
+  },
+  {
+    title: 'Typed functions',
+    description: 'Use funcra, parameters, return and pure',
+    entry: 'main.srp',
+    files: {
+      // Source copied from the official compiler fixture examples/functions.srp.
+      'main.srp': `// Typed calls, forward declarations, all primitive parameter types, and unit.
+print(add(10, square(5)));
+
+funcra add(a: integer, b: integer) -> integer {
+    return a + b;
+}
+
+funcra square(value: integer) -> integer {
+    return value * value;
+}
+
+funcra identity(text: string) -> string {
+    return text;
+}
+
+funcra greet(name: string) -> unit {
+    print("Hello", name);
+    return;
+}
+
+pure funcra choose(value: integer, enabled: boolean) -> integer {
+    if enabled { return value * 2; }
+    return value;
+}
+
+greet(identity("Scarp"));
+print(choose(3, true));
+`,
+    },
+  },
+  {
+    title: 'Writing output',
+    description: 'Compare print, write and newlines',
+    entry: 'main.srp',
+    files: {
+      // Source copied from the official compiler fixture examples/output.srp.
+      'main.srp': `// Output without a final newline.
+bind name = "Scarp";
+write("Hello, ");
+print(name, 3, true,);
+print();
+write("done");
+`,
+    },
+  },
+  {
     title: 'Root mean square',
     description: 'Numerical RMS from Scarp alpha.6',
     entry: 'main.srp',
