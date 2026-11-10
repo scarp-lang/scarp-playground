@@ -48,11 +48,13 @@ interface Props {
   diagnostic: CompilerDiagnostic | null | undefined;
   onChange: (path: string, source: string) => void;
   onNavigate: (path: string, line: number, column: number, source: string) => void;
+  onFindReferences: (path: string, line: number, column: number, source: string) => void;
   navigationTarget: { path: string; line: number; column: number; sequence: number } | null;
   navigationTrigger: number;
+  referenceTrigger: number;
 }
 
-export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, navigationTarget, navigationTrigger }: Props) {
+export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
@@ -63,6 +65,9 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
   const lastNavigationTrigger = useRef(navigationTrigger);
+  const lastReferenceTrigger = useRef(referenceTrigger);
+  const onFindReferencesRef = useRef(onFindReferences);
+  onFindReferencesRef.current = onFindReferences;
   const onNavigateRef = useRef(onNavigate);
   onNavigateRef.current = onNavigate;
 
@@ -87,6 +92,12 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
     instance.addCommand(monaco.KeyCode.F12, () => {
       const position = instance.getPosition();
       if (position) onNavigateRef.current(
+        activePath.current, position.lineNumber, position.column, instance.getValue(),
+      );
+    });
+    instance.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F12, () => {
+      const position = instance.getPosition();
+      if (position) onFindReferencesRef.current(
         activePath.current, position.lineNumber, position.column, instance.getValue(),
       );
     });
@@ -217,6 +228,16 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       activePath.current, position.lineNumber, position.column, instance.getValue(),
     );
   }, [navigationTrigger]);
+
+  useEffect(() => {
+    if (referenceTrigger === lastReferenceTrigger.current) return;
+    lastReferenceTrigger.current = referenceTrigger;
+    const instance = editor.current;
+    const position = instance?.getPosition();
+    if (instance && position) onFindReferencesRef.current(
+      activePath.current, position.lineNumber, position.column, instance.getValue(),
+    );
+  }, [referenceTrigger]);
 
   useEffect(() => {
     const instance = editor.current;
