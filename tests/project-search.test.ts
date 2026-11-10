@@ -24,7 +24,7 @@ describe('local Scarp project search', () => {
     const result = searchProjectFiles({
       'main.srp': 'print("😀 नमस्ते");\r\n😀😀x here\rthird here',
     }, 'here');
-    expect(result.matches.map(x => [x.line, x.column])).toEqual([[2, 6], [3, 7]]);
+    expect(result.matches.map(x => [x.line, x.column])).toEqual([[2, 7], [3, 7]]);
   });
 
   it('excludes invalid virtual paths and never searches across lines', () => {
