@@ -152,6 +152,92 @@ fn definition_request(json_source: &str) -> String {
     }).to_string()
 }
 
+const MAX_REFERENCE_RESULTS: usize = 120;
+
+// Return source-owned semantic references, never a substring search. The
+// compiler index is built without evaluating program statements or stdin.
+fn references_request(json_source: &str) -> String {
+    if json_source.len() > MAX_REQUEST_JSON_BYTES {
+        return error("The compiler request exceeds the 1 MiB JSON limit.");
+    }
+    let request: DefinitionRequest = match serde_json::from_str(json_source) {
+        Ok(value) => value,
+        Err(_) => return error("Malformed references request."),
+    };
+    match request.files.get(&request.path) {
+        Some(source) if source.len() <= MAX_FILE_BYTES &&
+            request.offset <= source.len() && source.is_char_boundary(request.offset) => {}
+        _ => return error("Invalid references source or UTF-8 byte offset."),
+    };
+    let path = request.path.clone();
+    let (entry, loader) = match load_workspace(Request {
+        entry: request.entry,
+        files: request.files,
+    }) {
+        Ok(result) => result,
+        Err(problem) => return error(problem),
+    };
+    let limits = IndexLimits {
+        max_symbols: 4096,
+        max_references: 16_384,
+        max_name_bytes: 256 * 1024,
+        max_work: 100_000,
+    };
+    let indexed = match modules::compile_indexed_with_loader(
+        &entry, &loader, module_limits(), limits,
+    ) {
+        Ok(program) => program,
+        Err(problem) => return compiler_error(problem),
+    };
+    let index = indexed.index();
+    let Some(source_id) = index.sources().files().iter().position(|file| file.name == path) else {
+        return json!({ "ok": true, "symbol": null, "declaration": null,
+            "references": [], "truncated": false }).to_string();
+    };
+    let Some(symbol) = index.goto_definition(source_id, request.offset) else {
+        return json!({ "ok": true, "symbol": null, "declaration": null,
+            "references": [], "truncated": false }).to_string();
+    };
+    // The compiler supplies validated source spans; only map them to a bounded
+    // path/range/kind payload. Do not return source bodies or the full index.
+    let location_json = |location: modules::SourceLocation| -> Option<Value> {
+        let file = index.sources().files().get(location.source)?;
+        Some(json!({
+            "path": file.name,
+            "start": { "line": location.start.line, "column": location.start.column },
+            "end": { "line": location.end.line, "column": location.end.column },
+        }))
+    };
+    let declaration = match symbol.location {
+        Some(location) => match location_json(location) {
+            Some(found) => found,
+            None => return error("Invalid compiler declaration location."),
+        },
+        None => Value::Null,
+    };
+    let mut references = Vec::new();
+    let mut truncated = false;
+    for reference in index.find_references(symbol.id) {
+        if references.len() == MAX_REFERENCE_RESULTS {
+            truncated = true;
+            break;
+        }
+        let Some(location) = location_json(reference.location) else {
+            return error("Invalid compiler reference location.");
+        };
+        let mut value = location;
+        value["kind"] = json!(reference.kind.as_str());
+        references.push(value);
+    }
+    json!({
+        "ok": true,
+        "symbol": { "name": symbol.name.as_ref(), "kind": symbol.kind.as_str() },
+        "declaration": declaration,
+        "references": references,
+        "truncated": truncated,
+    }).to_string()
+}
+
 fn execute_request(json_source: &str) -> String {
     process_request(json_source, false)
 }
@@ -270,6 +356,13 @@ pub fn definition(request_json: &str) -> String {
     definition_request(request_json)
 }
 
+/// Find actual uses of one resolved symbol, including cross-file calls.
+/// Symbol declarations are returned separately; no runtime execution occurs.
+#[wasm_bindgen]
+pub fn references(request_json: &str) -> String {
+    references_request(request_json)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -279,6 +372,66 @@ mod tests {
             "files": files.iter().map(|(p, s)| ((*p).to_string(), (*s).to_string()))
                 .collect::<BTreeMap<_, _>>()
         }).to_string()
+    }
+
+
+    #[test]
+    fn finds_only_compiler_owned_references_across_imports() {
+        let main = "import \"math.srp\" as math; print(math.twice(21)); print(math.twice(5));";
+        let request = json!({
+            "entry": "main.srp",
+            "files": {
+                "main.srp": main,
+                "math.srp": "pub pure funcra twice(value: integer) -> integer { return value * 2; }"
+            },
+            "path": "main.srp",
+            "offset": main.find("twice(21)").unwrap(),
+        }).to_string();
+        let reply: Value = serde_json::from_str(&references_request(&request)).unwrap();
+        assert_eq!(reply["ok"], true, "{reply}");
+        assert_eq!(reply["symbol"]["name"], "twice");
+        assert_eq!(reply["declaration"]["path"], "math.srp");
+        assert_eq!(reply["references"].as_array().unwrap().len(), 2);
+        assert_eq!(reply["references"][0]["kind"], "call");
+        assert!(!reply["truncated"].as_bool().unwrap());
+    }
+
+    #[test]
+    fn reference_queries_never_run_code_or_read_input() {
+        let source = "bind name = read_line(); print(name);";
+        let request = json!({
+            "entry": "main.srp",
+            "files": { "main.srp": source },
+            "path": "main.srp",
+            "offset": source.find("name);").unwrap(),
+        }).to_string();
+        let reply: Value = serde_json::from_str(&references_request(&request)).unwrap();
+        assert_eq!(reply["ok"], true, "{reply}");
+        assert_eq!(reply["symbol"]["name"], "name");
+        assert_eq!(reply["references"].as_array().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn references_reject_invalid_utf8_offset_and_do_not_infer_missing_tokens() {
+        let source = "bind name = \"😀\"; print(name);";
+        let request = json!({
+            "entry": "main.srp",
+            "files": { "main.srp": source },
+            "path": "main.srp",
+            "offset": source.find("😀").unwrap() + 1,
+        }).to_string();
+        let invalid: Value = serde_json::from_str(&references_request(&request)).unwrap();
+        assert_eq!(invalid["ok"], false);
+        let empty = json!({
+            "entry": "main.srp",
+            "files": { "main.srp": source },
+            "path": "main.srp",
+            "offset": source.len(),
+        }).to_string();
+        let reply: Value = serde_json::from_str(&references_request(&empty)).unwrap();
+        assert_eq!(reply["ok"], true);
+        assert_eq!(reply["symbol"], Value::Null);
+        assert_eq!(reply["references"], json!([]));
     }
 
     #[test]

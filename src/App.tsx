@@ -9,6 +9,7 @@ import { examples } from './examples';
 import { checkWorkspace, runWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
 import { editorPositionToByteOffset } from './navigation/coordinates';
 import { findDefinition } from './navigation/client';
+import { findReferences, type SourceRange } from './navigation/references';
 import { sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
 import type { RunResult } from './runner/types';
@@ -70,6 +71,10 @@ export function App() {
   const executionScope = useRef(new ExecutionScope());
   const definitionScope = useRef(new ExecutionScope());
   const [navigationTrigger, setNavigationTrigger] = useState(0);
+  const [referenceTrigger, setReferenceTrigger] = useState(0);
+  const [referenceResult, setReferenceResult] = useState<{
+    name: string; kind: string; sites: Array<SourceRange & { kind: string }>; truncated: boolean;
+  } | null>(null);
   const [navigationTarget, setNavigationTarget] = useState<{
     path: string; line: number; column: number; sequence: number;
   } | null>(null);
@@ -93,6 +98,7 @@ export function App() {
   }
 
   function invalidateExecution() {
+    setReferenceResult(null);
     definitionScope.current.invalidate();
     setNavigationTarget(null);
     setNavigationTrigger(0);
@@ -119,6 +125,7 @@ export function App() {
     setOperation(mode);
     setResult(null);
     setNotice(null);
+    setReferenceResult(null);
     try {
       const response = mode === 'check'
         ? await checkWorkspace(workspace, execution.controller.signal)
@@ -142,6 +149,74 @@ export function App() {
       if (executionScope.current.finish(execution)) setRunning(false);
     }
   }, [workspace, programInput]);
+
+  const locateReferences = useCallback(async (
+    path: string, line: number, column: number, source: string,
+  ) => {
+    if (workspace.files[path] !== source) {
+      setNotice('Source is still changing. Retry Find References.');
+      return;
+    }
+    const offset = editorPositionToByteOffset(source, line, column);
+    if (offset === null) {
+      setNotice('Place the cursor on a valid Scarp symbol.');
+      return;
+    }
+    executionScope.current.invalidate();
+    setRunning(false);
+    setResult(null);
+    setReferenceResult(null);
+    definitionScope.current.invalidate();
+    const lookup = definitionScope.current.start();
+    if (!lookup) return;
+    setNotice('Finding symbol references through the Scarp compiler…');
+    try {
+      const answer = await findReferences(workspace, path, offset, lookup.controller.signal);
+      if (!definitionScope.current.isCurrent(lookup)) return;
+      if (!answer.ok) {
+        if (answer.diagnostic) {
+          setResult({ ok: false, stdout: '', stderr: '',
+            error: answer.error, diagnostic: answer.diagnostic });
+        }
+        setNotice(answer.error || 'Find References failed.');
+        return;
+      }
+      if (!answer.symbol) {
+        setNotice('No compiler-indexed symbol at the cursor.');
+        return;
+      }
+      const sites: Array<SourceRange & { kind: string }> =
+        answer.declaration ? [{ ...answer.declaration, kind: 'declaration' }] : [];
+      sites.push(...answer.references);
+      for (const site of sites) {
+        if (!Object.hasOwn(workspace.files, site.path) ||
+            !sourceLocationToEditorRange(workspace.files[site.path], site)) {
+          setNotice('Compiler returned an invalid reference location.');
+          return;
+        }
+      }
+      setReferenceResult({
+        name: answer.symbol.name, kind: answer.symbol.kind, sites, truncated: answer.truncated,
+      });
+      setNotice('Found ' + answer.references.length + (answer.truncated ? '+' : '') +
+        ' references for ' + answer.symbol.name + '.');
+    } finally {
+      definitionScope.current.finish(lookup);
+    }
+  }, [workspace]);
+
+  function jumpToReference(site: SourceRange) {
+    const source = workspace.files[site.path];
+    if (source === undefined) return;
+    const range = sourceLocationToEditorRange(source, site);
+    if (!range) return;
+    definitionScope.current.invalidate();
+    setActiveFile(site.path);
+    setNavigationTarget(previous => ({
+      path: site.path, line: range.startLineNumber, column: range.startColumn,
+      sequence: (previous?.sequence ?? 0) + 1,
+    }));
+  }
 
   const navigateToDefinition = useCallback(async (
     path: string, line: number, column: number, source: string,
@@ -575,6 +650,35 @@ export function App() {
             </section>
           )}
 
+          {referenceResult && (
+            <section className="project-search" aria-label="Compiler references" data-testid="references-panel">
+              <div className="project-search-bar">
+                <strong>References: {referenceResult.name}</strong>
+                <span>{referenceResult.kind} · {referenceResult.sites.length} location(s)
+                  {referenceResult.truncated ? ' (additional references omitted)' : ''}</span>
+                <button type="button" aria-label="Close references" onClick={() => setReferenceResult(null)}>
+                  Close
+                </button>
+              </div>
+              <div className="project-search-results" aria-label="Resolved reference locations">
+                {referenceResult.sites.map((site, index) => {
+                  const location = sourceLocationToEditorRange(workspace.files[site.path], site);
+                  return (
+                    <button type="button" className="project-search-hit"
+                      key={site.path + ':' + site.start.line + ':' + site.start.column + ':' + index}
+                      aria-label={'Go to ' + site.kind + ' at ' + site.path + ' line ' +
+                        site.start.line + ' column ' + site.start.column}
+                      onClick={() => jumpToReference(site)}>
+                      <strong>{site.path}:{site.start.line}:{location?.startColumn ?? site.start.column}
+                        {' · '}{site.kind}</strong>
+                      <span>{workspace.files[site.path].split(/\r\n|\n|\r/)[site.start.line - 1]?.trim().slice(0, 170) ?? ''}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+          )}
+
           <div className="editor-card">
             <div className="file-tabs" role="tablist" aria-label="Scarp source files">
               {files.map((file) => (
@@ -600,16 +704,21 @@ export function App() {
                   </div>
                 }
               >
-                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} navigationTarget={navigationTarget} navigationTrigger={navigationTrigger} />
+                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} onFindReferences={locateReferences} navigationTarget={navigationTarget}
+                  navigationTrigger={navigationTrigger} referenceTrigger={referenceTrigger} />
               </Suspense>
             </div>
             <div className="editor-footer">
-              <span><span className="online-dot" />Scarp syntax · Ctrl+Space: Completion · F12: Go to Definition</span>
+              <span><span className="online-dot" />Scarp syntax · Ctrl+Space: Completion · F12: Definition · Shift+F12: References</span>
               <span>UTF-8 · {activeFile}</span>
               <div className="footer-controls">
                 <button type="button" onClick={() => setNavigationTrigger(previous => previous + 1)}
                   title="Navigate to the source declaration under the editor cursor (F12)">
                   Go to definition
+                </button>
+                <button type="button" onClick={() => setReferenceTrigger(previous => previous + 1)}
+                  title="Find actual compiler-indexed references to the symbol under the cursor (Shift+F12)">
+                  Find references
                 </button>
                 <button type="button" onClick={() => {
                   invalidateExecution();
