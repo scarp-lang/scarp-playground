@@ -94,6 +94,21 @@ describe('compiler schema-v1 diagnostic coordinates', () => {
     })).toBeNull();
   });
 
+  it('understands lone-CR lines and refuses positions beyond source text', () => {
+    expect(sourceLocationToEditorRange('one\rtwo😀', {
+      path: 'main.srp',
+      start: { line: 2, column: 4 },
+      end: { line: 2, column: 5 },
+    })).toEqual({
+      startLineNumber: 2, startColumn: 4, endLineNumber: 2, endColumn: 6,
+    });
+    expect(sourceLocationToEditorRange('abc', {
+      path: 'main.srp',
+      start: { line: 1, column: 2 },
+      end: { line: 1, column: 9 },
+    })).toBeNull();
+  });
+
   it('accepts only the exact documented compiler encoding', () => {
     expect(hasSupportedDiagnosticEncoding(diagnostic)).toBe(true);
     expect(hasSupportedDiagnosticEncoding({ ...diagnostic, column_encoding: 'utf-16' })).toBe(false);

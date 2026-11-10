@@ -5,6 +5,8 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import { diagnosticLocations, sourceLocationToEditorRange } from './diagnostics';
 import { editorCompletionHints } from './editor-completions';
+import { referenceDecorationsForFile } from './navigation/reference-view';
+import type { ReferenceSite } from './navigation/references';
 import type { CompilerDiagnostic } from './runner/types';
 
 const environment = globalThis as typeof globalThis & {
@@ -52,13 +54,16 @@ interface Props {
   navigationTarget: { path: string; line: number; column: number; sequence: number } | null;
   navigationTrigger: number;
   referenceTrigger: number;
+  referenceSites: ReadonlyArray<ReferenceSite> | null;
+  selectedReferenceIndex: number;
 }
 
-export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger }: Props) {
+export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger, referenceSites, selectedReferenceIndex }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
   const views = useRef(new Map<string, monaco.editor.ICodeEditorViewState | null>());
+  const referenceDecorations = useRef<monaco.editor.IEditorDecorationsCollection | null>(null);
   const activePath = useRef(path);
   const filesRef = useRef(files);
   filesRef.current = files;
@@ -88,6 +93,7 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
     });
     editor.current = instance;
+    referenceDecorations.current = instance.createDecorationsCollection();
     // Compiler-backed definition lookup, never a Monaco regex or JS symbol guess.
     instance.addCommand(monaco.KeyCode.F12, () => {
       const position = instance.getPosition();
@@ -132,12 +138,16 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       },
     });
     const listener = instance.onDidChangeModelContent(() => {
+      // Immediately hide stale symbol locations before React commits the edit.
+      referenceDecorations.current?.clear();
       const currentFile = activePath.current;
       onChangeRef.current(currentFile, instance.getValue());
     });
     return () => {
       listener.dispose();
       completionProvider.dispose();
+      referenceDecorations.current?.clear();
+      referenceDecorations.current = null;
       instance.dispose();
       for (const model of models.current.values()) {
         monaco.editor.setModelMarkers(model, MARKER_OWNER, []);
@@ -186,6 +196,31 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       views.current.delete(file);
     }
   }, [files, path]);
+
+  useEffect(() => {
+    const collection = referenceDecorations.current;
+    if (!collection) return;
+    const source = files[path];
+    // Only the currently visible editor model receives decorations. Tab switches
+    // rebuild from immutable compiler locations; no stale model decoration IDs.
+    if (source === undefined) {
+      collection.clear();
+      return;
+    }
+    const matches = referenceDecorationsForFile(
+      referenceSites, path, source, selectedReferenceIndex,
+    );
+    collection.set(matches.map(({ range, active, kind }) => ({
+      range: new monaco.Range(
+        range.startLineNumber, range.startColumn,
+        range.endLineNumber, range.endColumn,
+      ),
+      options: {
+        inlineClassName: active ? 'scarp-reference-current' : 'scarp-reference-match',
+        hoverMessage: { value: active ? 'Selected Scarp ' + kind : 'Scarp ' + kind },
+      },
+    })));
+  }, [referenceSites, selectedReferenceIndex, files, path]);
 
   useEffect(() => {
     const locations = diagnosticLocations(diagnostic);

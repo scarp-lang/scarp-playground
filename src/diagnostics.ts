@@ -29,7 +29,7 @@ export function sourceLocationToEditorRange(
   source: string,
   location: DiagnosticLocation,
 ): EditorRange | null {
-  const lines = source.split(/\r?\n/);
+  const lines = source.split(/\r\n|\r|\n/);
   const start = location.start;
   const end = location.end;
   for (const position of [start, end]) {
@@ -38,7 +38,8 @@ export function sourceLocationToEditorRange(
       !Number.isSafeInteger(position.column) ||
       position.line < 1 ||
       position.line > lines.length ||
-      position.column < 1
+      position.column < 1 ||
+      position.column > [...lines[position.line - 1]].length + 1
     ) return null;
   }
   const startColumn = scalarToUtf16Column(lines[start.line - 1], start.column);

@@ -397,6 +397,29 @@ mod tests {
     }
 
     #[test]
+    fn references_do_not_conflate_same_named_functions_in_different_modules() {
+        let main = r#"import "left.srp" as left;
+import "right.srp" as right;
+print(left.compute(7));
+print(right.compute(9));"#;
+        let request = json!({
+            "entry": "main.srp",
+            "files": {
+                "main.srp": main,
+                "left.srp": "pub pure funcra compute(x: integer) -> integer { return x * 2; }",
+                "right.srp": "pub pure funcra compute(x: integer) -> integer { return x + 1; }",
+            },
+            "path": "main.srp",
+            "offset": main.find("compute(7)").unwrap(),
+        }).to_string();
+        let reply: Value = serde_json::from_str(&references_request(&request)).unwrap();
+        assert_eq!(reply["ok"], true, "{reply}");
+        assert_eq!(reply["declaration"]["path"], "left.srp");
+        assert_eq!(reply["references"].as_array().unwrap().len(), 1);
+        assert_eq!(reply["references"][0]["kind"], "call");
+    }
+
+    #[test]
     fn reference_queries_never_run_code_or_read_input() {
         let source = "bind name = read_line(); print(name);";
         let request = json!({
