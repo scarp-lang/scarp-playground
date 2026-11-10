@@ -60,8 +60,33 @@ Scarp, an analytics service or a server. The downloaded JSON is plain text and
 - Import/export is a source portability feature, **not** a security sandbox
   or a promise that hostile programs are safe to execute.
 
-The old one-file `#code=` link sharing remains separate and limited to 2 KiB.
-A JSON import is not an automatically executed network share link.
+## Shareable project URLs
+
+Click **Share** to copy a link that carries the complete project, including
+every .srp file, the entrypoint and the selected tab. Short single-file
+`main.srp` snippets continue using the original `#code=` format (2 KiB
+of UTF-8 source). Other projects use a versioned, URL-encoded
+`#project=` fragment containing the same portable JSON schema described
+above. The complete URL is limited to **8,192 characters**.
+
+A project over the link limit is **not truncated**: the Share action asks
+you to use **Export project** and send the downloaded JSON instead.
+
+Opening a project link validates the same paths, source sizes and portable
+JSON version as an import. A malformed or excessive link is rejected.
+Shared source is **not automatically executed**. Opening a link in the editor
+is temporary, does not overwrite a previously saved local project, and
+disables local autosave until you explicitly select **Save locally**.
+Original one-file `#code=` URLs remain readable.
+
+A URL fragment is normally not sent as part of an HTTP request to the host,
+and the Playground does not upload the project to a server. **However, the
+link itself contains readable, unencrypted source.** Anyone who receives it
+can read that source; browsers, messaging apps, extensions or screenshots
+may retain or expose the link. Never put API keys or secrets in a shared
+project URL. For private or longer work use local JSON export instead.
+
+An imported JSON file is not an automatically executed network share link.
 
 For the compiler API and pinned WebAssembly version see
 [compiler integration](compiler-integration.md). For browser runtime
