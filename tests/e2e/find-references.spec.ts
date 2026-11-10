@@ -34,3 +34,59 @@ test('Find References does not evaluate input or print side effects', async ({ p
   await expect(page.getByTestId('references-panel')).toContainText('References: name', { timeout: 30_000 });
   await expect(page.locator('.stdout')).toHaveCount(0);
 });
+
+
+test('selected compiler references are highlighted and Next/Previous wrap across modules', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await expect(editor).toBeAttached();
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 13; i += 1) await page.keyboard.press('ArrowRight');
+  await page.getByRole('button', { name: 'Find references' }).click();
+
+  const panel = page.getByTestId('references-panel');
+  await expect(panel).toContainText('References: twice', { timeout: 30_000 });
+  await expect(panel.getByRole('status')).toHaveText('Selected 2 of 2');
+  await expect(page.getByRole('tab', { name: /main.srp/ }))
+    .toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.monaco-editor .scarp-reference-current')).toBeVisible();
+
+  // The one reference and its declaration use different source files.
+  await panel.getByRole('button', { name: 'Next reference' }).click();
+  await expect(panel.getByRole('status')).toHaveText('Selected 1 of 2');
+  await expect(page.getByRole('tab', { name: /math.srp/ }))
+    .toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.monaco-editor .scarp-reference-current')).toBeVisible();
+
+  await panel.getByRole('button', { name: 'Previous reference' }).click();
+  await expect(panel.getByRole('status')).toHaveText('Selected 2 of 2');
+  await expect(page.getByRole('tab', { name: /main.srp/ }))
+    .toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('.monaco-editor .scarp-reference-current')).toBeVisible();
+});
+
+test('editing source clears references and removes all Monaco decorations', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: /Import a module/ }).click();
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await expect(editor).toBeAttached();
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+End');
+  await page.keyboard.press('ArrowUp');
+  await page.keyboard.press('Home');
+  for (let i = 0; i < 13; i += 1) await page.keyboard.press('ArrowRight');
+  await page.getByRole('button', { name: 'Find references' }).click();
+  await expect(page.locator('.monaco-editor .scarp-reference-current')).toBeVisible({
+    timeout: 30_000,
+  });
+
+  await editor.focus();
+  await page.keyboard.insertText(' ');
+  await expect(page.getByTestId('references-panel')).toHaveCount(0);
+  await expect(page.locator('.monaco-editor .scarp-reference-current')).toHaveCount(0);
+  await expect(page.locator('.monaco-editor .scarp-reference-match')).toHaveCount(0);
+});
