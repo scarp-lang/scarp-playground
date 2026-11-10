@@ -34,3 +34,6 @@ export type RunRequest = { id: number; workspace: Workspace; mode: 'run' | 'chec
 export type RunResponse = { id: number; result: RunResult };
 export type DefinitionRequest = { id: number; workspace: Workspace; mode: 'definition'; path: string; offset: number };
 export type DefinitionResponse = { id: number; definition: import('../navigation/protocol').DefinitionResult };
+
+export type ReferencesRequest = { id: number; workspace: Workspace; mode: 'references'; path: string; offset: number };
+export type ReferencesResponse = { id: number; references: import('../navigation/references').ReferenceResult };
