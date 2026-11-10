@@ -200,6 +200,10 @@ termination under bounded pressure, see [browser memory-pressure telemetry](docs
 These observations do not establish a hard memory cap.
 For the portable source-only JSON format and its import threat model see
 [docs/portable-workspaces.md](docs/portable-workspaces.md).
+
+Start with compiler-verified conditionals, while/repeat loops, typed functions and
+output examples in the Playground's **Example Programs** section. See
+[docs/beginner-examples.md](docs/beginner-examples.md).
 See the [alpha.5 compiler integration gate](docs/compiler-alpha6-5-check.md),
 [historical alpha.4 integration](docs/compiler-alpha6-4-check.md) and
 [historical alpha.3 audit](docs/compiler-alpha6-3-check.md)
