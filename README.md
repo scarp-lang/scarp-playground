@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.6** (published prerelease) |
-| Pinned compiler revision | `cdf6a3924ec2a36c7beca5a9aec4f01a0bce515e` |
+| Scarp compiler | **v0.0.6-alpha.7** (published prerelease) |
+| Pinned compiler revision | `b1c1fd232b418267d95520c69ee563ac99ecae30` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -34,8 +34,8 @@ pure, deterministic Top-K ranking and temperature-aware softmax helpers; the
 Playground runs their published examples through the same interpreter.
 Alpha.3's private scalar IR is not a browser native-code generator. The current development preview exposes **Go to definition** through
 F12 and an accessible button, using the real Rust compiler's bounded symbol
-index. It does not implement a full LSP or rename engine; compiler-backed Find References
-is available through Shift+F12.
+index. It does not implement a full LSP; compiler-backed Find References is available
+through Shift+F12, and conservative compiler-verified Rename through F2.
 
 Alpha.4 publishes bounded sampled integration (`sample_area`), prefix area (`sample_cumulative_area`), secant slopes (`sample_slopes`) and finite `cosine_similarity`. Three new browser examples use official alpha.4 source and expected output. The Rust-only ELF64 object emitter is **not** exposed as a browser native compiler or CLI.
 
@@ -125,6 +125,11 @@ load failure — it never fakes a successful program result.
   decode `\\u{HEX}` Unicode escapes inside strings. The built-in example uses
   the published compiler fixture and runs in browser WebAssembly; these are not
   BigInt, native executable, or installed-package capabilities.
+- **Rename symbol (F2 and toolbar):** preview an identity-based multi-file rename
+  for compiler-indexed Scarp symbols, then explicitly apply only after a
+  nonexecuting recompile succeeds. Unused names, 120-site limit, no builtins,
+  snapshot cancellation and restricted ASCII names are intentional safeguards.
+  See [rename scope and safety](docs/symbol-rename.md).
 - **Go to Definition (F12 and toolbar button)** uses the official Rust compiler's bounded, nonexecuting
   symbol index. Navigates across virtual .srp modules, preserves editor undo
   history, and translates Monaco UTF-16 cursor coordinates to Scarp's UTF-8
@@ -247,3 +252,7 @@ See [docs/project-search.md](docs/project-search.md).
 Use **Shift+F12** or **Find references** to query compiler-owned symbol uses
 across imported modules; unlike text search, this resolves symbol identity.
 See [docs/find-references.md](docs/find-references.md).
+
+Use **F2** or **Rename symbol** to preview a conservative compiler-validated
+rename across indexed `.srp` modules, then explicitly apply the edits.
+See [docs/symbol-rename.md](docs/symbol-rename.md).

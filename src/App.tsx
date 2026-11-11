@@ -10,6 +10,7 @@ import { checkWorkspace, runWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/
 import { editorPositionToByteOffset } from './navigation/coordinates';
 import { findDefinition } from './navigation/client';
 import { findReferences, type SourceRange } from './navigation/references';
+import { previewSymbolRename, validRenameName, type RenameResult } from './navigation/rename';
 import { initialReferenceIndex, stepReferenceIndex } from './navigation/reference-view';
 import { sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
@@ -73,6 +74,15 @@ export function App() {
   const definitionScope = useRef(new ExecutionScope());
   const [navigationTrigger, setNavigationTrigger] = useState(0);
   const [referenceTrigger, setReferenceTrigger] = useState(0);
+  const [renameTrigger, setRenameTrigger] = useState(0);
+  const [renameTarget, setRenameTarget] = useState<{
+    snapshot: Workspace; path: string; offset: number;
+  } | null>(null);
+  const [renameName, setRenameName] = useState('');
+  const [renameBusy, setRenameBusy] = useState(false);
+  const [renamePreview, setRenamePreview] =
+    useState<Extract<RenameResult, { ok: true }> | null>(null);
+  const renameInputRef = useRef<HTMLInputElement>(null);
   const [selectedReferenceIndex, setSelectedReferenceIndex] = useState(-1);
   const [referenceResult, setReferenceResult] = useState<{
     name: string; kind: string; sites: Array<SourceRange & { kind: string }>; truncated: boolean;
@@ -88,6 +98,10 @@ export function App() {
     if (searchOpen) searchInputRef.current?.focus();
   }, [searchOpen]);
 
+  useEffect(() => {
+    if (renameTarget) renameInputRef.current?.focus();
+  }, [renameTarget]);
+
   function jumpToSearchHit(hit: ProjectSearchHit) {
     if (!Object.hasOwn(workspace.files, hit.path)) return;
     // Any delayed definition result must not replace explicit text navigation.
@@ -100,6 +114,9 @@ export function App() {
   }
 
   function invalidateExecution() {
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setRenameBusy(false);
     setReferenceResult(null);
     setSelectedReferenceIndex(-1);
     definitionScope.current.invalidate();
@@ -210,6 +227,80 @@ export function App() {
       definitionScope.current.finish(lookup);
     }
   }, [workspace]);
+
+  function beginRename(path: string, line: number, column: number, source: string) {
+    if (workspace.files[path] !== source) {
+      setNotice('Source is still changing. Retry Rename symbol.');
+      return;
+    }
+    const offset = editorPositionToByteOffset(source, line, column);
+    if (offset === null || offset >= new TextEncoder().encode(source).byteLength) {
+      setNotice('Place the cursor on a Scarp identifier to rename it.');
+      return;
+    }
+    invalidateExecution();
+    setRenameTarget({ snapshot: workspace, path, offset });
+    setRenameName('');
+    setNotice('Enter a new identifier, preview compiler-checked edits, then apply.');
+  }
+
+  async function previewRename() {
+    if (!renameTarget || renameBusy || !validRenameName(renameName)) return;
+    if (workspace !== renameTarget.snapshot) {
+      setRenameTarget(null);
+      setNotice('Workspace changed; select the symbol again.');
+      return;
+    }
+    definitionScope.current.invalidate();
+    const lookup = definitionScope.current.start();
+    if (!lookup) return;
+    setRenameBusy(true);
+    setRenamePreview(null);
+    setNotice('Checking symbol identity and recompiling the proposed rename…');
+    try {
+      const answer = await previewSymbolRename(
+        renameTarget.snapshot, renameTarget.path, renameTarget.offset,
+        renameName, lookup.controller.signal,
+      );
+      if (!definitionScope.current.isCurrent(lookup)) return;
+      if (!answer.ok) {
+        if (answer.diagnostic) {
+          setResult({ ok: false, stdout: '', stderr: '',
+            error: answer.error, diagnostic: answer.diagnostic });
+        }
+        setNotice(answer.error);
+        return;
+      }
+      setRenamePreview(answer);
+      setNotice('Rename preview verified without executing source code.');
+    } finally {
+      if (definitionScope.current.isCurrent(lookup)) setRenameBusy(false);
+      definitionScope.current.finish(lookup);
+    }
+  }
+
+  function applyRename() {
+    if (!renameTarget || !renamePreview || workspace !== renameTarget.snapshot) {
+      setNotice('Rename preview became stale. Retry from the current source.');
+      setRenameTarget(null);
+      setRenamePreview(null);
+      return;
+    }
+    const { old_name, new_name, changes, changed_files, files: renamedFiles } = renamePreview;
+    invalidateExecution();
+    // Monaco models intentionally remount for this atomic multi-file change.
+    setWorkspace({ entry: workspace.entry, files: { ...renamedFiles } });
+    setEditorSession(previous => previous + 1);
+    setNotice('Renamed ' + old_name + ' to ' + new_name + ' at ' + changes +
+      ' compiler-resolved sites in ' + changed_files.length + ' file(s).');
+  }
+
+  function cancelRename() {
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setRenameBusy(false);
+  }
 
   function jumpToReference(site: SourceRange, index: number) {
     const source = workspace.files[site.path];
@@ -583,9 +674,9 @@ export function App() {
           </div>
           <div className="sidebar-bottom">
             <div className="section-label">COMPATIBILITY</div>
-            <strong>Scarp v0.0.6-alpha.6</strong>
-            <p>Compiler source pinned to release commit cdf6a39. Code runs locally inside a disposable Web Worker.</p>
-            <a href="https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.6" target="_blank" rel="noreferrer">Compiler release notes ↗</a>
+            <strong>Scarp v0.0.6-alpha.7</strong>
+            <p>Compiler source pinned to release commit b1c1fd2. Code runs locally inside a disposable Web Worker.</p>
+            <a href="https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.7" target="_blank" rel="noreferrer">Compiler release notes ↗</a>
           </div>
         </aside>
 
@@ -709,6 +800,42 @@ export function App() {
             </section>
           )}
 
+          {renameTarget && (
+            <section className="project-search" aria-label="Rename Scarp symbol" data-testid="rename-panel">
+              <form className="project-search-bar" onSubmit={event => {
+                event.preventDefault();
+                void previewRename();
+              }}>
+                <label htmlFor="rename-new-name">Rename symbol at {renameTarget.path}</label>
+                <input id="rename-new-name" ref={renameInputRef} type="text"
+                  aria-label="New Scarp identifier" autoComplete="off"
+                  spellCheck={false} maxLength={64} required
+                  value={renameName} disabled={renameBusy}
+                  onChange={event => {
+                    definitionScope.current.invalidate();
+                    setRenamePreview(null);
+                    setRenameName(event.target.value);
+                  }} />
+                <button type="submit"
+                  disabled={renameBusy || !validRenameName(renameName) || !!renamePreview}>
+                  {renameBusy ? 'Validating…' : 'Preview rename'}
+                </button>
+                <button type="button" onClick={cancelRename}>Cancel rename</button>
+              </form>
+              {renamePreview && (
+                <div className="project-search-results">
+                  <p role="status">Compiler verified {renamePreview.changes} site(s) in{' '}
+                    {renamePreview.changed_files.length} file(s):{' '}
+                    <strong>{renamePreview.old_name}</strong> → <strong>{renamePreview.new_name}</strong>
+                  </p>
+                  <p>{renamePreview.changed_files.join(', ')}</p>
+                  <button type="button" className="button-primary"
+                    onClick={applyRename}>Apply rename to workspace</button>
+                </div>
+              )}
+            </section>
+          )}
+
           <div className="editor-card">
             <div className="file-tabs" role="tablist" aria-label="Scarp source files">
               {files.map((file) => (
@@ -734,14 +861,14 @@ export function App() {
                   </div>
                 }
               >
-                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} onFindReferences={locateReferences} navigationTarget={navigationTarget}
-                  navigationTrigger={navigationTrigger} referenceTrigger={referenceTrigger}
+                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} onFindReferences={locateReferences} onRename={beginRename} navigationTarget={navigationTarget}
+                  navigationTrigger={navigationTrigger} referenceTrigger={referenceTrigger} renameTrigger={renameTrigger}
                   referenceSites={referenceResult?.sites ?? null}
                   selectedReferenceIndex={selectedReferenceIndex} />
               </Suspense>
             </div>
             <div className="editor-footer">
-              <span><span className="online-dot" />Scarp syntax · Ctrl+Space: Completion · F12: Definition · Shift+F12: References</span>
+              <span><span className="online-dot" />Scarp syntax · Ctrl+Space: Completion · F12: Definition · Shift+F12: References · F2: Rename</span>
               <span>UTF-8 · {activeFile}</span>
               <div className="footer-controls">
                 <button type="button" onClick={() => setNavigationTrigger(previous => previous + 1)}
@@ -751,6 +878,10 @@ export function App() {
                 <button type="button" onClick={() => setReferenceTrigger(previous => previous + 1)}
                   title="Find actual compiler-indexed references to the symbol under the cursor (Shift+F12)">
                   Find references
+                </button>
+                <button type="button" onClick={() => setRenameTrigger(previous => previous + 1)}
+                  title="Preview compiler-checked symbol rename (F2)">
+                  Rename symbol
                 </button>
                 <button type="button" onClick={() => {
                   invalidateExecution();

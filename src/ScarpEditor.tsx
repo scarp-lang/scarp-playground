@@ -51,14 +51,16 @@ interface Props {
   onChange: (path: string, source: string) => void;
   onNavigate: (path: string, line: number, column: number, source: string) => void;
   onFindReferences: (path: string, line: number, column: number, source: string) => void;
+  onRename: (path: string, line: number, column: number, source: string) => void;
   navigationTarget: { path: string; line: number; column: number; sequence: number } | null;
   navigationTrigger: number;
   referenceTrigger: number;
+  renameTrigger: number;
   referenceSites: ReadonlyArray<ReferenceSite> | null;
   selectedReferenceIndex: number;
 }
 
-export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger, referenceSites, selectedReferenceIndex }: Props) {
+export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger, renameTrigger, referenceSites, selectedReferenceIndex, onRename }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
@@ -71,8 +73,11 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
   onChangeRef.current = onChange;
   const lastNavigationTrigger = useRef(navigationTrigger);
   const lastReferenceTrigger = useRef(referenceTrigger);
+  const lastRenameTrigger = useRef(renameTrigger);
   const onFindReferencesRef = useRef(onFindReferences);
   onFindReferencesRef.current = onFindReferences;
+  const onRenameRef = useRef(onRename);
+  onRenameRef.current = onRename;
   const onNavigateRef = useRef(onNavigate);
   onNavigateRef.current = onNavigate;
 
@@ -104,6 +109,13 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
     instance.addCommand(monaco.KeyMod.Shift | monaco.KeyCode.F12, () => {
       const position = instance.getPosition();
       if (position) onFindReferencesRef.current(
+        activePath.current, position.lineNumber, position.column, instance.getValue(),
+      );
+    });
+    // F2 resolves the selected token with the Rust compiler before any edit.
+    instance.addCommand(monaco.KeyCode.F2, () => {
+      const position = instance.getPosition();
+      if (position) onRenameRef.current(
         activePath.current, position.lineNumber, position.column, instance.getValue(),
       );
     });
@@ -273,6 +285,16 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       activePath.current, position.lineNumber, position.column, instance.getValue(),
     );
   }, [referenceTrigger]);
+
+  useEffect(() => {
+    if (renameTrigger === lastRenameTrigger.current) return;
+    lastRenameTrigger.current = renameTrigger;
+    const instance = editor.current;
+    const position = instance?.getPosition();
+    if (instance && position) onRenameRef.current(
+      activePath.current, position.lineNumber, position.column, instance.getValue(),
+    );
+  }, [renameTrigger]);
 
   useEffect(() => {
     const instance = editor.current;

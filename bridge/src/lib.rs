@@ -238,6 +238,179 @@ fn references_request(json_source: &str) -> String {
     }).to_string()
 }
 
+
+const MAX_RENAME_SITES: usize = 120;
+
+#[derive(Deserialize)]
+struct RenameRequest {
+    #[serde(flatten)]
+    workspace: Request,
+    path: String,
+    offset: usize,
+    new_name: String,
+}
+
+fn identifier_character(byte: u8) -> bool {
+    byte.is_ascii_alphanumeric() || byte == b'_'
+}
+
+/// Reject possible capture in *any* virtual file, including files not reached
+/// by the selected entry. False positives in comments and literals are safe:
+/// this is intentionally a conservative rename, not text-substitution.
+fn contains_identifier(source: &str, name: &str) -> bool {
+    let bytes = source.as_bytes();
+    source.match_indices(name).any(|(start, _)| {
+        let end = start + name.len();
+        (start == 0 || !identifier_character(bytes[start - 1]))
+            && (end == bytes.len() || !identifier_character(bytes[end]))
+    })
+}
+
+/// Preview a semantic rename using the compiler's resolved declaration and
+/// references. Recompile the edited graph; NEVER execute user code. A caller
+/// must explicitly confirm the returned workspace before applying any edit.
+fn rename_request(json_source: &str) -> String {
+    if json_source.len() > MAX_REQUEST_JSON_BYTES {
+        return error("The compiler request exceeds the 1 MiB JSON limit.");
+    }
+    let request: RenameRequest = match serde_json::from_str(json_source) {
+        Ok(value) => value,
+        Err(_) => return error("Malformed rename request."),
+    };
+    let name = request.new_name.as_str();
+    if name.is_empty() || name.len() > 64 ||
+        !name.as_bytes()[0].is_ascii_alphabetic() && name.as_bytes()[0] != b'_' ||
+        !name.bytes().all(identifier_character)
+    {
+        return error("Use a Scarp identifier of 1-64 ASCII letters, digits or underscores, starting with a letter or underscore.");
+    }
+    // The language parser owns the keyword list; avoid a divergent JS allowlist.
+    if scarp::parse(&format!("bind {name} = 1;")).is_err() {
+        return error("The new name is reserved or is not a valid Scarp declaration.");
+    }
+    let source = match request.workspace.files.get(&request.path) {
+        Some(source) if request.offset < source.len() && source.is_char_boundary(request.offset) =>
+            source,
+        _ => return error("Place the rename cursor on a valid source identifier."),
+    };
+    if request.workspace.files.values().any(|source| contains_identifier(source, name)) {
+        return error("The new identifier already occurs in this workspace. Choose an unused name to avoid capture.");
+    }
+    let (entry, loader) = match load_workspace(Request {
+        entry: request.workspace.entry.clone(),
+        files: request.workspace.files.clone(),
+    }) {
+        Ok(value) => value,
+        Err(problem) => return error(problem),
+    };
+    let limits = IndexLimits {
+        max_symbols: 4096,
+        max_references: 16_384,
+        max_name_bytes: 256 * 1024,
+        max_work: 100_000,
+    };
+    let indexed = match modules::compile_indexed_with_loader(
+        &entry, &loader, module_limits(), limits,
+    ) {
+        Ok(value) => value,
+        Err(problem) => return compiler_error(problem),
+    };
+    let index = indexed.index();
+    let Some(source_id) = index.sources().files().iter().position(|file| file.name == request.path) else {
+        return error("The selected file is not reachable from the entrypoint.");
+    };
+    let Some(symbol) = index.goto_definition(source_id, request.offset) else {
+        return error("No compiler-resolved identifier at the rename cursor.");
+    };
+    use modules::symbols::SymbolKind as K;
+    if !matches!(symbol.kind, K::Binding | K::Constant | K::Function |
+        K::Parameter | K::RepeatIndex | K::ImportAlias)
+    {
+        return error("This symbol kind cannot be renamed safely in the Playground.");
+    }
+    let old_name = symbol.name.as_ref();
+    if name == old_name {
+        return error("Choose a different identifier for the rename.");
+    }
+    let Some(declaration) = symbol.location else {
+        return error("Symbols without source declarations cannot be renamed.");
+    };
+    let references: Vec<_> = index.find_references(symbol.id).collect();
+    if references.len() + 1 > MAX_RENAME_SITES {
+        return error("Too many symbol sites to rename safely (limit: 120).");
+    }
+    // Compiler locations are file-local UTF-8 byte spans, not Monaco columns.
+    let mut locations: BTreeMap<String, Vec<(usize, usize)>> = BTreeMap::new();
+    for location in std::iter::once(declaration).chain(references.iter().map(|r| r.location)) {
+        let Some(file) = index.sources().files().get(location.source) else {
+            return error("Invalid compiler rename source.");
+        };
+        let Some(original) = request.workspace.files.get(&file.name) else {
+            return error("The rename crosses outside the virtual workspace.");
+        };
+        if original.get(location.span.start..location.span.end) != Some(old_name) {
+            return error("The compiler's rename site does not match the source identifier.");
+        }
+        locations.entry(file.name.clone()).or_default()
+            .push((location.span.start, location.span.end));
+    }
+    let mut changed = request.workspace.files.clone();
+    for (path, sites) in &mut locations {
+        sites.sort_unstable_by(|left, right| right.0.cmp(&left.0));
+        let Some(source) = changed.get_mut(path) else {
+            return error("The renamed file disappeared from the virtual workspace.");
+        };
+        let mut prior_start = usize::MAX;
+        for &(start, end) in sites.iter() {
+            if start >= end || end > prior_start || source.get(start..end) != Some(old_name) {
+                return error("Overlapping or stale compiler rename locations.");
+            }
+            source.replace_range(start..end, name);
+            prior_start = start;
+        }
+    }
+    let (new_entry, new_loader) = match load_workspace(Request {
+        entry: entry.clone(),
+        files: changed.clone(),
+    }) {
+        Ok(value) => value,
+        Err(problem) => return error(problem),
+    };
+    // Compiler-owned static validation: no read_line(), no evaluator, no user
+    // stdout, and no runtime effects. A rename cannot introduce syntax errors
+    // or silently drop references to the resolved declaration.
+    let revised = match modules::compile_indexed_with_loader(
+        &new_entry, &new_loader, module_limits(), limits,
+    ) {
+        Ok(value) => value,
+        Err(problem) => return compiler_error(problem),
+    };
+    let newer = revised.index();
+    let mut renamed = newer.symbols().iter().filter(|candidate|
+        candidate.name.as_ref() == name && candidate.kind == symbol.kind
+        && candidate.location.is_some());
+    let Some(target) = renamed.next() else {
+        return error("The renamed declaration was not found in the compiled workspace.");
+    };
+    if renamed.next().is_some() {
+        return error("The new identifier resolves to multiple declarations.");
+    }
+    let mut previous_kinds: Vec<_> = references.iter().map(|r| r.kind.as_str()).collect();
+    let mut updated_kinds: Vec<_> = newer.find_references(target.id)
+        .map(|r| r.kind.as_str()).collect();
+    previous_kinds.sort_unstable();
+    updated_kinds.sort_unstable();
+    if previous_kinds != updated_kinds {
+        return error("Renaming would change compiler-resolved symbol references.");
+    }
+    let changed_files: Vec<_> = locations.keys().cloned().collect();
+    json!({
+        "ok": true, "old_name": old_name, "new_name": name,
+        "kind": symbol.kind.as_str(), "changes": references.len() + 1,
+        "changed_files": changed_files, "files": changed,
+    }).to_string()
+}
+
 fn execute_request(json_source: &str) -> String {
     process_request(json_source, false)
 }
@@ -363,6 +536,12 @@ pub fn references(request_json: &str) -> String {
     references_request(request_json)
 }
 
+/// Compute a bounded, compiler-verified rename preview without running code.
+#[wasm_bindgen]
+pub fn rename(request_json: &str) -> String {
+    rename_request(request_json)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -374,6 +553,106 @@ mod tests {
         }).to_string()
     }
 
+
+
+    #[test]
+    fn rename_updates_only_the_compiler_resolved_symbol_across_imports() {
+        let main = "import \"left.srp\" as left; import \"right.srp\" as right; print(left.twice(7), right.twice(9));";
+        let request = json!({
+            "entry": "main.srp",
+            "files": {
+                "main.srp": main,
+                "left.srp": "pub pure funcra twice(value: integer)->integer{return value * 2;}",
+                "right.srp": "pub pure funcra twice(value: integer)->integer{return value + 1;}"
+            },
+            "path": "main.srp",
+            "offset": main.find("twice(7)").unwrap(),
+            "new_name": "double",
+        }).to_string();
+        let result: Value = serde_json::from_str(&rename_request(&request)).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["changes"], 2);
+        assert_eq!(result["changed_files"], json!(["left.srp", "main.srp"]));
+        assert!(result["files"]["main.srp"].as_str().unwrap().contains("left.double(7)"));
+        assert!(result["files"]["main.srp"].as_str().unwrap().contains("right.twice(9)"));
+        assert!(result["files"]["left.srp"].as_str().unwrap().contains("funcra double("));
+        assert!(result["files"]["right.srp"].as_str().unwrap().contains("funcra twice("));
+    }
+
+    #[test]
+    fn rename_parameter_updates_named_argument_labels_and_preserves_unicode_text() {
+        let main = "import \"lib.srp\" as lib; print(lib.greet(name: 4), \"😀\");";
+        let request = json!({
+            "entry": "main.srp",
+            "files": {
+                "main.srp": main,
+                "lib.srp": "pub pure funcra greet(name: integer)->integer{return name + 1;}"
+            },
+            "path": "main.srp",
+            "offset": main.find("name:").unwrap(),
+            "new_name": "value",
+        }).to_string();
+        let result: Value = serde_json::from_str(&rename_request(&request)).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["changes"], 3);
+        assert!(result["files"]["main.srp"].as_str().unwrap().contains("greet(value: 4)"));
+        assert!(result["files"]["main.srp"].as_str().unwrap().contains("\"😀\""));
+        assert!(result["files"]["lib.srp"].as_str().unwrap().contains("greet(value: integer)"));
+        assert!(result["files"]["lib.srp"].as_str().unwrap().contains("return value + 1;"));
+    }
+
+    #[test]
+    fn rename_does_not_execute_program_input_or_output() {
+        let source = "bind name = read_line(); print(name);";
+        let request = json!({
+            "entry": "main.srp", "files": {"main.srp": source},
+            "path": "main.srp", "offset": source.find("name);").unwrap(),
+            "new_name": "label",
+        }).to_string();
+        let result: Value = serde_json::from_str(&rename_request(&request)).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert!(result["files"]["main.srp"].as_str().unwrap().contains("print(label)"));
+    }
+
+    #[test]
+    fn rename_rejects_capture_keywords_builtins_and_invalid_positions() {
+        let source = "bind old = 1; bind existing = 2; print(old, existing);";
+        for name in ["existing", "if", "old", "not-valid", "", "a".repeat(65).as_str()] {
+            let request = json!({
+                "entry": "main.srp", "files": {"main.srp": source},
+                "path": "main.srp", "offset": source.find("old").unwrap(),
+                "new_name": name,
+            }).to_string();
+            let result: Value = serde_json::from_str(&rename_request(&request)).unwrap();
+            assert_eq!(result["ok"], false, "name={name}: {result}");
+        }
+        let request = json!({
+            "entry": "main.srp", "files": {"main.srp": "print(1);"},
+            "path": "main.srp", "offset": 0, "new_name": "other",
+        }).to_string();
+        let result: Value = serde_json::from_str(&rename_request(&request)).unwrap();
+        assert_eq!(result["ok"], false);
+        let request = json!({
+            "entry": "main.srp", "files": {"main.srp": "bind a = \"😀\"; print(a);"},
+            "path": "main.srp", "offset": 11, "new_name": "other",
+        }).to_string();
+        let result: Value = serde_json::from_str(&rename_request(&request)).unwrap();
+        assert_eq!(result["ok"], false);
+    }
+
+    #[test]
+    fn rename_conservatively_rejects_unindexed_collisions() {
+        let request = json!({
+            "entry": "main.srp",
+            "files": {
+                "main.srp": "bind original = 2; print(original);",
+                "other.srp": "// proposed appears in unreachable source\n"
+            },
+            "path": "main.srp", "offset": 5, "new_name": "proposed",
+        }).to_string();
+        let result: Value = serde_json::from_str(&rename_request(&request)).unwrap();
+        assert_eq!(result["ok"], false);
+    }
 
     #[test]
     fn finds_only_compiler_owned_references_across_imports() {
