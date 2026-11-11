@@ -1,13 +1,13 @@
 import { describe, expect, it, vi, beforeEach, afterEach } from 'vitest';
 import {
   decodeRenameReply, previewSymbolRename, validRenameName,
-  verifyRenameSnapshot, MAX_RENAME_SITES,
+  verifyRenameSnapshot, MAX_RENAME_SITES, type RenameResult,
 } from '../src/navigation/rename';
 
 const source = { entry: 'main.srp', files: {
   'main.srp': 'bind answer = 42; print(answer);',
 } };
-const valid = {
+const valid: Extract<RenameResult, { ok: true }> = {
   ok: true, old_name: 'answer', new_name: 'result', kind: 'binding',
   changes: 2, changed_files: ['main.srp'],
   files: { 'main.srp': 'bind result = 42; print(result);' },
