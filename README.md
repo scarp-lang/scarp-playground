@@ -125,10 +125,12 @@ load failure — it never fakes a successful program result.
   decode `\\u{HEX}` Unicode escapes inside strings. The built-in example uses
   the published compiler fixture and runs in browser WebAssembly; these are not
   BigInt, native executable, or installed-package capabilities.
-- **Rename symbol (F2 and toolbar):** preview an identity-based multi-file rename
-  for compiler-indexed Scarp symbols, then explicitly apply only after a
-  nonexecuting recompile succeeds. Unused names, 120-site limit, no builtins,
-  snapshot cancellation and restricted ASCII names are intentional safeguards.
+- **Rename symbol (F2 and toolbar):** inspect a complete per-file
+  before/after changed-line diff and navigate to affected sources, then
+  explicitly apply only after a nonexecuting recompile succeeds. The browser
+  independently replays and checks all compiler-owned UTF-8 edit spans.
+  Unused names, 120-site limit, no builtins, snapshot cancellation and
+  restricted ASCII names are intentional safeguards.
   See [rename scope and safety](docs/symbol-rename.md).
 - **Go to Definition (F12 and toolbar button)** uses the official Rust compiler's bounded, nonexecuting
   symbol index. Navigates across virtual .srp modules, preserves editor undo
