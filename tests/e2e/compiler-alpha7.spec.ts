@@ -22,7 +22,7 @@ test('alpha.7 rejects conditional branches with mismatched types', async ({ page
 });
 
 test('alpha.7 rejects surrogate Unicode escapes instead of emitting text', async ({ page }) => {
-  const source = String.raw`print("\\u{D800}");`;
+  const source = String.raw`print("\u{D800}");`;
   await page.goto('./#code=' + encodeURIComponent(source));
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.error-panel')).toContainText(/escape|unicode|surrogate/i, { timeout: 30_000 });
