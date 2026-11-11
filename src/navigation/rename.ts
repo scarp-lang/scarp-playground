@@ -6,9 +6,12 @@ import { claimCompilerWorker } from '../runner/worker-slot';
 export const MAX_RENAME_SITES = 120;
 export const MAX_RENAME_NAME_LENGTH = 64;
 
+/** File-local UTF-8 byte spans emitted by the resolved Rust symbol index. */
+export type RenameEdit = { path: string; start: number; end: number };
+
 export type RenameResult =
   | { ok: true; old_name: string; new_name: string; kind: string;
-      changes: number; changed_files: string[]; files: Record<string, string> }
+      changes: number; changed_files: string[]; edits: RenameEdit[]; files: Record<string, string> }
   | { ok: false; error: string; diagnostic?: CompilerDiagnostic | null };
 
 const invalid = (): RenameResult =>
@@ -40,6 +43,8 @@ export function validatedRenameResult(value: unknown): RenameResult {
       Number(value.changes) > MAX_RENAME_SITES ||
       !Array.isArray(value.changed_files) ||
       value.changed_files.length < 1 || value.changed_files.length > 12 ||
+      !Array.isArray(value.edits) ||
+      value.edits.length !== value.changes ||
       !record(value.files)) return invalid();
 
   const files = value.files;
@@ -54,6 +59,18 @@ export function validatedRenameResult(value: unknown): RenameResult {
     // The fallback entry is a known filename, just for source/path/byte validation.
     return invalid();
   }
+  const edits: RenameEdit[] = [];
+  for (const candidate of value.edits) {
+    if (!record(candidate) || typeof candidate.path !== 'string' ||
+        !validPath(candidate.path) ||
+        !Number.isSafeInteger(candidate.start) || Number(candidate.start) < 0 ||
+        !Number.isSafeInteger(candidate.end) || Number(candidate.end) <= Number(candidate.start) ||
+        Number(candidate.end) - Number(candidate.start) !== value.old_name.length ||
+        Number(candidate.end) > 64 * 1024) return invalid();
+    edits.push({
+      path: candidate.path, start: candidate.start as number, end: candidate.end as number,
+    });
+  }
   return {
     ok: true,
     old_name: value.old_name,
@@ -61,11 +78,16 @@ export function validatedRenameResult(value: unknown): RenameResult {
     kind: value.kind,
     changes: value.changes as number,
     changed_files: changed as string[],
+    edits,
     files: files as Record<string, string>,
   };
 }
 
-/** Refuse any response that changed file membership or lied about changed paths. */
+/**
+ * Independently replay every compiler-provided UTF-8 edit against the exact
+ * request snapshot. Reject extra source changes, missing sites, overlapping
+ * replacements, invalid Unicode boundaries or altered file membership.
+ */
 export function verifyRenameSnapshot(
   original: Workspace, requested: string, answer: RenameResult,
 ): RenameResult {
@@ -74,10 +96,53 @@ export function verifyRenameSnapshot(
   const oldPaths = Object.keys(original.files).sort();
   const newPaths = Object.keys(answer.files).sort();
   if (oldPaths.length !== newPaths.length ||
-      oldPaths.some((path, i) => path !== newPaths[i])) return invalid();
-  const changed = oldPaths.filter(path => original.files[path] !== answer.files[path]);
-  if (changed.length !== answer.changed_files.length ||
-      changed.some((path, i) => path !== [...answer.changed_files].sort()[i])) return invalid();
+      oldPaths.some((path, i) => path !== newPaths[i]) ||
+      answer.edits.length !== answer.changes) return invalid();
+
+  const editsByPath = new Map<string, RenameEdit[]>();
+  for (const edit of answer.edits) {
+    if (!Object.hasOwn(original.files, edit.path)) return invalid();
+    const sites = editsByPath.get(edit.path) ?? [];
+    sites.push(edit);
+    editsByPath.set(edit.path, sites);
+  }
+  const modified = [...editsByPath.keys()].sort();
+  if (modified.length !== answer.changed_files.length ||
+      modified.some((path, i) => path !== [...answer.changed_files].sort()[i])) return invalid();
+
+  const encoder = new TextEncoder();
+  const decoder = new TextDecoder('utf-8', { fatal: true });
+  const identifierByte = (byte: number | undefined): boolean =>
+    byte !== undefined && ((byte >= 48 && byte <= 57) ||
+    (byte >= 65 && byte <= 90) || (byte >= 97 && byte <= 122) || byte === 95);
+  try {
+    for (const path of oldPaths) {
+      const source = original.files[path];
+      const expected = answer.files[path];
+      const edits = (editsByPath.get(path) ?? []).sort((a, b) => a.start - b.start);
+      const bytes = encoder.encode(source);
+      let cursor = 0;
+      let reconstructed = '';
+      for (const edit of edits) {
+        if (edit.start < cursor || edit.end > bytes.length ||
+            edit.end - edit.start !== answer.old_name.length ||
+            identifierByte(bytes[edit.start - 1]) || identifierByte(bytes[edit.end])) {
+          return invalid();
+        }
+        // Fatal decoding refuses spans that split UTF-8 characters.
+        reconstructed += decoder.decode(bytes.subarray(cursor, edit.start));
+        if (decoder.decode(bytes.subarray(edit.start, edit.end)) !== answer.old_name) {
+          return invalid();
+        }
+        reconstructed += answer.new_name;
+        cursor = edit.end;
+      }
+      reconstructed += decoder.decode(bytes.subarray(cursor));
+      if (reconstructed !== expected) return invalid();
+    }
+  } catch {
+    return invalid();
+  }
   return answer;
 }
 
