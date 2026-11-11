@@ -9,8 +9,11 @@ not a full language server protocol implementation.
 1. Place the editor cursor on a declaration or an actual symbol use.
 2. Press **F2** or choose **Rename symbol** in the editor toolbar.
 3. Enter a new ASCII identifier and click **Preview rename**.
-4. Examine the proposed site count and affected filenames, then click
-   **Apply rename to workspace**. **Cancel rename** makes no edits.
+4. Examine the proposed site count **and the complete before/after diff for
+   each changed source line**, grouped by file. Use the per-line **Line** link
+   to inspect the original source in Monaco without applying anything.
+5. Click **Apply rename to workspace** only after reviewing the changes.
+   **Cancel rename** makes no edits.
 
 The browser remounts Monaco models after confirmed multi-file replacements, so
 the old text models cannot overwrite compiler edits. When opt-in browser local
