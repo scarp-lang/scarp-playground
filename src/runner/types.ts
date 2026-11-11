@@ -37,3 +37,7 @@ export type DefinitionResponse = { id: number; definition: import('../navigation
 
 export type ReferencesRequest = { id: number; workspace: Workspace; mode: 'references'; path: string; offset: number };
 export type ReferencesResponse = { id: number; references: import('../navigation/references').ReferenceResult };
+
+export type RenameRequest = { id: number; workspace: Workspace; mode: 'rename';
+  path: string; offset: number; new_name: string };
+export type RenameResponse = { id: number; rename: import('../navigation/rename').RenameResult };
