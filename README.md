@@ -115,12 +115,16 @@ load failure — it never fakes a successful program result.
   but never returns program stdout or stderr. The real compiler reports source
   diagnostics, including imported-module locations. Check is not a syntax-only
   parser or an external remote service.
-- Numerical RMS from Scarp alpha.1, retained in the pinned alpha.5 WASM runtime.
+- Numerical RMS from Scarp alpha.1, retained in the pinned alpha.7 WASM runtime.
 - **Deterministic Top-K and temperature softmax** from Scarp alpha.3, with official exact-output examples verified through native Rust and real browser WASM regression tests. These are finite vector functions, not an AI model runtime or random sampling.
 - **Top-P nucleus ranking and Pearson correlation** from Scarp alpha.5, with byte-exact
   official example outputs plus domain-error and Worker-recovery tests in
   the real browser interpreter. These do not provide stochastic sampling,
   model training, GPU computation or native executable generation.
+- **Scarp alpha.7 expressions:** select one typed value with `if`/`elif`/`else` and
+  decode `\\u{HEX}` Unicode escapes inside strings. The built-in example uses
+  the published compiler fixture and runs in browser WebAssembly; these are not
+  BigInt, native executable, or installed-package capabilities.
 - **Go to Definition (F12 and toolbar button)** uses the official Rust compiler's bounded, nonexecuting
   symbol index. Navigates across virtual .srp modules, preserves editor undo
   history, and translates Monaco UTF-16 cursor coordinates to Scarp's UTF-8
@@ -214,7 +218,8 @@ For the portable source-only JSON format and its import threat model see
 Start with compiler-verified conditionals, while/repeat loops, typed functions and
 output examples in the Playground's **Example Programs** section. See
 [docs/beginner-examples.md](docs/beginner-examples.md).
-See the [alpha.6 compiler integration notes](docs/compiler-alpha6-input.md),
+See the [alpha.7 compiler integration notes](docs/compiler-alpha7-conditional-unicode.md),
+[historical alpha.6 input and tuple integration](docs/compiler-alpha6-input.md),
 [historical alpha.5 integration gate](docs/compiler-alpha6-5-check.md),
 [historical alpha.4 integration](docs/compiler-alpha6-4-check.md) and
 [historical alpha.3 audit](docs/compiler-alpha6-3-check.md)

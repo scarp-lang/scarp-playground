@@ -224,6 +224,15 @@ write("done");
     },
   },
   {
+    title: 'Conditional values + Unicode escapes',
+    description: 'Choose expression values and decode Unicode scalars (alpha.7)',
+    entry: 'main.srp',
+    files: {
+      // Official v0.0.6-alpha.7 examples/conditional_unicode.srp (exact fixture).
+      'main.srp': "bind score = 73;\nbind label = if score >= 90 {\n    \"\\u{1F44B}\"\n} elif score >= 60 {\n    \"\\u{0928}\\u{092E}\\u{0938}\\u{094D}\\u{0924}\\u{0947} \\u{1F44B}\"\n} else {\n    text_repeat(\"unreached\", -1)\n};\nprint(label, if true { 7 } else { 1 / 0 });\n",
+    },
+  },
+  {
     title: 'Import a module',
     description: 'Two real .srp source files',
     entry: 'main.srp',
