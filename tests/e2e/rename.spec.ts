@@ -41,7 +41,7 @@ test('rename refuses an occupied identifier without mutating code', async ({ pag
   await page.getByRole('button', { name: 'Rename symbol' }).click();
   await page.getByRole('textbox', { name: 'New Scarp identifier' }).fill('math');
   await page.getByRole('button', { name: 'Preview rename' }).click();
-  await expect(page.locator('[role="status"]')).toContainText(
+  await expect(page.locator('.notice')).toContainText(
     /already occurs in this workspace/i, { timeout: 30_000 },
   );
   await expect(page.getByRole('button', { name: 'Apply rename to workspace' })).toHaveCount(0);
