@@ -1,6 +1,6 @@
 # Compiler v0.0.6-alpha.6 — browser input, text and tuples
 
-This change upgrades the Playground's **development branch** to the exact
+This historical change upgraded the Playground's **development branch** to the exact
 published compiler release commit `cdf6a3924ec2a36c7beca5a9aec4f01a0bce515e` (not a
 moving tag or branch). This is a prerelease, not a stable language contract.
 
