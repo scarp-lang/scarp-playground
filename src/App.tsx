@@ -844,7 +844,7 @@ export function App() {
                 <button type="button" onClick={cancelRename}>Cancel rename</button>
               </form>
               {renamePreview && (
-                <div className="project-search-results">
+                <div className="rename-preview-results">
                   <p role="status">Compiler verified {renamePreview.changes} site(s) in{' '}
                     {renamePreview.changed_files.length} file(s):{' '}
                     <strong>{renamePreview.old_name}</strong> → <strong>{renamePreview.new_name}</strong>
