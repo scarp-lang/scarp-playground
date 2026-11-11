@@ -19,7 +19,7 @@ describe('shipped compiler-backed learning examples', () => {
     const conditional = examples.find((example) => example.title === 'Conditional values + Unicode escapes');
     expect(conditional).toBeDefined();
     const source = conditional!.files['main.srp'];
-    expect(source).toContain(String.raw`\\u{1F44B}`);
+    expect(source).toContain(String.raw`\u{1F44B}`);
     expect(source).toContain('elif score >= 60');
     expect(source).toContain('if true { 7 } else { 1 / 0 }');
   });
