@@ -6,10 +6,10 @@ test('boots the real interpreter and executes the official hello sample', async 
   await page.goto('./');
   await expect(page.getByRole('heading', { name: 'Code. Run. Learn.' })).toBeVisible();
   await expect(page.getByText('Development preview', { exact: true })).toBeVisible();
-  // The embedded compiler is pinned independently of Playground's v0.0.1 tag.
-  await expect(page.getByText('Scarp v0.0.6-alpha.6', { exact: true })).toBeVisible();
+  // The embedded compiler is pinned independently of Playground's own published v0.0.2 tag.
+  await expect(page.getByText('Scarp v0.0.6-alpha.7', { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /Compiler release notes/ }))
-    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.6');
+    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.7');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
   await expect(page.locator('.result-status.success')).toBeVisible();
