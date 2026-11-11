@@ -255,6 +255,7 @@ Use **Shift+F12** or **Find references** to query compiler-owned symbol uses
 across imported modules; unlike text search, this resolves symbol identity.
 See [docs/find-references.md](docs/find-references.md).
 
-Use **F2** or **Rename symbol** to preview a conservative compiler-validated
-rename across indexed `.srp` modules, then explicitly apply the edits.
+Use **F2** or **Rename symbol** to review complete, compiler-validated
+before/after changed lines across indexed `.srp` modules, then explicitly
+apply the verified edits.
 See [docs/symbol-rename.md](docs/symbol-rename.md).
