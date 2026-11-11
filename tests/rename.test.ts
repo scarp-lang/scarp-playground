@@ -10,6 +10,7 @@ const source = { entry: 'main.srp', files: {
 const valid: Extract<RenameResult, { ok: true }> = {
   ok: true, old_name: 'answer', new_name: 'result', kind: 'binding',
   changes: 2, changed_files: ['main.srp'],
+  edits: [{ path: 'main.srp', start: 5, end: 11 }, { path: 'main.srp', start: 24, end: 30 }],
   files: { 'main.srp': 'bind result = 42; print(result);' },
 };
 
@@ -33,6 +34,10 @@ describe('compiler-checked rename validation', () => {
       JSON.stringify({ ...valid, files: { '../secret.srp': 'no' } }),
       JSON.stringify({ ...valid, files: { 'main.srp': 'x'.repeat(65 * 1024) } }),
       JSON.stringify({ ...valid, kind: 23 }),
+      JSON.stringify({ ...valid, edits: [] }),
+      JSON.stringify({ ...valid, edits: [{ path: 'main.srp', start: 5, end: 11 }] }),
+      JSON.stringify({ ...valid, edits: [{ path: 'main.srp', start: -1, end: 5 }, valid.edits[1]] }),
+      JSON.stringify({ ...valid, edits: [{ path: 'main.srp', start: 5, end: 14 }, valid.edits[1]] }),
     ];
     for (const candidate of bad) {
       expect(decodeRenameReply(candidate)).toMatchObject({
@@ -52,6 +57,18 @@ describe('compiler-checked rename validation', () => {
     expect(verifyRenameSnapshot(source, 'result', {
       ...valid, files: { ...source.files }, changed_files: ['main.srp'],
     })).toMatchObject({ ok: false });
+
+    // Each response must be exactly reproducible from its compiler byte spans.
+    for (const forged of [
+      { ...valid, files: { 'main.srp': 'bind result = 42; print(result); // injected' } },
+      { ...valid, edits: [valid.edits[1], valid.edits[1]] },
+      { ...valid, edits: [{ path: 'main.srp', start: 6, end: 12 }, valid.edits[1]] },
+      { ...valid, edits: [{ path: 'other.srp', start: 5, end: 11 }, valid.edits[1]] },
+      { ...valid, changed_files: ['main.srp', 'other.srp'] },
+    ]) {
+      expect(verifyRenameSnapshot(source, 'result', forged))
+        .toMatchObject({ ok: false });
+    }
   });
 });
 
