@@ -387,3 +387,58 @@ a { color: inherit; text-decoration: none; }
 }
 .file-duplicate-preview .rename-diff-list { max-height: 250px; margin: 0; }
 .file-duplicate-preview > button { justify-self: start; }
+
+/* Browser-local quick-open palette. No search query or source is persisted. */
+.quick-open-overlay {
+  position: fixed; inset: 0; z-index: 300; display: flex;
+  justify-content: center; align-items: flex-start;
+  padding: min(11vh, 92px) 14px 14px;
+  background: rgba(9, 14, 30, .76);
+}
+.quick-open-dialog {
+  width: min(540px, 100%); max-height: min(78vh, 650px);
+  overflow: auto; min-width: 0; padding: 16px;
+  border: 1px solid var(--border); border-radius: 12px;
+  box-shadow: 0 24px 65px rgba(0, 0, 0, .36);
+  background: var(--panel); color: var(--text);
+}
+.quick-open-heading { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+.quick-open-heading h2 { font-size: 16px; margin: 0 0 4px; font-weight: 750; }
+.quick-open-heading p { font-size: 11px; margin: 0 0 15px; color: var(--muted); }
+.quick-open-heading button { flex: none; font-size: 23px; padding: 0 6px; color: var(--muted); }
+.quick-open-dialog > label { display: block; margin-bottom: 5px; font-size: 12px; font-weight: 650; }
+.quick-open-dialog > input {
+  box-sizing: border-box; width: 100%; min-width: 0; padding: 10px 11px;
+  border-radius: 8px; border: 1px solid var(--border);
+  background: var(--panel-2); color: var(--text);
+  font: 13px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.quick-open-dialog > input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.quick-open-results {
+  display: grid; gap: 4px; min-width: 0; margin-top: 12px;
+  max-height: 340px; overflow: auto; padding: 3px;
+}
+.quick-open-hit {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 10px; min-width: 0; padding: 11px 12px; text-align: left;
+  background: transparent; color: var(--text);
+  border: 1px solid transparent; border-radius: 8px;
+}
+.quick-open-hit.selected, .quick-open-hit:hover {
+  background: var(--panel-2); border-color: var(--accent);
+}
+.quick-open-hit:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.quick-open-name { display: flex; flex-wrap: wrap; align-items: center; gap: 7px; font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }
+.quick-open-path {
+  flex: none; max-width: 50%; overflow-wrap: anywhere;
+  font: 11px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
+  color: var(--muted); text-align: right;
+}
+.quick-open-empty, .quick-open-count { padding: 8px; margin: 0; font-size: 11px; color: var(--muted); }
+.quick-open-count { border-top: 1px solid var(--border); margin-top: 9px; }
+@media (max-width: 520px) {
+  .quick-open-overlay { padding-top: 30px; }
+  .quick-open-dialog { padding: 12px; max-height: calc(100dvh - 60px); }
+  .quick-open-hit { align-items: flex-start; flex-direction: column; gap: 4px; }
+  .quick-open-path { max-width: 100%; text-align: left; }
+}
