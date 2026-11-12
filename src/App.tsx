@@ -22,6 +22,7 @@ import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './p
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
+import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
 import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
@@ -84,6 +85,9 @@ export function App() {
   } | null>(null);
   const [fileMovePlan, setFileMovePlan] =
     useState<Extract<ModuleMovePlan, { ok: true }> | null>(null);
+  const [fileRemoval, setFileRemoval] = useState<{
+    snapshot: Workspace; from: string; plan: ModuleRemovalPlan;
+  } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const executionScope = useRef(new ExecutionScope());
@@ -189,14 +193,18 @@ export function App() {
     const label = lastBulkEdit.label;
     invalidateExecution();
     setWorkspace(original);
-    setActiveFile(current => Object.hasOwn(original.files, current)
-      ? current : lastBulkEdit.restoreActiveFile ?? original.entry);
+    setActiveFile(current => lastBulkEdit.label === 'file removal' &&
+      lastBulkEdit.restoreActiveFile
+      ? lastBulkEdit.restoreActiveFile
+      : Object.hasOwn(original.files, current)
+        ? current : lastBulkEdit.restoreActiveFile ?? original.entry);
     setLastBulkEdit(null);
     setEditorSession(previous => previous + 1);
     setNotice('Undid the last ' + label + ' across all affected files.');
   }
 
   function invalidateExecution() {
+    setFileRemoval(null);
     setFileMove(null);
     setFileMovePlan(null);
     setReplacePreview(null);
@@ -697,23 +705,35 @@ export function App() {
       ' import path(s). Run Check code to validate the project.');
   }
 
-  function removeFile() {
-    if (files.length <= 1) {
-      setNotice('The workspace needs at least one source file.');
+  function reviewFileRemoval() {
+    invalidateExecution();
+    const plan = previewModuleRemoval(workspace, activeFile);
+    setFileRemoval({ snapshot: workspace, from: activeFile, plan });
+    setNotice(plan.ok
+      ? 'Review the file deletion and new entrypoint before applying.'
+      : plan.error);
+  }
+
+  function applyFileRemoval() {
+    if (!fileRemoval || workspace !== fileRemoval.snapshot ||
+        !fileRemoval.plan.ok || fileRemoval.from !== fileRemoval.plan.path) {
+      setFileRemoval(null);
+      setNotice('File removal preview is stale. Review the current workspace again.');
       return;
     }
-    const replacement = files.find((file) => file !== activeFile)!;
+    const { path, workspace: next, nextActive } = fileRemoval.plan;
+    const undo = createBulkEditUndo(workspace, next, 'file removal', undefined, path);
+    if (!undo) {
+      setNotice('The removal cannot be safely reversed, so no files were deleted.');
+      return;
+    }
     invalidateExecution();
-    setWorkspace((previous) => {
-      const nextFiles = { ...previous.files };
-      delete nextFiles[activeFile];
-      return {
-        entry: previous.entry === activeFile ? replacement : previous.entry,
-        files: nextFiles,
-      };
-    });
-    setActiveFile(replacement);
-    setResult(null);
+    setWorkspace(next);
+    setActiveFile(nextActive);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setNotice('Removed unused module ' + path +
+      '. Undo bulk change restores it until the next project edit.');
   }
 
   async function copyActiveSource() {
@@ -1194,6 +1214,40 @@ export function App() {
                 )}
               </section>
             )}
+            {fileRemoval && (
+              <section className="file-remove-panel" role="region"
+                aria-label="Review Scarp module removal">
+                <h3>Remove {fileRemoval.from}?</h3>
+                {fileRemoval.plan.ok ? (
+                  <>
+                    <p>No other source file imports this module.
+                      {fileRemoval.plan.changedEntry
+                        ? ' The entrypoint will change to ' + fileRemoval.plan.workspace.entry + '.'
+                        : ' The project entrypoint will be preserved.'}
+                    </p>
+                    <p>Confirming deletes this virtual file only. One-step undo will be available.</p>
+                    <button type="button" className="button-primary"
+                      onClick={applyFileRemoval}>Confirm remove file</button>
+                  </>
+                ) : (
+                  <>
+                    <p role="alert">{fileRemoval.plan.error}</p>
+                    {fileRemoval.plan.dependents.length > 0 && (
+                      <ul className="file-remove-dependents" aria-label="Blocking module imports">
+                        {fileRemoval.plan.dependents.map((ref, index) => (
+                          <li key={ref.importer + ':' + ref.line + ':' + index}>
+                            {ref.importer}:{ref.line} imports "{ref.specifier}"
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+                <button type="button" onClick={() => setFileRemoval(null)}>
+                  Cancel file removal
+                </button>
+              </section>
+            )}
             <div className="editor-body">
               <Suspense
                 fallback={
@@ -1252,7 +1306,7 @@ export function App() {
                   title="Rename or move the active .srp file and preview required import updates">
                   Rename file
                 </button>
-                <button type="button" onClick={removeFile} disabled={files.length < 2}>Remove file</button>
+                <button type="button" onClick={reviewFileRemoval} disabled={files.length < 2}>Remove file</button>
               </div>
             </div>
           </div>

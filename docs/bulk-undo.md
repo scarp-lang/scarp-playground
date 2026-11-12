@@ -2,7 +2,7 @@
 
 The Playground keeps one **ephemeral, in-memory** undo snapshot after an
 explicitly applied **project-wide text replacement** or compiler-verified
-**symbol rename**, or a validated **file rename/move**. The toolbar's **Undo bulk change** button restores all
+**symbol rename**, a validated **file rename/move**, or a dependency-safe **file removal**. The toolbar's **Undo bulk change** button restores all
 affected source files together, including source line endings and the original
 entry point. It never runs Scarp code.
 

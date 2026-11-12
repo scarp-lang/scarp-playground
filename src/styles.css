@@ -358,3 +358,20 @@ a { color: inherit; text-decoration: none; }
 .file-move-preview p { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
 .file-move-preview .rename-diff-list { margin: 0; max-height: 250px; }
 .file-move-preview > button { justify-self: start; }
+
+/* Review import dependencies before any virtual source file is removed. */
+.file-remove-panel {
+  display: flex; flex-direction: column; align-items: flex-start;
+  gap: 10px; min-width: 0; padding: 13px 16px;
+  border-bottom: 1px solid var(--border); background: var(--panel-2);
+}
+.file-remove-panel h3 { font-size: 14px; font-weight: 700; overflow-wrap: anywhere; }
+.file-remove-panel p { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.file-remove-dependents {
+  margin: 0; padding: 9px 10px; list-style: none; max-height: 200px;
+  width: 100%; min-width: 0; overflow: auto;
+  border: 1px solid var(--border); border-radius: 7px;
+  font: 11px/1.7 ui-monospace, SFMono-Regular, Consolas, monospace;
+  overflow-wrap: anywhere;
+}
+.file-remove-dependents li { padding: 3px 0; }

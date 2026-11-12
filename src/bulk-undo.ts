@@ -7,7 +7,7 @@ import { validPath, validateWorkspace, type Workspace } from './workspace';
 export type BulkEditUndo = {
   before: Workspace;
   after: Workspace;
-  label: 'project-wide replacement' | 'symbol rename' | 'file move';
+  label: 'project-wide replacement' | 'symbol rename' | 'file move' | 'file removal';
   restoreActiveFile?: string;
 };
 
@@ -17,11 +17,24 @@ export function createBulkEditUndo(
   after: Workspace,
   label: BulkEditUndo['label'],
   moved?: { from: string; to: string },
+  removed?: string,
 ): BulkEditUndo | null {
   if (before === after || validateWorkspace(before) || validateWorkspace(after)) return null;
   const oldPaths = Object.keys(before.files).sort();
   const newPaths = Object.keys(after.files).sort();
-  if (oldPaths.length !== newPaths.length) return null;
+  if (label === 'file removal') {
+    if (moved || !removed || !validPath(removed) ||
+        !Object.hasOwn(before.files, removed) ||
+        Object.hasOwn(after.files, removed) ||
+        oldPaths.length !== newPaths.length + 1 ||
+        after.entry !== (before.entry === removed ? newPaths[0] : before.entry) ||
+        newPaths.some((path, index) => path !==
+          oldPaths.filter(original => original !== removed)[index]) ||
+        newPaths.some(path => before.files[path] !== after.files[path])) return null;
+    return { before, after, label, restoreActiveFile: removed };
+  }
+
+  if (removed || oldPaths.length !== newPaths.length) return null;
 
   if (label === 'file move') {
     if (!moved || !validPath(moved.from) || !validPath(moved.to) ||
