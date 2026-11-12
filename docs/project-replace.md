@@ -15,14 +15,14 @@ Long lines scroll horizontally. Nothing changes until you explicitly choose
 - The operation is entirely inside the browser; no server requests, uploads,
   compiler execution or program evaluation occur during preview.
 - Search and replacement are **literal text**, not regular expressions or
-  interpolation. Replacement values such as \`$&\` and \`\\\` stay literal.
+  interpolation. Replacement values such as `$&` and `\\` stay literal.
 - Search is case-insensitive by default, with optional case-sensitive
   replacement. The ordinary Find results remain case-insensitive.
 - At most **120 actual text changes** may be applied. Projects requiring more
   matches are rejected **completely**, never silently truncated.
 - The search query is **2–96 characters**, and replacement text is **0–256
   characters**. Both must fit on one line; an empty replacement deletes text.
-- The original line endings (\`CRLF\`, \`LF\` or \`CR\`) and unrelated files
+- The original line endings (`CRLF`, `LF` or `CR`) and unrelated files
   are preserved exactly.
 - The result must satisfy the same **12-file**, **64 KiB per file**, and
   **128 KiB project-wide** limits as Scarp execution.
