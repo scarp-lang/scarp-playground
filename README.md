@@ -114,6 +114,10 @@ load failure — it never fakes a successful program result.
   nonexecuting import-path preview, preserves relative import targets when
   changing directories, updates the project entrypoint, and supports one-step
   multi-file undo. See [file rename and move](docs/module-file-move.md).
+- **Duplicate file** previews an independent copy of an active `.srp` module,
+  safely rebases the copy's relative imports when changing directories, and
+  supports one-step undo without touching the original sources. See
+  [module duplication](docs/module-file-duplication.md).
 - **Remove file** performs a nonexecuting import-dependency check before
   deleting a virtual module, refuses removal when other modules import it,
   previews entrypoint changes and supports one-step undo. See
