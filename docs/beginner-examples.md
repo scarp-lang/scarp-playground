@@ -20,10 +20,13 @@ the five samples above. The language uses `funcra` for functions, `var`
 for mutable bindings, and both bounded `while` and counted `repeat`
 loops. Run each sample and change small inputs to see how the output changes.
 
-These examples rely on Scarp `v0.0.6-alpha.5`, which is the compiler
-currently pinned by the Playground. Changes to the language are tested
-against the actual interpreter; proposed features such as future composite
-types should not appear as runnable samples until released.
+These examples use the pinned Scarp `v0.0.6-alpha.8` compiler. The
+**Boolean assertions** example is based on the released
+[`examples/assertions.srp`](https://github.com/scarp-lang/scarp/blob/v0.0.6-alpha.8/examples/assertions.srp)
+fixture and prints `3` followed by a newline. Its conditions use the actual
+compiler's runtime assertion semantics; a reached failure reports E0065. See
+[the alpha.8 browser guide](compiler-alpha8-assertions.md). Changes to the
+language are tested against the actual interpreter, not speculative syntax.
 
 Click **Save locally** to keep an edited workspace in this browser, or
 **Export project** to preserve it as a source-only JSON file. Built-in
