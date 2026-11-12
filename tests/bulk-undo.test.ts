@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { createBulkEditUndo, undoBulkEdit } from '../src/bulk-undo';
 import { previewProjectReplace } from '../src/project-replace';
 import { previewModuleMove } from '../src/module-move';
+import { previewModuleRemoval } from '../src/module-remove';
 
 const base = () => ({ entry: 'main.srp', files: {
   'main.srp': 'print("twice");',
@@ -101,5 +102,38 @@ describe('atomic file move undo', () => {
     expect(undoBulkEdit({ entry: 'renamed.srp', files: {
       ...after.files, 'math.srp': 'changed',
     } }, ticket)).toBeNull();
+  });
+});
+
+
+describe('atomic module deletion undo', () => {
+  it('restores the deleted file and former project entry on the same snapshot', () => {
+    const original = { entry: 'main.srp', files: {
+      'main.srp': 'print("hello");', 'unused.srp': '// untouched',
+    } };
+    const plan = previewModuleRemoval(original, 'main.srp');
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    const ticket = createBulkEditUndo(original, plan.workspace, 'file removal',
+      undefined, 'main.srp');
+    expect(ticket?.restoreActiveFile).toBe('main.srp');
+    expect(undoBulkEdit(plan.workspace, ticket)).toBe(original);
+    expect(undoBulkEdit({ ...plan.workspace }, ticket)).toBeNull();
+  });
+
+  it('refuses unsafe deletion tickets with modified surviving sources', () => {
+    const before = { entry: 'main.srp', files: {
+      'main.srp': 'print(1);', 'unused.srp': '// unused',
+    } };
+    const correct = { entry: 'main.srp', files: { 'main.srp': 'print(1);' } };
+    expect(createBulkEditUndo(before, correct, 'file removal')).toBeNull();
+    expect(createBulkEditUndo(before, correct, 'file removal',
+      undefined, 'missing.srp')).toBeNull();
+    expect(createBulkEditUndo(before, { entry: 'main.srp', files: {
+      'main.srp': 'print(999);',
+    } }, 'file removal', undefined, 'unused.srp')).toBeNull();
+    const ticket = createBulkEditUndo(before, correct, 'file removal', undefined, 'unused.srp');
+    expect(ticket).not.toBeNull();
+    expect(undoBulkEdit(correct, ticket)).toBe(before);
   });
 });
