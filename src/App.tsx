@@ -21,6 +21,7 @@ import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
+import { QuickOpenFiles } from './QuickOpenFiles';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
@@ -74,6 +75,7 @@ export function App() {
   // Runtime input is intentionally ephemeral: never saved or placed in shared links.
   const [programInput, setProgramInput] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [replaceText, setReplaceText] = useState('');
   const [replaceMatchCase, setReplaceMatchCase] = useState(false);
@@ -210,6 +212,7 @@ export function App() {
   }
 
   function invalidateExecution() {
+    setQuickOpen(false);
     setFileDuplicate(null);
     setFileDuplicatePlan(null);
     setFileRemoval(null);
@@ -506,6 +509,19 @@ export function App() {
       definitionScope.current.finish(lookup);
     }
   }, [workspace]);
+
+  useEffect(() => {
+    const onQuickOpen = (event: KeyboardEvent) => {
+      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey ||
+          event.key.toLowerCase() !== 'p') return;
+      // Capture before Monaco and the browser's native Print action.
+      event.preventDefault();
+      event.stopPropagation();
+      if (!event.repeat) setQuickOpen(true);
+    };
+    window.addEventListener('keydown', onQuickOpen, true);
+    return () => window.removeEventListener('keydown', onQuickOpen, true);
+  }, []);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -903,6 +919,15 @@ export function App() {
 
   return (
     <div className="app-shell min-h-screen">
+      {quickOpen && (
+        <QuickOpenFiles paths={files} entry={workspace.entry}
+          onClose={() => setQuickOpen(false)}
+          onSelect={path => {
+            if (!Object.hasOwn(workspace.files, path)) return;
+            setActiveFile(path);
+            setQuickOpen(false);
+          }} />
+      )}
       <header className="topbar">
         <div className="brand" aria-label="Scarp Playground">
           <div className="brand-mark" aria-hidden="true">S</div>
@@ -974,6 +999,12 @@ export function App() {
                 Undo bulk change
               </button>
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
+              <button type="button" className="button-secondary"
+                aria-keyshortcuts="Control+P Meta+P"
+                title="Quickly switch between Scarp source files (Ctrl+P / Cmd+P)"
+                onClick={() => setQuickOpen(true)}>
+                Quick open
+              </button>
               <button type="button" className="button-secondary"
                 aria-expanded={searchOpen} aria-controls="project-search-panel"
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
