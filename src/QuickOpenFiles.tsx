@@ -21,7 +21,14 @@ export function QuickOpenFiles({ paths, entry, onSelect, onClose }: Props) {
     [paths, query, entry]);
 
   useEffect(() => {
+    // Restore keyboard focus to the invoker after closing the dialog.
+    const previousFocus = document.activeElement;
     search.current?.focus();
+    return () => {
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) {
+        previousFocus.focus();
+      }
+    };
   }, []);
 
   function handleKeys(event: KeyboardEvent<HTMLDivElement>) {
