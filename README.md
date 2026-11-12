@@ -114,6 +114,10 @@ load failure — it never fakes a successful program result.
   nonexecuting import-path preview, preserves relative import targets when
   changing directories, updates the project entrypoint, and supports one-step
   multi-file undo. See [file rename and move](docs/module-file-move.md).
+- **Remove file** performs a nonexecuting import-dependency check before
+  deleting a virtual module, refuses removal when other modules import it,
+  previews entrypoint changes and supports one-step undo. See
+  [safe file removal](docs/module-file-removal.md).
 - **Opt-in browser-local saving:** Save locally keeps a versioned, size-limited
   multi-file workspace and selected editor tab across reloads, with automatic
   local updates while enabled. Forget saved copy removes the browser snapshot.
