@@ -101,6 +101,9 @@ load failure — it never fakes a successful program result.
   and touch editing. Standard Monaco undo/redo, balanced-delimiter pairing,
   and a visual **word-wrap toggle** are supported without running source.
   See [editor shortcuts](docs/editor-shortcuts.md).
+- **Copy source**, **Download .srp** and active-file line/UTF-8 byte counters
+  provide direct module-level export and editor feedback without a server.
+  See [source file operations](docs/source-file-operations.md).
 - Compiler schema-v1 errors underline their real source ranges in Monaco and
   open the originating file, including imported modules. Related-source
   locations are navigable; UTF-8/Unicode-scalar positions are converted to
