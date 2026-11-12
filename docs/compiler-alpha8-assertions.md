@@ -37,6 +37,16 @@ filesystem-based `scarp.project` workflows are **not** implemented in the
 browser. The Playground still has an isolated in-memory `.srp` source graph,
 with no filesystem-backed project manifest, host CLI or server execution.
 
+## Single-source compiler compatibility metadata
+
+The development UI and the main browser smoke test read
+`compiler-compatibility.json` rather than maintaining separate copies of the
+version and release URL. `scripts/check-dependency-locks.mjs` independently
+rejects metadata that disagrees with the hard-reviewed Scarp commit/version
+or points to an unrelated release page. Compiler upgrades must coordinate
+`bridge/Cargo.toml`, `bridge/Cargo.lock`, the reviewed validation constants,
+and this JSON metadata file. The published Playground tags stay unchanged.
+
 ## Verification gates
 
 On the pull request, GitHub Actions must pass:
