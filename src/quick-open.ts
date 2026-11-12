@@ -40,3 +40,48 @@ export function quickOpenFiles(paths: string[], query: string, entry: string): Q
     path, name, directory, entry: isEntry,
   }));
 }
+
+/**
+ * Quick Open also accepts file.srp:line[:column] or :line[:column]
+ * for the active file. Virtual .srp paths never contain ':', so suffixes
+ * can be parsed unambiguously without filesystem or compiler access.
+ */
+export type QuickOpenQuery = {
+  filter: string;
+  line: number | null;
+  column: number | null;
+  activeFileOnly: boolean;
+};
+
+export function parseQuickOpenQuery(raw: string): QuickOpenQuery | null {
+  if (raw.length > MAX_QUICK_OPEN_QUERY) return null;
+  const query = raw.trim();
+  if (!query.includes(':')) {
+    return { filter: query, line: null, column: null, activeFileOnly: false };
+  }
+  const match = /^([^:]*):([1-9]\d{0,5})(?::([1-9]\d{0,5}))?$/.exec(query);
+  if (!match) return null;
+  return {
+    filter: match[1],
+    line: Number(match[2]),
+    column: match[3] ? Number(match[3]) : null,
+    activeFileOnly: match[1].length === 0,
+  };
+}
+
+/** Clamp line/column to the actual in-memory file, using Monaco UTF-16 columns. */
+export function quickOpenPosition(
+  source: string, line: number, column: number | null,
+): { line: number; column: number } {
+  const lines = source.split(/\r\n|\r|\n/);
+  const boundedLine = Math.max(1, Math.min(line, lines.length));
+  const text = lines[boundedLine - 1];
+  let boundedColumn = Math.max(1, Math.min(column ?? 1, text.length + 1));
+  // Do not place the cursor between UTF-16 surrogates of one scalar value.
+  if (boundedColumn > 1 && boundedColumn <= text.length &&
+      /[\uD800-\uDBFF]/.test(text[boundedColumn - 2]) &&
+      /[\uDC00-\uDFFF]/.test(text[boundedColumn - 1])) {
+    boundedColumn += 1;
+  }
+  return { line: boundedLine, column: boundedColumn };
+}
