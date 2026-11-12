@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.7** (published prerelease) |
-| Pinned compiler revision | `b1c1fd232b418267d95520c69ee563ac99ecae30` |
+| Scarp compiler | **v0.0.6-alpha.8** (published prerelease) |
+| Pinned compiler revision | `37253e7805c0ca594560700dd1deb3928458e60d` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -45,6 +45,15 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.8 adds typed Boolean `assert(...)` statements with optional static
+messages and source-located E0065 failures. The browser uses the released
+assertions through the real WASM interpreter, with a compiler-owned runnable
+example and end-to-end failure tests. Its **Check code** feature still evaluates
+reachable code and can trigger an assertion; this differs from the compiler's
+non-executing native `verify` CLI. Alpha.8 filesystem project manifests and
+`scarp init`, `scarp test`, and `scarp project info` CLI commands are not
+available in the browser. See [alpha.8 integration notes](docs/compiler-alpha8-assertions.md).
 
 Alpha.6 adds explicit buffered `read_line()` input, six scalar/text
 conversion intrinsics, and structural heterogeneous tuples. The Playground
@@ -144,6 +153,9 @@ load failure — it never fakes a successful program result.
   official example outputs plus domain-error and Worker-recovery tests in
   the real browser interpreter. These do not provide stochastic sampling,
   model training, GPU computation or native executable generation.
+- **Scarp alpha.8 assertions:** use the official Rust `assert` statement for
+  typed Boolean invariants; failures return source-located E0065 errors and
+  suppress buffered partial stdout, including across imported modules.
 - **Scarp alpha.7 expressions:** select one typed value with `if`/`elif`/`else` and
   decode `\\u{HEX}` Unicode escapes inside strings. The built-in example uses
   the published compiler fixture and runs in browser WebAssembly; these are not
