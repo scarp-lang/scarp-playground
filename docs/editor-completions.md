@@ -20,3 +20,9 @@ Use **Check code** and the compiler diagnostics for that.
 
 The language reference and runnable examples live in
 [the Scarp compiler](https://github.com/scarp-lang/scarp).
+
+
+For editing shortcuts, **Ctrl+/** (Cmd+/ on macOS) comments or uncomments the
+current/selected lines using Scarp's supported `//` syntax. The toolbar
+also offers a comment toggle and a visual word-wrap control. See
+[editor shortcuts](editor-shortcuts.md).
