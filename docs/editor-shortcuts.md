@@ -39,7 +39,8 @@ is inconvenient. The action is available for every open Scarp source module.
 | Enable/Disable word wrap | Toggle visual wrapping without changing any source bytes |
 | Copy source | Copy the active module's exact source through the browser clipboard |
 | Download .srp | Download the active module as a UTF-8 source file |
-| Undo bulk change | Restore an applied project-wide replace or symbol rename, if still safe |
+| Undo bulk change | Restore an applied project-wide replace, symbol rename, or file rename if still safe |
+| Rename file | Preview and apply safe virtual .srp module moves with import-path updates |
 
 Monaco also automatically closes common balanced delimiters in Scarp source
 (`()`, `[]`, `{}`, and string quotes). This is editor assistance, not
