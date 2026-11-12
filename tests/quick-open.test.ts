@@ -16,7 +16,7 @@ describe('offline Scarp quick-open path ranking', () => {
   it('ranks exact basename and path matches before partial matches', () => {
     expect(quickOpenFiles(paths, 'math.srp', 'main.srp')[0].path).toBe('lib/math.srp');
     expect(quickOpenFiles(paths, 'lib/math.srp', 'main.srp')[0].path).toBe('lib/math.srp');
-    expect(quickOpenFiles(paths, 'math', 'main.srp').map(x => x.path)).toEqual([
+    expect(quickOpenFiles(paths, 'mat', 'main.srp').map(x => x.path)).toEqual([
       'lib/math.srp', 'lib/matrix.srp',
     ]);
   });
