@@ -37,6 +37,8 @@ is inconvenient. The action is available for every open Scarp source module.
 | Ctrl+Enter (Cmd+Enter) | Run Scarp using the browser WebAssembly worker |
 | Ctrl+Shift+F (Cmd+Shift+F) | Find literal text in the entire virtual project |
 | Enable/Disable word wrap | Toggle visual wrapping without changing any source bytes |
+| Copy source | Copy the active module's exact source through the browser clipboard |
+| Download .srp | Download the active module as a UTF-8 source file |
 | Undo bulk change | Restore an applied project-wide replace or symbol rename, if still safe |
 
 Monaco also automatically closes common balanced delimiters in Scarp source
