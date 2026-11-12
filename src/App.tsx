@@ -23,6 +23,7 @@ import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './p
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
 import { QuickOpenFiles } from './QuickOpenFiles';
+import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
@@ -77,6 +78,7 @@ export function App() {
   const [programInput, setProgramInput] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [replaceText, setReplaceText] = useState('');
   const [replaceMatchCase, setReplaceMatchCase] = useState(false);
@@ -513,12 +515,16 @@ export function App() {
 
   useEffect(() => {
     const onQuickOpen = (event: KeyboardEvent) => {
+      const key = event.key.toLowerCase();
       if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey ||
-          event.key.toLowerCase() !== 'p') return;
-      // Capture before Monaco and the browser's native Print action.
+          (key !== 'p' && key !== 'g')) return;
+      // Capture before Monaco and the browser's native Print/Find Next actions.
       event.preventDefault();
       event.stopPropagation();
-      if (!event.repeat) setQuickOpen(true);
+      if (!event.repeat) {
+        setQuickOpenPrefill(key === 'g' ? ':' : '');
+        setQuickOpen(true);
+      }
     };
     window.addEventListener('keydown', onQuickOpen, true);
     return () => window.removeEventListener('keydown', onQuickOpen, true);
@@ -921,11 +927,26 @@ export function App() {
   return (
     <div className="app-shell min-h-screen">
       {quickOpen && (
-        <QuickOpenFiles paths={files} entry={workspace.entry}
+        <QuickOpenFiles key={quickOpenPrefill === ':' ? 'go-to-line' : 'quick-open'}
+          paths={files} entry={workspace.entry} activeFile={activeFile}
+          initialQuery={quickOpenPrefill}
           onClose={() => setQuickOpen(false)}
-          onSelect={path => {
+          onSelect={(path, line, column) => {
             if (!Object.hasOwn(workspace.files, path)) return;
+            definitionScope.current.invalidate();
+            setRenameTarget(null);
+            setRenamePreview(null);
             setActiveFile(path);
+            if (line !== null) {
+              const position = quickOpenPosition(workspace.files[path], line, column);
+              setNavigationTarget(previous => ({
+                path, line: position.line, column: position.column,
+                sequence: (previous?.sequence ?? 0) + 1,
+              }));
+              setNotice('Opened ' + path + ':' + position.line + ':' + position.column + '.');
+            } else {
+              setNavigationTarget(null);
+            }
             setQuickOpen(false);
           }} />
       )}
@@ -1003,8 +1024,14 @@ export function App() {
               <button type="button" className="button-secondary"
                 aria-keyshortcuts="Control+P Meta+P"
                 title="Quickly switch between Scarp source files (Ctrl+P / Cmd+P)"
-                onClick={() => setQuickOpen(true)}>
+                onClick={() => { setQuickOpenPrefill(''); setQuickOpen(true); }}>
                 Quick open
+              </button>
+              <button type="button" className="button-secondary"
+                aria-keyshortcuts="Control+G Meta+G"
+                title="Go to a line in the active Scarp file (Ctrl+G / Cmd+G)"
+                onClick={() => { setQuickOpenPrefill(':'); setQuickOpen(true); }}>
+                Go to line
               </button>
               <button type="button" className="button-secondary"
                 aria-expanded={searchOpen} aria-controls="project-search-panel"

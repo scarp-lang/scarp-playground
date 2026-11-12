@@ -8,6 +8,12 @@ the Playground, including the Monaco source editor. You can also click the
 **Quick open** button in the workspace toolbar.
 
 The dialog searches the virtual project's file names and relative paths.
+It also accepts `file.srp:line` and `file.srp:line:column` for direct
+source navigation, or `:line[:column]` to jump within the active file.
+Use **Ctrl+G** / **Cmd+G** or the visible **Go to line** button to open the
+same picker prefilled with `:`. Line and column numbers are 1-based, and
+out-of-range positions are clamped to the real in-memory source boundaries.
+Unicode surrogate pairs are kept intact when positioning the Monaco cursor.
 Matching is case-insensitive. An exact filename or path ranks above partial
 matches; the project entrypoint is shown first if the query is empty.
 
@@ -17,6 +23,8 @@ matches; the project entrypoint is shown first if the query is empty.
 | --- | --- |
 | Open the file switcher | Ctrl+P or Cmd+P, or Quick open button |
 | Find files | Type the filename or relative folder path |
+| Go to line in active file | Ctrl+G / Cmd+G, or Go to line button, then type a 1-based number |
+| Open at an exact position | Type `lib/math.srp:12:4`, `main.srp:8`, or `:8:2` |
 | Move the active result | Up/Down arrow keys |
 | Open the selected result | Enter, or click/tap a result |
 | Dismiss without changing source | Escape, close button, or click outside dialog |
@@ -24,8 +32,11 @@ matches; the project entrypoint is shown first if the query is empty.
 
 An unmatched search shows a clear empty state rather than selecting any
 file. Closing the switcher discards the query. Opening a file changes the
-selected editor tab only; the project entrypoint is **not** changed, and
-Scarp code is neither checked nor executed automatically.
+selected editor tab only; an optional address also positions the Monaco cursor.
+The project entrypoint is **not** changed, and Scarp code is neither checked
+nor executed automatically. Invalid, zero, negative, oversized, or ambiguous
+line/column suffixes are rejected without switching files. Closing the dialog
+without selection discards the entire query.
 
 ## Privacy, validation and availability
 
@@ -40,7 +51,7 @@ Ctrl+P is deliberately captured inside the Playground, rather than opening
 the browser's Print dialog. If you want to print a document, use the
 browser's menu while outside the Playground.
 
-For source navigation *inside* one file, use the Monaco editor directly.
+For source navigation *inside* one file, use Monaco or Ctrl+G / Cmd+G.
 For compiler-owned symbol navigation across files, use **F12** (definition),
 **Shift+F12** (references), or **F2** (rename). Quick Open is a fast
 path-based file switcher, not a language server or a filesystem explorer.

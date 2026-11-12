@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react';
-import { quickOpenFiles, MAX_QUICK_OPEN_QUERY } from './quick-open';
+import { quickOpenFiles, parseQuickOpenQuery, MAX_QUICK_OPEN_QUERY } from './quick-open';
 
 type Props = {
   paths: string[];
   entry: string;
-  onSelect: (path: string) => void;
+  activeFile: string;
+  initialQuery?: string;
+  onSelect: (path: string, line: number | null, column: number | null) => void;
   onClose: () => void;
 };
 
@@ -12,13 +14,17 @@ type Props = {
  * Browser-local, accessible path switcher. The search never touches compiler
  * workers, modifies source, persists queries, or sends data over the network.
  */
-export function QuickOpenFiles({ paths, entry, onSelect, onClose }: Props) {
-  const [query, setQuery] = useState('');
+export function QuickOpenFiles({ paths, entry, activeFile, initialQuery = '', onSelect, onClose }: Props) {
+  const [query, setQuery] = useState(initialQuery);
   const [selected, setSelected] = useState(0);
   const search = useRef<HTMLInputElement>(null);
   const dialog = useRef<HTMLDivElement>(null);
-  const results = useMemo(() => quickOpenFiles(paths, query, entry),
-    [paths, query, entry]);
+  const target = useMemo(() => parseQuickOpenQuery(query), [query]);
+  const results = useMemo(() => {
+    if (!target) return [];
+    const hits = quickOpenFiles(paths, target.activeFileOnly ? '' : target.filter, entry);
+    return target.activeFileOnly ? hits.filter(file => file.path === activeFile) : hits;
+  }, [paths, entry, activeFile, target]);
 
   useEffect(() => {
     // Restore keyboard focus to the invoker after closing the dialog.
@@ -63,7 +69,7 @@ export function QuickOpenFiles({ paths, entry, onSelect, onClose }: Props) {
       setSelected(index => (index + results.length - 1) % results.length);
     } else if (event.key === 'Enter' && results[selected]) {
       event.preventDefault();
-      onSelect(results[selected].path);
+      onSelect(results[selected].path, target?.line ?? null, target?.column ?? null);
     }
   }
 
@@ -77,7 +83,7 @@ export function QuickOpenFiles({ paths, entry, onSelect, onClose }: Props) {
         <div className="quick-open-heading">
           <div>
             <h2>Quick open</h2>
-            <p>Switch .srp files · Ctrl+P / Cmd+P · ↑↓ to navigate · Enter to open</p>
+            <p>Ctrl+P / Cmd+P · file:line:column · Ctrl+G / Cmd+G for current file</p>
           </div>
           <button type="button" onClick={onClose} aria-label="Close Quick Open">×</button>
         </div>
@@ -89,7 +95,7 @@ export function QuickOpenFiles({ paths, entry, onSelect, onClose }: Props) {
             ? 'quick-open-result-' + selected : undefined}
           value={query} maxLength={MAX_QUICK_OPEN_QUERY}
           onChange={event => { setQuery(event.target.value); setSelected(0); }}
-          placeholder="Search by file name or relative path" spellCheck={false}
+          placeholder="File, file:line:column, or :line" spellCheck={false}
           autoComplete="off" />
         <div className="quick-open-results" id="quick-open-results"
           role="listbox" aria-label="Matching Scarp files">
@@ -98,7 +104,7 @@ export function QuickOpenFiles({ paths, entry, onSelect, onClose }: Props) {
               key={file.path} tabIndex={-1} aria-selected={index === selected}
               className={'quick-open-hit ' + (index === selected ? 'selected' : '')}
               onMouseEnter={() => setSelected(index)}
-              onClick={() => onSelect(file.path)}>
+              onClick={() => onSelect(file.path, target?.line ?? null, target?.column ?? null)}>
               <span className="quick-open-name">{file.name}
                 {file.entry && <span className="entry-pill">entry</span>}
               </span>
@@ -107,11 +113,12 @@ export function QuickOpenFiles({ paths, entry, onSelect, onClose }: Props) {
           ))}
           {results.length === 0 && (
             <p className="quick-open-empty" role="status">
-              No matching .srp files. Try a different name or path.
+              {query === ':' ? 'Enter a line number for the active file.' :
+                'No matching .srp files or invalid line address.'}
             </p>
           )}
         </div>
-        <p className="quick-open-count">{results.length} of {paths.length} files · local search only</p>
+        <p className="quick-open-count">{results.length} of {paths.length} files · line and column are 1-based · local search only</p>
       </div>
     </div>
   );
