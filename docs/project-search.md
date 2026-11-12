@@ -18,3 +18,9 @@ Definition, and **Check code** for authoritative compiler diagnostics.
 
 Searching does not change local browser-saved workspaces or the current
 shared-project session.
+
+
+For text changes across multiple files, choose **Replace with** in the same
+panel and review every proposed line before explicitly applying the result.
+See [project-wide replace](project-replace.md). This is plain text editing,
+not a compiler-validated symbol rename.
