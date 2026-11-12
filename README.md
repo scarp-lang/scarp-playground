@@ -255,6 +255,10 @@ use **Replace with** inside Find in project. Unlike F2 symbol renaming, this can
 change comments and strings. A 120-site safety cap prevents partial changes.
 See [docs/project-replace.md](docs/project-replace.md).
 
+After applying a whole-project replacement or a compiler-verified symbol rename,
+**Undo bulk change** restores the previous complete workspace while it remains
+unchanged. See [docs/bulk-undo.md](docs/bulk-undo.md).
+
 
 Use **Shift+F12** or **Find references** to query compiler-owned symbol uses
 across imported modules; unlike text search, this resolves symbol identity.

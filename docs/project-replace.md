@@ -39,3 +39,10 @@ verify that the resulting Scarp program remains valid.
 
 Saved local copies follow the existing explicit opt-in policy. The preview
 itself is ephemeral and is not exported, shared or persisted.
+
+## Revert an applied replacement
+
+**Undo bulk change** in the workspace toolbar restores the previous complete
+project immediately after Apply, provided no source file or project structure
+has changed in the meantime. Only the latest bulk operation can be undone;
+it is not a persistent history or redo stack. See [bulk undo](bulk-undo.md).
