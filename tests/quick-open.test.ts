@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_QUICK_OPEN_QUERY, quickOpenFiles } from '../src/quick-open';
+import { MAX_QUICK_OPEN_QUERY, quickOpenFiles, parseQuickOpenQuery, quickOpenPosition } from '../src/quick-open';
 
 const paths = ['lib/math.srp', 'app/main.srp', 'main.srp', 'lib/matrix.srp', 'examples/print.srp'];
 
@@ -44,5 +44,46 @@ describe('offline Scarp quick-open path ranking', () => {
     expect(quickOpenFiles(paths, 'm', 'main.srp')).toEqual(
       quickOpenFiles([...paths].reverse(), 'm', 'main.srp'),
     );
+  });
+});
+
+
+describe('bounded Quick Open source-position addresses', () => {
+  it('parses relative file and active-file line/column addresses', () => {
+    expect(parseQuickOpenQuery(' lib\\math.srp:12:4 ')).toEqual({
+      filter: 'lib\\math.srp', line: 12, column: 4, activeFileOnly: false,
+    });
+    expect(parseQuickOpenQuery(':8')).toEqual({
+      filter: '', line: 8, column: null, activeFileOnly: true,
+    });
+    expect(parseQuickOpenQuery(':8:2')).toEqual({
+      filter: '', line: 8, column: 2, activeFileOnly: true,
+    });
+    expect(parseQuickOpenQuery('math')).toEqual({
+      filter: 'math', line: null, column: null, activeFileOnly: false,
+    });
+    expect(parseQuickOpenQuery('')).toEqual({
+      filter: '', line: null, column: null, activeFileOnly: false,
+    });
+  });
+
+  it('rejects invalid, ambiguous, unsafe, or unbounded line addresses', () => {
+    for (const query of [
+      ':', 'main.srp:', ':0', 'main.srp:0', 'main.srp:1:0',
+      'math.srp:-1', 'math.srp:1:-1', 'math.srp:1:2:3',
+      'main.srp:1234567', 'main.srp:1:1234567', 'name:NaN',
+      'a'.repeat(MAX_QUICK_OPEN_QUERY + 1),
+    ]) {
+      expect(parseQuickOpenQuery(query)).toBeNull();
+    }
+  });
+
+  it('clamps positions to real file bounds without splitting astral Unicode', () => {
+    const source = 'hello\r\n😀end\n';
+    expect(quickOpenPosition(source, 200, 999)).toEqual({ line: 3, column: 1 });
+    expect(quickOpenPosition(source, 1, 300)).toEqual({ line: 1, column: 6 });
+    expect(quickOpenPosition(source, 2, 2)).toEqual({ line: 2, column: 3 });
+    expect(quickOpenPosition(source, 2, 3)).toEqual({ line: 2, column: 3 });
+    expect(quickOpenPosition(source, 2, null)).toEqual({ line: 2, column: 1 });
   });
 });
