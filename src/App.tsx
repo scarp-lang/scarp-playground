@@ -20,6 +20,7 @@ import { MAX_FILES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
+import { scarpFileStats } from './source-file';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
 import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
@@ -106,6 +107,8 @@ export function App() {
     path: string; line: number; column: number; sequence: number;
   } | null>(null);
   const files = Object.keys(workspace.files);
+  const activeStats = useMemo(() => scarpFileStats(activeFile, workspace.files[activeFile] ?? ''),
+    [activeFile, workspace.files]);
   const searchResult = useMemo(() =>
     searchProjectFiles(workspace.files, searchQuery), [workspace.files, searchQuery]);
 
@@ -657,6 +660,37 @@ export function App() {
     setResult(null);
   }
 
+  async function copyActiveSource() {
+    const source = workspace.files[activeFile];
+    if (source === undefined || !activeStats) {
+      setNotice('No active Scarp source file is available to copy.');
+      return;
+    }
+    try {
+      await navigator.clipboard.writeText(source);
+      setNotice('Copied ' + activeFile + ' to the clipboard. No source was uploaded.');
+    } catch {
+      setNotice('Clipboard access is unavailable. Use Download .srp instead.');
+    }
+  }
+
+  function downloadActiveSource() {
+    const source = workspace.files[activeFile];
+    if (source === undefined || !activeStats) {
+      setNotice('No active Scarp source file is available to download.');
+      return;
+    }
+    const url = URL.createObjectURL(new Blob([source], { type: 'text/plain;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = activeStats.downloadName;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setNotice('Downloaded ' + activeFile + ' as an exact UTF-8 source file. No source was uploaded.');
+  }
+
   function exportWorkspace() {
     const json = serializePortableWorkspace(workspace, activeFile);
     if (!json) {
@@ -1064,8 +1098,16 @@ export function App() {
             </div>
             <div className="editor-footer">
               <span><span className="online-dot" />Scarp syntax · Ctrl+/: Comment · Ctrl+Space: Completion · F12: Definition · Shift+F12: References · F2: Rename</span>
-              <span>UTF-8 · {activeFile}</span>
+              <span>UTF-8 · {activeFile} · {activeStats?.lines ?? 0} lines · {activeStats?.bytes ?? 0} bytes</span>
               <div className="footer-controls">
+                <button type="button" onClick={() => void copyActiveSource()}
+                  title="Copy the entire active .srp file to the clipboard without uploading it">
+                  Copy source
+                </button>
+                <button type="button" onClick={downloadActiveSource}
+                  title="Download the active .srp module as a plain UTF-8 source file">
+                  Download .srp
+                </button>
                 <button type="button"
                   onClick={() => setCommentTrigger(previous => previous + 1)}
                   aria-keyshortcuts="Control+/"
