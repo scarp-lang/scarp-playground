@@ -17,7 +17,7 @@ export type ModuleMovePlan =
 
 type Token = { kind: 'word' | 'string' | 'punct'; text: string;
   start: number; end: number; depth: number };
-type ImportPath = { start: number; end: number; specifier: string };
+export type ImportPath = { start: number; end: number; specifier: string };
 
 const letter = (char: string): boolean => /^[A-Za-z_]$/.test(char);
 const wordChar = (char: string): boolean => /^[A-Za-z0-9_]$/.test(char);
@@ -27,7 +27,7 @@ const wordChar = (char: string): boolean => /^[A-Za-z0-9_]$/.test(char);
  * The scanner works in JS UTF-16 code-unit offsets, preserving all original
  * source bytes in every untouched span. Never perform global text replacement.
  */
-function importPaths(source: string): ImportPath[] | null {
+export function importPaths(source: string): ImportPath[] | null {
   const tokens: Token[] = [];
   let depth = 0;
   let offset = 0;
