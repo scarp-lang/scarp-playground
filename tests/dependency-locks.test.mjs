@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  validateCargoLock, validateNpmLock, validateProjectFiles,
+  validateCargoLock, validateNpmLock, validateCompilerMetadata, validateProjectFiles,
   REVIEWED_SCARP_COMMIT, REVIEWED_SCARP_VERSION,
 } from '../scripts/check-dependency-locks.mjs';
 
@@ -41,6 +41,7 @@ test('actual repository lockfiles satisfy pinned provenance', () => {
   const result = validateProjectFiles('.');
   assert.deepEqual(result.npm.errors, []);
   assert.deepEqual(result.cargo.errors, []);
+  assert.deepEqual(result.compatibility.errors, []);
   assert.ok(result.npm.packages > 100);
   assert.ok(result.cargo.packages > 10);
 });
@@ -82,5 +83,24 @@ test('refuses moving compiler refs, foreign git repos and unchecked crates', () 
     [cargo, cargoLock.replace('registry+https://github.com/rust-lang/crates.io-index', 'git+https://example.org/evil')],
   ]) {
     assert.ok(validateCargoLock(modifiedManifest, modifiedLock).errors.length > 0);
+  }
+});
+
+test('rejects stale, deceptive, or unreviewed browser compiler metadata', () => {
+  const reviewed = {
+    version: REVIEWED_SCARP_VERSION,
+    commit: REVIEWED_SCARP_COMMIT,
+    releaseUrl: 'https://github.com/scarp-lang/scarp/releases/tag/v' + REVIEWED_SCARP_VERSION,
+  };
+  assert.deepEqual(validateCompilerMetadata(reviewed).errors, []);
+  for (const bad of [
+    null,
+    [],
+    { ...reviewed, version: '0.0.6-alpha.7' },
+    { ...reviewed, commit: 'f'.repeat(40) },
+    { ...reviewed, releaseUrl: 'https://untrusted.example/scarp' },
+    { ...reviewed, reviewBypass: true },
+  ]) {
+    assert.ok(validateCompilerMetadata(bad).errors.length > 0);
   }
 });
