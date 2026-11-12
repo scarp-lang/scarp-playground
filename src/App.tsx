@@ -6,6 +6,7 @@ const ScarpEditor = lazy(() =>
   import('./ScarpEditor').then(({ ScarpEditor }) => ({ default: ScarpEditor })),
 );
 import { examples } from './examples';
+import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
 import { editorPositionToByteOffset } from './navigation/coordinates';
 import { findDefinition } from './navigation/client';
@@ -967,9 +968,9 @@ export function App() {
           </div>
           <div className="sidebar-bottom">
             <div className="section-label">COMPATIBILITY</div>
-            <strong>Scarp v0.0.6-alpha.8</strong>
-            <p>Compiler source pinned to release commit 37253e7. Code runs locally inside a disposable Web Worker.</p>
-            <a href="https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.8" target="_blank" rel="noreferrer">Compiler release notes ↗</a>
+            <strong>Scarp v{compilerCompatibility.version}</strong>
+            <p>Compiler source pinned to release commit {compilerCompatibility.commit.slice(0, 7)}. Code runs locally inside a disposable Web Worker.</p>
+            <a href={compilerCompatibility.releaseUrl} target="_blank" rel="noreferrer">Compiler release notes ↗</a>
           </div>
         </aside>
 
