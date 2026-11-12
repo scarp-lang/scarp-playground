@@ -63,3 +63,17 @@ test('copy current source uses browser clipboard only when permission is availab
   await expect(page.locator('.notice')).toContainText('Copied main.srp to the clipboard');
   expect(await page.evaluate(() => navigator.clipboard.readText())).toBe(source);
 });
+
+test('mobile footer actions wrap without horizontal overflow and remain clickable', async ({ page }) => {
+  await page.setViewportSize({ width: 375, height: 812 });
+  await page.goto('./');
+  const downloadButton = page.getByRole('button', { name: 'Download .srp' });
+  await downloadButton.scrollIntoViewIfNeeded();
+  await expect(downloadButton).toBeInViewport();
+  await expect(page.getByRole('button', { name: 'Copy source' })).toBeVisible();
+  const width = await page.locator('body').evaluate(element => element.scrollWidth);
+  expect(width).toBeLessThanOrEqual(375);
+  const pending = page.waitForEvent('download');
+  await downloadButton.click();
+  expect((await pending).suggestedFilename()).toBe('main.srp');
+});
