@@ -248,6 +248,11 @@ Use **Find in project** (Ctrl+Shift+F) for bounded local text search across
 all virtual `.srp` files, including clickable, Unicode-aware source locations.
 See [docs/project-search.md](docs/project-search.md).
 
+For complete preview-before-apply **literal text replacement** across open files,
+use **Replace with** inside Find in project. Unlike F2 symbol renaming, this can
+change comments and strings. A 120-site safety cap prevents partial changes.
+See [docs/project-replace.md](docs/project-replace.md).
+
 
 Use **Shift+F12** or **Find references** to query compiler-owned symbol uses
 across imported modules; unlike text search, this resolves symbol identity.
