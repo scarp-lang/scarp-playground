@@ -96,6 +96,9 @@ load failure — it never fakes a successful program result.
 - React + Vite with TypeScript and Tailwind CSS, adaptive dark/light interface.
 - Monaco editor with a Scarp-specific tokenizer, separate text models per
   source file (preserving per-file undo/view history), and selectable entrypoint.
+- **Quick open** (Ctrl+P / Cmd+P) switches between virtual Scarp modules via
+  an offline, case-insensitive filename/path search with keyboard navigation
+  and mobile support. See [Quick Open](docs/quick-open.md).
 - **Ctrl+/** (Cmd+/ on macOS) toggles Scarp `//` comments for the active line
   or selected lines. A visible **Comment / uncomment** button supports mouse
   and touch editing. Standard Monaco undo/redo, balanced-delimiter pairing,
