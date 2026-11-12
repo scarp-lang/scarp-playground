@@ -16,6 +16,9 @@ Each browser must load Monaco, obey the built page's meta Content Security
 Policy (including rejection of inline JavaScript), execute authentic WASM,
 validate and execute imported virtual modules, preserve Unicode-aware compiler
 diagnostics and recover from a deterministic interpreter output-budget failure.
+The alpha.8 shared smoke test additionally checks that Boolean assertion
+failures report E0065 without leaking partial stdout and that the next fresh
+compiler Worker can execute normally.
 
 The test suite uses `npx playwright install --with-deps chromium firefox webkit`.
 The CI gate runs all three projects before uploading the GitHub Pages artifact.
