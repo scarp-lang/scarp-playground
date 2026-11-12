@@ -338,3 +338,23 @@ a { color: inherit; text-decoration: none; }
 @media (max-width: 760px) {
   .project-replace-pair { grid-template-columns: minmax(0, 1fr); }
 }
+
+/* Import-aware file rename review stays within the editor card on mobile. */
+.file-move-panel {
+  display: grid; gap: 10px; min-width: 0; padding: 13px 16px;
+  border-bottom: 1px solid var(--border); background: var(--panel-2);
+}
+.file-move-form { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; min-width: 0; }
+.file-move-form span, .file-move-form label { font-size: 12px; color: var(--muted); }
+.file-move-form strong { color: var(--text); overflow-wrap: anywhere; }
+.file-move-form input {
+  min-width: 180px; flex: 1 1 220px; max-width: 100%;
+  border-radius: 7px; border: 1px solid var(--border);
+  background: var(--panel); color: var(--text); padding: 7px 9px;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace;
+}
+.file-move-form input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.file-move-preview { display: grid; gap: 10px; min-width: 0; }
+.file-move-preview p { margin: 0; font-size: 12px; overflow-wrap: anywhere; }
+.file-move-preview .rename-diff-list { margin: 0; max-height: 250px; }
+.file-move-preview > button { justify-self: start; }
