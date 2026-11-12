@@ -21,6 +21,7 @@ import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
+import { previewModuleMove, type ModuleMovePlan } from './module-move';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
 import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
@@ -78,6 +79,11 @@ export function App() {
     snapshot: Workspace; plan: Extract<ReplacePlan, { ok: true }>;
   } | null>(null);
   const [lastBulkEdit, setLastBulkEdit] = useState<BulkEditUndo | null>(null);
+  const [fileMove, setFileMove] = useState<{
+    snapshot: Workspace; from: string; to: string;
+  } | null>(null);
+  const [fileMovePlan, setFileMovePlan] =
+    useState<Extract<ModuleMovePlan, { ok: true }> | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const executionScope = useRef(new ExecutionScope());
@@ -183,12 +189,16 @@ export function App() {
     const label = lastBulkEdit.label;
     invalidateExecution();
     setWorkspace(original);
+    setActiveFile(current => Object.hasOwn(original.files, current)
+      ? current : lastBulkEdit.restoreActiveFile ?? original.entry);
     setLastBulkEdit(null);
     setEditorSession(previous => previous + 1);
     setNotice('Undid the last ' + label + ' across all affected files.');
   }
 
   function invalidateExecution() {
+    setFileMove(null);
+    setFileMovePlan(null);
     setReplacePreview(null);
     setRenameTarget(null);
     setRenamePreview(null);
@@ -641,6 +651,52 @@ export function App() {
     setNotice('Added ' + name + '. Imports can refer to this file by relative path.');
   }
 
+  function beginFileMove() {
+    invalidateExecution();
+    setFileMove({ snapshot: workspace, from: activeFile, to: activeFile });
+    setNotice('Choose a new unused .srp path, preview all import updates, then apply.');
+  }
+
+  function planFileMove() {
+    if (!fileMove || workspace !== fileMove.snapshot) {
+      setFileMove(null);
+      setFileMovePlan(null);
+      setNotice('The source workspace changed. Start file rename again.');
+      return;
+    }
+    const plan = previewModuleMove(workspace, fileMove.from, fileMove.to);
+    if (!plan.ok) {
+      setFileMovePlan(null);
+      setNotice(plan.error);
+      return;
+    }
+    setFileMovePlan(plan);
+    setNotice('Preview only: source files have not been renamed or executed.');
+  }
+
+  function applyFileMove() {
+    if (!fileMove || !fileMovePlan || workspace !== fileMove.snapshot ||
+        fileMovePlan.from !== fileMove.from || fileMovePlan.to !== fileMove.to) {
+      setFileMovePlan(null);
+      setNotice('File rename preview became stale. Preview the current source again.');
+      return;
+    }
+    const { from, to, rewrittenImports, workspace: next } = fileMovePlan;
+    const token = createBulkEditUndo(workspace, next, 'file move', { from, to });
+    if (!token) {
+      setFileMovePlan(null);
+      setNotice('Cannot safely apply this file rename. No edits were made.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(next);
+    setActiveFile(to);
+    setLastBulkEdit(token);
+    setEditorSession(previous => previous + 1);
+    setNotice('Renamed ' + from + ' to ' + to + ' and updated ' + rewrittenImports +
+      ' import path(s). Run Check code to validate the project.');
+  }
+
   function removeFile() {
     if (files.length <= 1) {
       setNotice('The workspace needs at least one source file.');
@@ -1081,6 +1137,63 @@ export function App() {
               ))}
               <button type="button" className="file-add" onClick={addFile} title="Add .srp file" aria-label="Add file">+</button>
             </div>
+            {fileMove && (
+              <section className="file-move-panel" aria-label="Rename or move Scarp module">
+                <form className="file-move-form" onSubmit={event => {
+                  event.preventDefault();
+                  planFileMove();
+                }}>
+                  <span>Rename <strong>{fileMove.from}</strong> to:</span>
+                  <label htmlFor="file-move-path">New relative .srp path</label>
+                  <input id="file-move-path" type="text" value={fileMove.to}
+                    maxLength={128} autoComplete="off" spellCheck={false}
+                    onChange={event => {
+                      setFileMove({ ...fileMove, to: event.target.value });
+                      setFileMovePlan(null);
+                    }} />
+                  <button type="submit" className="button-primary">
+                    Preview file rename
+                  </button>
+                  <button type="button" onClick={() => {
+                    setFileMove(null);
+                    setFileMovePlan(null);
+                  }}>Cancel file rename</button>
+                </form>
+                {fileMovePlan && (
+                  <div className="file-move-preview" data-testid="file-move-preview">
+                    <p role="status">
+                      Rename <strong>{fileMovePlan.from}</strong> to{' '}
+                      <strong>{fileMovePlan.to}</strong>; rewrite{' '}
+                      {fileMovePlan.rewrittenImports} import path(s) in{' '}
+                      {fileMovePlan.changedFiles.length} file(s).
+                      {workspace.entry === fileMovePlan.from
+                        ? ' The project entry point will be updated.' : ''}
+                    </p>
+                    {fileMovePlan.lines.length > 0 && (
+                      <div className="rename-diff-list" role="region"
+                        aria-label="Proposed import path changes">
+                        {fileMovePlan.lines.map((line, index) => (
+                          <section className="rename-diff-file" key={line.path + ':' + line.line + ':' + index}>
+                            <h3>{line.path}:{line.line} · {line.imports} import(s)</h3>
+                            <div className="rename-diff-source">
+                              <span className="rename-diff-indicator" aria-hidden="true">−</span>
+                              <pre>{line.before}</pre>
+                            </div>
+                            <div className="rename-diff-source rename-diff-after">
+                              <span className="rename-diff-indicator" aria-hidden="true">+</span>
+                              <pre>{line.after}</pre>
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    )}
+                    <button type="button" className="button-primary" onClick={applyFileMove}>
+                      Apply file rename
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
             <div className="editor-body">
               <Suspense
                 fallback={
@@ -1135,6 +1248,10 @@ export function App() {
                   invalidateExecution();
                   setWorkspace((previous) => ({ ...previous, entry: activeFile }));
                 }} disabled={workspace.entry === activeFile}>Set as entry</button>
+                <button type="button" onClick={beginFileMove}
+                  title="Rename or move the active .srp file and preview required import updates">
+                  Rename file
+                </button>
                 <button type="button" onClick={removeFile} disabled={files.length < 2}>Remove file</button>
               </div>
             </div>

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createBulkEditUndo, undoBulkEdit } from '../src/bulk-undo';
 import { previewProjectReplace } from '../src/project-replace';
+import { previewModuleMove } from '../src/module-move';
 
 const base = () => ({ entry: 'main.srp', files: {
   'main.srp': 'print("twice");',
@@ -56,5 +57,49 @@ describe('ephemeral atomic multi-file undo', () => {
     expect(edit).not.toBeNull();
     if (!edit) return;
     expect(undoBulkEdit(edit.after, edit)).toBe(before);
+  });
+});
+
+
+describe('atomic file move undo', () => {
+  it('restores original paths, entrypoint and imports from a validated snapshot', () => {
+    const before = {
+      entry: 'main.srp',
+      files: {
+        'main.srp': 'import "math.srp" as math;\nprint(math.twice(21));',
+        'math.srp': 'pub pure funcra twice(n: integer) -> integer { return n * 2; }',
+      },
+    };
+    const plan = previewModuleMove(before, 'main.srp', 'app/main.srp');
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    const ticket = createBulkEditUndo(before, plan.workspace, 'file move',
+      { from: 'main.srp', to: 'app/main.srp' });
+    expect(ticket?.restoreActiveFile).toBe('main.srp');
+    expect(ticket?.label).toBe('file move');
+    expect(undoBulkEdit(plan.workspace, ticket)).toBe(before);
+    expect(undoBulkEdit({ ...plan.workspace }, ticket)).toBeNull();
+  });
+
+  it('rejects unverified path changes and refuses an invalidated snapshot', () => {
+    const before = {
+      entry: 'main.srp',
+      files: { 'main.srp': 'print(1);', 'math.srp': 'pub bind factor = 2;' },
+    };
+    const after = { entry: 'renamed.srp', files: {
+      'renamed.srp': 'print(1);', 'math.srp': 'pub bind factor = 2;',
+    } };
+    expect(createBulkEditUndo(before, after, 'file move')).toBeNull();
+    expect(createBulkEditUndo(before, after, 'file move',
+      { from: 'math.srp', to: 'renamed.srp' })).toBeNull();
+    expect(createBulkEditUndo(before, after, 'file move',
+      { from: 'main.srp', to: 'math.srp' })).toBeNull();
+    const ticket = createBulkEditUndo(before, after, 'file move',
+      { from: 'main.srp', to: 'renamed.srp' });
+    expect(ticket).not.toBeNull();
+    expect(undoBulkEdit(after, ticket)).toBe(before);
+    expect(undoBulkEdit({ entry: 'renamed.srp', files: {
+      ...after.files, 'math.srp': 'changed',
+    } }, ticket)).toBeNull();
   });
 });

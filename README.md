@@ -110,6 +110,10 @@ load failure — it never fakes a successful program result.
   Monaco UTF-16 positions rather than guessed.
 - Multiple virtual `.srp` files and relative imports through the official
   `MemorySourceLoader`; not an operating-system filesystem.
+- **Rename file** safely moves or renames a virtual module with a complete
+  nonexecuting import-path preview, preserves relative import targets when
+  changing directories, updates the project entrypoint, and supports one-step
+  multi-file undo. See [file rename and move](docs/module-file-move.md).
 - **Opt-in browser-local saving:** Save locally keeps a versioned, size-limited
   multi-file workspace and selected editor tab across reloads, with automatic
   local updates while enabled. Forget saved copy removes the browser snapshot.
