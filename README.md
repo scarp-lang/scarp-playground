@@ -244,6 +244,10 @@ pin, safety constraints and location-mapping protocol. The
 historical record; its compiler pin does not describe the current live preview.
 A future Scarp prerelease does not automatically update Playground's engine.
 
+## Support development
+
+Scarp Playground remains free to use. Optional [GitHub sponsorship](https://github.com/sponsors/sanskarIN) helps support compiler integration, browser testing, documentation, and maintenance; sponsorship does not unlock execution or editor features.
+
 ## Community
 
 [Scarp documentation](https://scarp-lang.github.io/scarp-docs/) ·
