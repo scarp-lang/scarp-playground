@@ -9,8 +9,11 @@ not a full language server protocol implementation.
 1. Place the editor cursor on a declaration or an actual symbol use.
 2. Press **F2** or choose **Rename symbol** in the editor toolbar.
 3. Enter a new ASCII identifier and click **Preview rename**.
-4. Examine the proposed site count and affected filenames, then click
-   **Apply rename to workspace**. **Cancel rename** makes no edits.
+4. Examine the proposed site count **and the complete before/after diff for
+   each changed source line**, grouped by file. Use the per-line **Line** link
+   to inspect the original source in Monaco without applying anything.
+5. Click **Apply rename to workspace** only after reviewing the changes.
+   **Cancel rename** makes no edits.
 
 The browser remounts Monaco models after confirmed multi-file replacements, so
 the old text models cannot overwrite compiler edits. When opt-in browser local
@@ -42,8 +45,15 @@ unreachable module graphs or arbitrary text matches.
   capture cases without guessing scope rules.
 - At most 120 compiler-resolved declaration and reference sites can be changed;
   a larger rename fails rather than silently truncating the result.
-- Each compiler UTF-8 byte span must exactly match the original symbol name.
-  Overlapping spans, unknown paths or stale sources are rejected.
+- The compiler returns file-local UTF-8 byte spans for every proposed edit.
+  The browser checks every span against the exact original identifier,
+  rejects invalid Unicode boundaries/overlaps/unknown paths, independently
+  replays all substitutions, and requires byte-for-byte agreement with the
+  compiler-proposed source and changed-file list before enabling Apply.
+- Line previews are produced from those validated edits. Since an identifier
+  cannot contain newlines, CRLF and Unicode line positions remain stable.
+  Every changed line is displayed (even with multiple changes per line);
+  long lines scroll horizontally instead of being silently clipped.
 - Before any preview is returned, the **renamed source graph is recompiled and
   reindexed without execution**. Its resolved symbol must be unique with the
   same reference kinds/count. A compiler diagnostic aborts the operation.

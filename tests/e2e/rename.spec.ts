@@ -22,8 +22,27 @@ test('F2 rename previews compiler-owned edits across imports, then runs renamed 
   await page.getByRole('textbox', { name: 'New Scarp identifier' }).fill('double');
   await page.getByRole('button', { name: 'Preview rename' }).click();
   await expect(panel.getByRole('status')).toContainText('2 site(s) in 2 file(s)', { timeout: 30_000 });
-  await expect(panel).toContainText('main.srp, math.srp');
+  const diff = panel.getByTestId('rename-diff');
+  await expect(diff).toBeVisible();
+  await expect(diff.getByRole('heading', { name: /main\.srp · 1 changed line/ })).toBeVisible();
+  await expect(diff.getByRole('heading', { name: /math\.srp · 1 changed line/ })).toBeVisible();
+  await expect(diff.locator('[aria-label="Before rename, main.srp line 2"]'))
+    .toHaveText('print(math.twice(21));');
+  await expect(diff.locator('[aria-label="After rename, main.srp line 2"]'))
+    .toHaveText('print(math.double(21));');
+  await expect(diff.locator('[aria-label="Before rename, math.srp line 1"]'))
+    .toContainText('funcra twice(');
+  await expect(diff.locator('[aria-label="After rename, math.srp line 1"]'))
+    .toContainText('funcra double(');
   await expect(page.locator('.stdout')).toHaveCount(0);
+  // Inspect a second module without committing or invalidating the preview.
+  await diff.getByRole('button', { name: 'Open math.srp line 1' }).click();
+  await expect(page.getByRole('tab', { name: /math.srp/ }))
+    .toHaveAttribute('aria-selected', 'true');
+  await expect(panel.getByRole('button', { name: 'Apply rename to workspace' })).toBeVisible();
+  await diff.getByRole('button', { name: 'Open main.srp line 2' }).click();
+  await expect(page.getByRole('tab', { name: /main.srp/ }))
+    .toHaveAttribute('aria-selected', 'true');
 
   await page.getByRole('button', { name: 'Apply rename to workspace' }).click();
   await expect(panel).toHaveCount(0);

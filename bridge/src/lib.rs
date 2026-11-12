@@ -404,10 +404,19 @@ fn rename_request(json_source: &str) -> String {
         return error("Renaming would change compiler-resolved symbol references.");
     }
     let changed_files: Vec<_> = locations.keys().cloned().collect();
+    // Send only compiler-owned file-local UTF-8 spans. The browser independently
+    // reconstructs the proposed sources from these sites before enabling Apply.
+    // The list is capped by MAX_RENAME_SITES and deterministic by file/offset.
+    let mut edits = Vec::with_capacity(references.len() + 1);
+    for (path, sites) in &locations {
+        for &(start, end) in sites.iter().rev() {
+            edits.push(json!({ "path": path, "start": start, "end": end }));
+        }
+    }
     json!({
         "ok": true, "old_name": old_name, "new_name": name,
         "kind": symbol.kind.as_str(), "changes": references.len() + 1,
-        "changed_files": changed_files, "files": changed,
+        "changed_files": changed_files, "edits": edits, "files": changed,
     }).to_string()
 }
 
@@ -573,6 +582,17 @@ mod tests {
         assert_eq!(result["ok"], true, "{result}");
         assert_eq!(result["changes"], 2);
         assert_eq!(result["changed_files"], json!(["left.srp", "main.srp"]));
+        assert_eq!(result["edits"].as_array().unwrap().len(), 2);
+        assert_eq!(result["edits"][0]["path"], "left.srp");
+        assert_eq!(result["edits"][1]["path"], "main.srp");
+        for edit in result["edits"].as_array().unwrap() {
+            let path = edit["path"].as_str().unwrap();
+            let start = edit["start"].as_u64().unwrap() as usize;
+            let end = edit["end"].as_u64().unwrap() as usize;
+            let original = if path == "main.srp" { main }
+                else { "pub pure funcra twice(value: integer)->integer{return value * 2;}" };
+            assert_eq!(&original[start..end], "twice");
+        }
         assert!(result["files"]["main.srp"].as_str().unwrap().contains("left.double(7)"));
         assert!(result["files"]["main.srp"].as_str().unwrap().contains("right.twice(9)"));
         assert!(result["files"]["left.srp"].as_str().unwrap().contains("funcra double("));
@@ -595,6 +615,10 @@ mod tests {
         let result: Value = serde_json::from_str(&rename_request(&request)).unwrap();
         assert_eq!(result["ok"], true, "{result}");
         assert_eq!(result["changes"], 3);
+        let edits = result["edits"].as_array().unwrap();
+        assert_eq!(edits.len(), 3);
+        assert!(edits.iter().any(|edit| edit["path"] == "main.srp"));
+        assert!(edits.iter().any(|edit| edit["path"] == "lib.srp"));
         assert!(result["files"]["main.srp"].as_str().unwrap().contains("greet(value: 4)"));
         assert!(result["files"]["main.srp"].as_str().unwrap().contains("\"😀\""));
         assert!(result["files"]["lib.srp"].as_str().unwrap().contains("greet(value: integer)"));

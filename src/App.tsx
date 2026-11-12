@@ -11,6 +11,7 @@ import { editorPositionToByteOffset } from './navigation/coordinates';
 import { findDefinition } from './navigation/client';
 import { findReferences, type SourceRange } from './navigation/references';
 import { previewSymbolRename, validRenameName, type RenameResult } from './navigation/rename';
+import { buildRenameDiff } from './navigation/rename-diff';
 import { initialReferenceIndex, stepReferenceIndex } from './navigation/reference-view';
 import { sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
@@ -89,6 +90,10 @@ export function App() {
   const [renamePreview, setRenamePreview] =
     useState<Extract<RenameResult, { ok: true }> | null>(null);
   const renameInputRef = useRef<HTMLInputElement>(null);
+  const renameDiff = useMemo(() =>
+    renameTarget && renamePreview
+      ? buildRenameDiff(renameTarget.snapshot, renamePreview) : null,
+    [renameTarget, renamePreview]);
   const [selectedReferenceIndex, setSelectedReferenceIndex] = useState(-1);
   const [referenceResult, setReferenceResult] = useState<{
     name: string; kind: string; sites: Array<SourceRange & { kind: string }>; truncated: boolean;
@@ -112,6 +117,8 @@ export function App() {
     if (!Object.hasOwn(workspace.files, hit.path)) return;
     // Any delayed definition result must not replace explicit text navigation.
     definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
     setActiveFile(hit.path);
     setNavigationTarget(previous => ({
       path: hit.path, line: hit.line, column: hit.column,
@@ -175,6 +182,9 @@ export function App() {
     if (!execution) return;
     // The new execution owns the single WASM slot; retire any pending lookup.
     definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setRenameBusy(false);
     setRunning(true);
     setOperation(mode);
     setResult(null);
@@ -222,6 +232,8 @@ export function App() {
     setResult(null);
     setReferenceResult(null);
     setSelectedReferenceIndex(-1);
+    setRenameTarget(null);
+    setRenamePreview(null);
     definitionScope.current.invalidate();
     const lookup = definitionScope.current.start();
     if (!lookup) return;
@@ -305,6 +317,11 @@ export function App() {
         setNotice(answer.error);
         return;
       }
+      const diff = buildRenameDiff(renameTarget.snapshot, answer);
+      if (!diff) {
+        setNotice('The compiler rename could not be independently verified. No edits were made.');
+        return;
+      }
       setRenamePreview(answer);
       setNotice('Rename preview verified without executing source code.');
     } finally {
@@ -314,7 +331,7 @@ export function App() {
   }
 
   function applyRename() {
-    if (!renameTarget || !renamePreview || workspace !== renameTarget.snapshot) {
+    if (!renameTarget || !renamePreview || !renameDiff || workspace !== renameTarget.snapshot) {
       setNotice('Rename preview became stale. Retry from the current source.');
       setRenameTarget(null);
       setRenamePreview(null);
@@ -342,6 +359,8 @@ export function App() {
     const range = sourceLocationToEditorRange(source, site);
     if (!range) return;
     definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
     setSelectedReferenceIndex(index);
     setActiveFile(site.path);
     setNavigationTarget(previous => ({
@@ -378,6 +397,8 @@ export function App() {
     executionScope.current.invalidate();
     setRunning(false);
     setResult(null);
+    setRenameTarget(null);
+    setRenamePreview(null);
     definitionScope.current.invalidate();
     const lookup = definitionScope.current.start();
     if (!lookup) return;
@@ -908,13 +929,56 @@ export function App() {
                 <button type="button" onClick={cancelRename}>Cancel rename</button>
               </form>
               {renamePreview && (
-                <div className="project-search-results">
+                <div className="rename-preview-results">
                   <p role="status">Compiler verified {renamePreview.changes} site(s) in{' '}
                     {renamePreview.changed_files.length} file(s):{' '}
                     <strong>{renamePreview.old_name}</strong> → <strong>{renamePreview.new_name}</strong>
                   </p>
-                  <p>{renamePreview.changed_files.join(', ')}</p>
+                  {renameDiff && (
+                    <>
+                      <p className="rename-diff-summary">
+                        Review {renameDiff.changedLines} changed line(s) before applying.
+                        Only the listed compiler-indexed identifiers will change.
+                      </p>
+                      <div className="rename-diff-list" data-testid="rename-diff"
+                        role="region" aria-label="Proposed rename changes">
+                        {renameDiff.files.map(file => (
+                          <section className="rename-diff-file" key={file.path}>
+                            <h3>{file.path} · {file.lines.length} changed line(s)</h3>
+                            {file.lines.map(line => (
+                              <div className="rename-diff-line" key={line.line}>
+                                <button type="button" className="rename-diff-jump"
+                                  aria-label={'Open ' + file.path + ' line ' + line.line}
+                                  onClick={() => {
+                                    setActiveFile(file.path);
+                                    setNavigationTarget(previous => ({
+                                      path: file.path, line: line.line, column: 1,
+                                      sequence: (previous?.sequence ?? 0) + 1,
+                                    }));
+                                  }}>
+                                  Line {line.line} · {line.sites} replacement(s)
+                                </button>
+                                <div className="rename-diff-source">
+                                  <span className="rename-diff-indicator" aria-hidden="true">−</span>
+                                  <pre aria-label={'Before rename, ' + file.path + ' line ' + line.line}>
+                                    {line.before}
+                                  </pre>
+                                </div>
+                                <div className="rename-diff-source rename-diff-after">
+                                  <span className="rename-diff-indicator" aria-hidden="true">+</span>
+                                  <pre aria-label={'After rename, ' + file.path + ' line ' + line.line}>
+                                    {line.after}
+                                  </pre>
+                                </div>
+                              </div>
+                            ))}
+                          </section>
+                        ))}
+                      </div>
+                    </>
+                  )}
                   <button type="button" className="button-primary"
+                    disabled={!renameDiff}
                     onClick={applyRename}>Apply rename to workspace</button>
                 </div>
               )}
