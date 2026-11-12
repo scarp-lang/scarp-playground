@@ -7,7 +7,7 @@ import { validPath, validateWorkspace, type Workspace } from './workspace';
 export type BulkEditUndo = {
   before: Workspace;
   after: Workspace;
-  label: 'project-wide replacement' | 'symbol rename' | 'file move' | 'file removal';
+  label: 'project-wide replacement' | 'symbol rename' | 'file move' | 'file removal' | 'file duplication';
   restoreActiveFile?: string;
 };
 
@@ -18,12 +18,28 @@ export function createBulkEditUndo(
   label: BulkEditUndo['label'],
   moved?: { from: string; to: string },
   removed?: string,
+  duplicated?: { from: string; to: string },
 ): BulkEditUndo | null {
   if (before === after || validateWorkspace(before) || validateWorkspace(after)) return null;
   const oldPaths = Object.keys(before.files).sort();
   const newPaths = Object.keys(after.files).sort();
+  if (label === 'file duplication') {
+    if (moved || removed || !duplicated ||
+        !validPath(duplicated.from) || !validPath(duplicated.to) ||
+        duplicated.from === duplicated.to ||
+        !Object.hasOwn(before.files, duplicated.from) ||
+        Object.hasOwn(before.files, duplicated.to) ||
+        !Object.hasOwn(after.files, duplicated.to) ||
+        before.entry !== after.entry ||
+        newPaths.length !== oldPaths.length + 1 ||
+        oldPaths.some(path => before.files[path] !== after.files[path]) ||
+        [...oldPaths, duplicated.to].sort().some((path, index) => path !== newPaths[index]))
+      return null;
+    return { before, after, label, restoreActiveFile: duplicated.from };
+  }
+
   if (label === 'file removal') {
-    if (moved || !removed || !validPath(removed) ||
+    if (moved || duplicated || !removed || !validPath(removed) ||
         !Object.hasOwn(before.files, removed) ||
         Object.hasOwn(after.files, removed) ||
         oldPaths.length !== newPaths.length + 1 ||
@@ -34,7 +50,7 @@ export function createBulkEditUndo(
     return { before, after, label, restoreActiveFile: removed };
   }
 
-  if (removed || oldPaths.length !== newPaths.length) return null;
+  if (removed || duplicated || oldPaths.length !== newPaths.length) return null;
 
   if (label === 'file move') {
     if (!moved || !validPath(moved.from) || !validPath(moved.to) ||

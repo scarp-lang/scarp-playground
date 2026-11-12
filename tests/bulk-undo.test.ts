@@ -3,6 +3,7 @@ import { createBulkEditUndo, undoBulkEdit } from '../src/bulk-undo';
 import { previewProjectReplace } from '../src/project-replace';
 import { previewModuleMove } from '../src/module-move';
 import { previewModuleRemoval } from '../src/module-remove';
+import { previewModuleDuplicate } from '../src/module-duplicate';
 
 const base = () => ({ entry: 'main.srp', files: {
   'main.srp': 'print("twice");',
@@ -135,5 +136,47 @@ describe('atomic module deletion undo', () => {
     const ticket = createBulkEditUndo(before, correct, 'file removal', undefined, 'unused.srp');
     expect(ticket).not.toBeNull();
     expect(undoBulkEdit(correct, ticket)).toBe(before);
+  });
+});
+
+
+describe('atomic file duplication undo', () => {
+  it('restores the original graph and entry after copying an imported Scarp module', () => {
+    const before = {
+      entry: 'main.srp', files: {
+        'main.srp': 'import "math.srp" as math;\nprint(math.twice(21));',
+        'math.srp': 'pub pure funcra twice(n: integer) -> integer { return n * 2; }',
+      },
+    };
+    const plan = previewModuleDuplicate(before, 'main.srp', 'app/main_copy.srp');
+    expect(plan.ok).toBe(true);
+    if (!plan.ok) return;
+    const token = createBulkEditUndo(before, plan.workspace, 'file duplication',
+      undefined, undefined, { from: 'main.srp', to: 'app/main_copy.srp' });
+    expect(token?.label).toBe('file duplication');
+    expect(token?.restoreActiveFile).toBe('main.srp');
+    expect(undoBulkEdit(plan.workspace, token)).toBe(before);
+    expect(undoBulkEdit({ ...plan.workspace }, token)).toBeNull();
+  });
+
+  it('refuses wrong added path, changed entry or modified surviving original', () => {
+    const before = { entry: 'main.srp', files: {
+      'main.srp': 'print(1);', 'math.srp': 'pub bind factor = 2;',
+    } };
+    const after = { entry: 'main.srp', files: {
+      ...before.files, 'main_copy.srp': 'print(1);',
+    } };
+    expect(createBulkEditUndo(before, after, 'file duplication')).toBeNull();
+    expect(createBulkEditUndo(before, after, 'file duplication', undefined, undefined,
+      { from: 'math.srp', to: 'main.srp' })).toBeNull();
+    expect(createBulkEditUndo(before, { ...after, entry: 'main_copy.srp' },
+      'file duplication', undefined, undefined,
+      { from: 'main.srp', to: 'main_copy.srp' })).toBeNull();
+    expect(createBulkEditUndo(before, { ...after, files: {
+      ...after.files, 'math.srp': 'overwritten',
+    } }, 'file duplication', undefined, undefined,
+    { from: 'main.srp', to: 'main_copy.srp' })).toBeNull();
+    expect(createBulkEditUndo(before, after, 'file duplication', undefined, undefined,
+      { from: 'main.srp', to: 'main_copy.srp' })).not.toBeNull();
   });
 });

@@ -23,6 +23,7 @@ import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from 
 import { scarpFileStats } from './source-file';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
+import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
 import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
@@ -85,6 +86,11 @@ export function App() {
   } | null>(null);
   const [fileMovePlan, setFileMovePlan] =
     useState<Extract<ModuleMovePlan, { ok: true }> | null>(null);
+  const [fileDuplicate, setFileDuplicate] = useState<{
+    snapshot: Workspace; from: string; to: string;
+  } | null>(null);
+  const [fileDuplicatePlan, setFileDuplicatePlan] =
+    useState<Extract<ModuleDuplicatePlan, { ok: true }> | null>(null);
   const [fileRemoval, setFileRemoval] = useState<{
     snapshot: Workspace; from: string; plan: ModuleRemovalPlan;
   } | null>(null);
@@ -204,6 +210,8 @@ export function App() {
   }
 
   function invalidateExecution() {
+    setFileDuplicate(null);
+    setFileDuplicatePlan(null);
     setFileRemoval(null);
     setFileMove(null);
     setFileMovePlan(null);
@@ -657,6 +665,62 @@ export function App() {
     }));
     setActiveFile(name);
     setNotice('Added ' + name + '. Imports can refer to this file by relative path.');
+  }
+
+  function beginFileDuplicate() {
+    const destination = suggestDuplicatePath(workspace, activeFile);
+    if (!destination) {
+      setNotice('No unused duplicate path is available, or the 12-file project limit was reached.');
+      return;
+    }
+    invalidateExecution();
+    setFileDuplicate({ snapshot: workspace, from: activeFile, to: destination });
+    setNotice('Preview the duplicated module and any rebased import paths before applying.');
+  }
+
+  function planFileDuplicate() {
+    if (!fileDuplicate || workspace !== fileDuplicate.snapshot) {
+      setFileDuplicate(null);
+      setFileDuplicatePlan(null);
+      setNotice('The project changed. Start duplication from the current source.');
+      return;
+    }
+    const plan = previewModuleDuplicate(workspace, fileDuplicate.from, fileDuplicate.to);
+    if (!plan.ok) {
+      setFileDuplicatePlan(null);
+      setNotice(plan.error);
+      return;
+    }
+    setFileDuplicatePlan(plan);
+    setNotice('Preview only: no source files were added, modified or executed.');
+  }
+
+  function applyFileDuplicate() {
+    if (!fileDuplicate || !fileDuplicatePlan ||
+        workspace !== fileDuplicate.snapshot ||
+        fileDuplicate.from !== fileDuplicatePlan.from ||
+        fileDuplicate.to !== fileDuplicatePlan.to) {
+      setFileDuplicate(null);
+      setFileDuplicatePlan(null);
+      setNotice('The file duplication preview became stale. Start again.');
+      return;
+    }
+    const { from, to, workspace: next, rewrittenImports } = fileDuplicatePlan;
+    const undo = createBulkEditUndo(
+      workspace, next, 'file duplication', undefined, undefined, { from, to },
+    );
+    if (!undo) {
+      setFileDuplicatePlan(null);
+      setNotice('Cannot safely record the duplicated file. No sources were changed.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(next);
+    setActiveFile(to);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setNotice('Duplicated ' + from + ' into ' + to + ', rebasing ' +
+      rewrittenImports + ' import path(s). Use Check code to validate the copy.');
   }
 
   function beginFileMove() {
@@ -1157,6 +1221,57 @@ export function App() {
               ))}
               <button type="button" className="file-add" onClick={addFile} title="Add .srp file" aria-label="Add file">+</button>
             </div>
+            {fileDuplicate && (
+              <section className="file-duplicate-panel" aria-label="Duplicate Scarp module">
+                <form className="file-move-form" onSubmit={event => {
+                  event.preventDefault();
+                  planFileDuplicate();
+                }}>
+                  <span>Duplicate <strong>{fileDuplicate.from}</strong> as:</span>
+                  <label htmlFor="file-duplicate-path">New copy .srp path</label>
+                  <input id="file-duplicate-path" type="text" value={fileDuplicate.to}
+                    maxLength={128} autoComplete="off" spellCheck={false}
+                    onChange={event => {
+                      setFileDuplicate({ ...fileDuplicate, to: event.target.value });
+                      setFileDuplicatePlan(null);
+                    }} />
+                  <button type="submit" className="button-primary">Preview duplication</button>
+                  <button type="button" onClick={() => {
+                    setFileDuplicate(null);
+                    setFileDuplicatePlan(null);
+                  }}>Cancel duplication</button>
+                </form>
+                {fileDuplicatePlan && (
+                  <div className="file-duplicate-preview" data-testid="file-duplicate-preview">
+                    <p role="status">Create <strong>{fileDuplicatePlan.to}</strong> from{' '}
+                      <strong>{fileDuplicatePlan.from}</strong>, rebasing{' '}
+                      {fileDuplicatePlan.rewrittenImports} import path(s).
+                      The original module and entrypoint remain unchanged.</p>
+                    {fileDuplicatePlan.lines.length > 0 && (
+                      <div className="rename-diff-list" role="region"
+                        aria-label="Copied import path changes">
+                        {fileDuplicatePlan.lines.map((line, index) => (
+                          <section className="rename-diff-file" key={line.line + ':' + index}>
+                            <h3>{fileDuplicatePlan.to}:{line.line} · {line.imports} import(s)</h3>
+                            <div className="rename-diff-source">
+                              <span className="rename-diff-indicator" aria-hidden="true">−</span>
+                              <pre>{line.before}</pre>
+                            </div>
+                            <div className="rename-diff-source rename-diff-after">
+                              <span className="rename-diff-indicator" aria-hidden="true">+</span>
+                              <pre>{line.after}</pre>
+                            </div>
+                          </section>
+                        ))}
+                      </div>
+                    )}
+                    <button type="button" className="button-primary" onClick={applyFileDuplicate}>
+                      Apply duplication
+                    </button>
+                  </div>
+                )}
+              </section>
+            )}
             {fileMove && (
               <section className="file-move-panel" aria-label="Rename or move Scarp module">
                 <form className="file-move-form" onSubmit={event => {
@@ -1302,6 +1417,11 @@ export function App() {
                   invalidateExecution();
                   setWorkspace((previous) => ({ ...previous, entry: activeFile }));
                 }} disabled={workspace.entry === activeFile}>Set as entry</button>
+                <button type="button" onClick={beginFileDuplicate}
+                  disabled={files.length >= MAX_FILES}
+                  title="Copy the current Scarp module with a preview of rebased import paths">
+                  Duplicate file
+                </button>
                 <button type="button" onClick={beginFileMove}
                   title="Rename or move the active .srp file and preview required import updates">
                   Rename file

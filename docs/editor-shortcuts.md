@@ -41,6 +41,7 @@ is inconvenient. The action is available for every open Scarp source module.
 | Download .srp | Download the active module as a UTF-8 source file |
 | Undo bulk change | Restore an applied project-wide replace, symbol rename, or file rename if still safe |
 | Rename file | Preview and apply safe virtual .srp module moves with import-path updates |
+| Duplicate file | Preview a separate module copy and rebase its relative imports without altering the original |
 
 Monaco also automatically closes common balanced delimiters in Scarp source
 (`()`, `[]`, `{}`, and string quotes). This is editor assistance, not

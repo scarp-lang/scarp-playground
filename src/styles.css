@@ -375,3 +375,15 @@ a { color: inherit; text-decoration: none; }
   overflow-wrap: anywhere;
 }
 .file-remove-dependents li { padding: 3px 0; }
+
+/* Duplicate-file review shares the rename form and scrollable before/after diff. */
+.file-duplicate-panel {
+  display: grid; gap: 10px; min-width: 0; padding: 13px 16px;
+  border-bottom: 1px solid var(--border); background: var(--panel-2);
+}
+.file-duplicate-preview { display: grid; gap: 10px; min-width: 0; }
+.file-duplicate-preview p {
+  margin: 0; font-size: 12px; line-height: 1.6; overflow-wrap: anywhere;
+}
+.file-duplicate-preview .rename-diff-list { max-height: 250px; margin: 0; }
+.file-duplicate-preview > button { justify-self: start; }
