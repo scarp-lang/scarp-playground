@@ -110,7 +110,9 @@ load failure — it never fakes a successful program result.
   source file (preserving per-file undo/view history), and selectable entrypoint.
 - **Quick open** (Ctrl+P / Cmd+P) switches between virtual Scarp modules via
   an offline, case-insensitive filename/path search with keyboard navigation
-  and mobile support. See [Quick Open](docs/quick-open.md).
+  and mobile support. Add `:line[:column]` to a filename to jump to source,
+  or use **Ctrl+G / Cmd+G** for the active file. The accessible **Go to line**
+  button offers the same behavior on mobile. See [Quick Open](docs/quick-open.md).
 - **Ctrl+/** (Cmd+/ on macOS) toggles Scarp `//` comments for the active line
   or selected lines. A visible **Comment / uncomment** button supports mouse
   and touch editing. Standard Monaco undo/redo, balanced-delimiter pairing,
