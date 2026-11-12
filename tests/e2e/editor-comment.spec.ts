@@ -60,14 +60,14 @@ test('toolbar comment action edits only the selected virtual module and supports
   await page.keyboard.press('ControlOrMeta+Home');
   await page.getByRole('button', { name: 'Comment / uncomment' }).click();
   await expect(page.locator('.monaco-editor .view-lines')).toContainText(
-    /\/\/\s*pub pure funcra twice/,
+    /\/\/\s*pub\s+pure\s+funcra\s+twice/,
   );
 
   // The source in the importing module must not be modified by comment toggling.
   await page.getByRole('tab', { name: /main.srp/ }).click();
   await expect(page.locator('.monaco-editor .view-lines')).toContainText('math.twice(21)');
   await page.getByRole('tab', { name: /math.srp/ }).click();
-  await expect(page.locator('.monaco-editor .view-lines')).toContainText(/\/\/\s*pub pure funcra twice/);
+  await expect(page.locator('.monaco-editor .view-lines')).toContainText(/\/\/\s*pub\s+pure\s+funcra\s+twice/);
   await editorInput(page);
   await page.keyboard.press('ControlOrMeta+Z');
   await expect(page.locator('.monaco-editor .view-lines')).toContainText('pub pure funcra twice');
