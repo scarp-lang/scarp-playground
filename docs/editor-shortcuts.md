@@ -31,6 +31,7 @@ is inconvenient. The action is available for every open Scarp source module.
 | Ctrl+/ (Cmd+/) | Toggle `//` on the current or selected lines |
 | Ctrl+Z (Cmd+Z) | Undo a normal Monaco edit in the current file |
 | Ctrl+Space | Show offline Scarp snippet/import completions |
+| Ctrl+P (Cmd+P) | Quick Open: find a .srp module by filename/path and switch tabs |
 | F12 | Compiler-backed Go to definition |
 | Shift+F12 | Compiler-backed Find references |
 | F2 | Preview compiler-validated symbol rename |
