@@ -18,6 +18,7 @@ import type { RunResult } from './runner/types';
 import { MAX_FILES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
+import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
 import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
 
@@ -68,6 +69,11 @@ export function App() {
   const [programInput, setProgramInput] = useState('');
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [replaceText, setReplaceText] = useState('');
+  const [replaceMatchCase, setReplaceMatchCase] = useState(false);
+  const [replacePreview, setReplacePreview] = useState<{
+    snapshot: Workspace; plan: Extract<ReplacePlan, { ok: true }>;
+  } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const executionScope = useRef(new ExecutionScope());
@@ -113,7 +119,35 @@ export function App() {
     }));
   }
 
+  function planProjectReplacement() {
+    const plan = previewProjectReplace(workspace, searchQuery, replaceText, replaceMatchCase);
+    if (!plan.ok) {
+      setReplacePreview(null);
+      setNotice(plan.error);
+      return;
+    }
+    setReplacePreview({ snapshot: workspace, plan });
+    setNotice('Preview only: no project files have been changed or executed.');
+  }
+
+  function applyProjectReplacement() {
+    if (!replacePreview || workspace !== replacePreview.snapshot) {
+      setReplacePreview(null);
+      setNotice('The replacement preview is stale. Preview the current source again.');
+      return;
+    }
+    // Apply the entire validated replacement atomically; remount Monaco models
+    // so stale editor buffers cannot overwrite an updated secondary file.
+    const { plan } = replacePreview;
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setEditorSession(previous => previous + 1);
+    setNotice('Replaced ' + plan.changes + ' literal text occurrence(s) in ' +
+      plan.changedFiles.length + ' .srp file(s). Check the program before running.');
+  }
+
   function invalidateExecution() {
+    setReplacePreview(null);
     setRenameTarget(null);
     setRenamePreview(null);
     setRenameBusy(false);
@@ -702,7 +736,7 @@ export function App() {
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
               <button type="button" className="button-secondary"
                 aria-expanded={searchOpen} aria-controls="project-search-panel"
-                onClick={() => setSearchOpen(open => !open)}>
+                onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
               <button type="button" className="button-secondary" onClick={() => void share()} title="Copy a link to the complete project when it fits the URL limit">Share ↗</button>
@@ -727,14 +761,65 @@ export function App() {
                 <label htmlFor="project-search-input">Find in all .srp files</label>
                 <input id="project-search-input" ref={searchInputRef} type="search"
                   value={searchQuery} maxLength={MAX_SEARCH_QUERY}
-                  onChange={event => setSearchQuery(event.target.value)}
+                  onChange={event => { setReplacePreview(null); setSearchQuery(event.target.value); }}
                   placeholder="Search source text…"
                   aria-label="Search text in project" />
-                <button type="button" onClick={() => setSearchQuery('')}
+                <button type="button" onClick={() => { setReplacePreview(null); setSearchQuery(''); }}
                   disabled={!searchQuery}>Clear</button>
-                <button type="button" onClick={() => setSearchOpen(false)}
+                <button type="button" onClick={() => { setReplacePreview(null); setSearchOpen(false); }}
                   aria-label="Close project search">Close</button>
               </div>
+              <div className="project-search-bar project-replace-bar">
+                <label htmlFor="project-replace-input">Replace with</label>
+                <input id="project-replace-input" type="text" spellCheck={false}
+                  aria-label="Replacement text (literal)" value={replaceText}
+                  maxLength={MAX_REPLACEMENT_LENGTH}
+                  onChange={event => {
+                    setReplacePreview(null);
+                    setReplaceText(event.target.value);
+                  }} />
+                <label className="project-replace-match-case">
+                  <input type="checkbox" checked={replaceMatchCase}
+                    onChange={event => {
+                      setReplacePreview(null);
+                      setReplaceMatchCase(event.target.checked);
+                    }} />
+                  Match case when replacing
+                </label>
+                <button type="button" disabled={searchQuery.length < 2}
+                  onClick={planProjectReplacement}>Preview replacements</button>
+              </div>
+              <p className="project-replace-help">
+                Plain-text replacement, not compiler-aware symbol rename. Review before applying.
+                Empty replacement deletes matched text. No code is executed or uploaded.
+              </p>
+              {replacePreview && (
+                <div className="project-replace-preview"
+                  aria-label="Project-wide replacement preview" data-testid="replace-preview">
+                  <p role="status">
+                    {replacePreview.plan.changes} replacement(s) across{' '}
+                    {replacePreview.plan.changedFiles.length} file(s) on{' '}
+                    {replacePreview.plan.lines.length} changed line(s).
+                  </p>
+                  <div className="project-replace-preview-actions">
+                    <button type="button" className="button-primary"
+                      onClick={applyProjectReplacement}>Apply all replacements</button>
+                    <button type="button" className="button-secondary"
+                      onClick={() => setReplacePreview(null)}>Cancel preview</button>
+                  </div>
+                  <div className="project-replace-lines">
+                    {replacePreview.plan.lines.map(line => (
+                      <div className="project-replace-line" key={line.path + ':' + line.line}>
+                        <strong>{line.path}:{line.line} · {line.changes} change(s)</strong>
+                        <div className="project-replace-pair">
+                          <div><span>Before</span><pre>{line.before || ' '}</pre></div>
+                          <div><span>After</span><pre>{line.after || ' '}</pre></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
               <p className="project-search-status" role="status">
                 {searchQuery.length < 2
                   ? 'Enter at least two characters. Searches are local and case-insensitive.'
