@@ -14,6 +14,7 @@ const SNIPPETS: ReadonlyArray<Omit<CompletionHint, 'replaceLength'>> = [
   { label: 'bind', insertText: 'bind ${1:value} = ${2:0};', detail: 'Declare an immutable binding', kind: 'snippet' },
   { label: 'var', insertText: 'var ${1:counter} = ${2:0};', detail: 'Declare a mutable binding', kind: 'snippet' },
   { label: 'if', insertText: 'if ${1:true} {\n  $0\n}', detail: 'Conditional block', kind: 'snippet' },
+  { label: 'assert', insertText: 'assert(${1:true}, "${2:reason}");', detail: 'Check a Boolean condition with an optional literal message', kind: 'snippet' },
   { label: 'while', insertText: 'while ${1:true} {\n  $0\n}', detail: 'Conditional loop (subject to interpreter work budget)', kind: 'snippet' },
   { label: 'repeat', insertText: 'repeat ${1:5} as ${2:index} {\n  $0\n}', detail: 'Counted loop', kind: 'snippet' },
   { label: 'funcra', insertText: 'funcra ${1:identity}(${2:value}: integer) -> integer {\n  return ${2:value};\n}', detail: 'Typed function declaration', kind: 'snippet' },
