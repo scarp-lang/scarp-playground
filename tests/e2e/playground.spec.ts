@@ -1,5 +1,10 @@
 import { expect, test } from '@playwright/test';
-import compilerCompatibility from '../../compiler-compatibility.json';
+import { readFileSync } from 'node:fs';
+
+// Playwright runs in Node.js, not Vite: read JSON without an ESM JSON import.
+const compilerCompatibility = JSON.parse(
+  readFileSync(new URL('../../compiler-compatibility.json', import.meta.url), 'utf8'),
+) as { version: string; releaseUrl: string };
 
 // These tests deliberately use the built Rust/WASM compiler, not mock responses.
 // The preview server serves the same /scarp-playground/ base path as GitHub Pages.
