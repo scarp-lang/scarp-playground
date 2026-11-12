@@ -96,7 +96,7 @@ describe('import-aware virtual module duplication', () => {
   });
 
   it('chooses collision-free sibling paths and rejects malformed or full projects', () => {
-    const before = project();
+    const before: { entry: string; files: Record<string, string> } = project();
     expect(suggestDuplicatePath(before, 'lib/math.srp')).toBe('lib/math_copy.srp');
     before.files['lib/math_copy.srp'] = '';
     expect(suggestDuplicatePath(before, 'lib/math.srp')).toBe('lib/math_copy2.srp');
