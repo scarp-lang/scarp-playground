@@ -46,6 +46,7 @@ test('ArrowDown and ArrowUp navigate results without changing sources', async ({
   await expect(dialog.getByRole('combobox', { name: 'Find .srp file' })).toHaveValue('');
   await dialog.getByRole('button', { name: 'Close Quick Open' }).click();
   await expect(dialog).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Quick open' })).toBeFocused();
   await expect(page.getByRole('tab', { name: /math.srp/ }))
     .toHaveAttribute('aria-selected', 'true');
 });
