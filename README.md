@@ -96,6 +96,11 @@ load failure — it never fakes a successful program result.
 - React + Vite with TypeScript and Tailwind CSS, adaptive dark/light interface.
 - Monaco editor with a Scarp-specific tokenizer, separate text models per
   source file (preserving per-file undo/view history), and selectable entrypoint.
+- **Ctrl+/** (Cmd+/ on macOS) toggles Scarp `//` comments for the active line
+  or selected lines. A visible **Comment / uncomment** button supports mouse
+  and touch editing. Standard Monaco undo/redo, balanced-delimiter pairing,
+  and a visual **word-wrap toggle** are supported without running source.
+  See [editor shortcuts](docs/editor-shortcuts.md).
 - Compiler schema-v1 errors underline their real source ranges in Monaco and
   open the originating file, including imported modules. Related-source
   locations are navigable; UTF-8/Unicode-scalar positions are converted to

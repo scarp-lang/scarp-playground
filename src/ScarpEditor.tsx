@@ -15,6 +15,24 @@ const environment = globalThis as typeof globalThis & {
 environment.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
 monaco.languages.register({ id: 'scarp' });
+// Monaco's native line-comment command requires the language's comment syntax.
+// Scarp alpha.7 supports // comments, but not /* ... */ block comments.
+monaco.languages.setLanguageConfiguration('scarp', {
+  comments: { lineComment: '//' },
+  brackets: [['{', '}'], ['[', ']'], ['(', ')']],
+  autoClosingPairs: [
+    { open: '{', close: '}' },
+    { open: '[', close: ']' },
+    { open: '(', close: ')' },
+    { open: '"', close: '"', notIn: ['string', 'comment'] },
+  ],
+  surroundingPairs: [
+    { open: '{', close: '}' },
+    { open: '[', close: ']' },
+    { open: '(', close: ')' },
+    { open: '"', close: '"' },
+  ],
+});
 monaco.languages.setMonarchTokensProvider('scarp', {
   keywords: [
     'bind', 'var', 'funcra', 'pure', 'pub', 'return', 'if', 'elif', 'else', 'while',
@@ -56,11 +74,13 @@ interface Props {
   navigationTrigger: number;
   referenceTrigger: number;
   renameTrigger: number;
+  commentTrigger: number;
+  wordWrap: boolean;
   referenceSites: ReadonlyArray<ReferenceSite> | null;
   selectedReferenceIndex: number;
 }
 
-export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger, renameTrigger, referenceSites, selectedReferenceIndex, onRename }: Props) {
+export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger, renameTrigger, commentTrigger, wordWrap, referenceSites, selectedReferenceIndex, onRename }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
@@ -74,6 +94,7 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
   const lastNavigationTrigger = useRef(navigationTrigger);
   const lastReferenceTrigger = useRef(referenceTrigger);
   const lastRenameTrigger = useRef(renameTrigger);
+  const lastCommentTrigger = useRef(commentTrigger);
   const onFindReferencesRef = useRef(onFindReferences);
   onFindReferencesRef.current = onFindReferences;
   const onRenameRef = useRef(onRename);
@@ -91,6 +112,7 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       theme: dark ? 'vs-dark' : 'vs',
       fontSize: 14,
       minimap: { enabled: false },
+      wordWrap: wordWrap ? 'on' : 'off',
       scrollBeyondLastLine: false,
       automaticLayout: true,
       tabSize: 2,
@@ -111,6 +133,12 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       if (position) onFindReferencesRef.current(
         activePath.current, position.lineNumber, position.column, instance.getValue(),
       );
+    });
+    // Ctrl+/ (Cmd+/ on macOS) toggles the current or selected lines using
+    // Monaco's native undoable comment action. This preserves indentation,
+    // selection, and per-module undo history rather than rewriting source in React.
+    instance.addCommand(monaco.KeyMod.CtrlCmd | monaco.KeyCode.Slash, () => {
+      void instance.getAction('editor.action.commentLine')?.run();
     });
     // F2 resolves the selected token with the Rust compiler before any edit.
     instance.addCommand(monaco.KeyCode.F2, () => {
@@ -285,6 +313,20 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       activePath.current, position.lineNumber, position.column, instance.getValue(),
     );
   }, [referenceTrigger]);
+
+  useEffect(() => {
+    if (commentTrigger === lastCommentTrigger.current) return;
+    lastCommentTrigger.current = commentTrigger;
+    const instance = editor.current;
+    if (!instance || !instance.getModel()) return;
+    void instance.getAction('editor.action.commentLine')?.run().then(() => {
+      if (editor.current === instance) instance.focus();
+    });
+  }, [commentTrigger]);
+
+  useEffect(() => {
+    editor.current?.updateOptions({ wordWrap: wordWrap ? 'on' : 'off' });
+  }, [wordWrap]);
 
   useEffect(() => {
     if (renameTrigger === lastRenameTrigger.current) return;

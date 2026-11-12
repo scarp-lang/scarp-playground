@@ -84,6 +84,8 @@ export function App() {
   const [navigationTrigger, setNavigationTrigger] = useState(0);
   const [referenceTrigger, setReferenceTrigger] = useState(0);
   const [renameTrigger, setRenameTrigger] = useState(0);
+  const [commentTrigger, setCommentTrigger] = useState(0);
+  const [wordWrap, setWordWrap] = useState(false);
   const [renameTarget, setRenameTarget] = useState<{
     snapshot: Workspace; path: string; offset: number;
   } | null>(null);
@@ -1055,14 +1057,26 @@ export function App() {
               >
                 <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} onFindReferences={locateReferences} onRename={beginRename} navigationTarget={navigationTarget}
                   navigationTrigger={navigationTrigger} referenceTrigger={referenceTrigger} renameTrigger={renameTrigger}
+                  commentTrigger={commentTrigger} wordWrap={wordWrap}
                   referenceSites={referenceResult?.sites ?? null}
                   selectedReferenceIndex={selectedReferenceIndex} />
               </Suspense>
             </div>
             <div className="editor-footer">
-              <span><span className="online-dot" />Scarp syntax · Ctrl+Space: Completion · F12: Definition · Shift+F12: References · F2: Rename</span>
+              <span><span className="online-dot" />Scarp syntax · Ctrl+/: Comment · Ctrl+Space: Completion · F12: Definition · Shift+F12: References · F2: Rename</span>
               <span>UTF-8 · {activeFile}</span>
               <div className="footer-controls">
+                <button type="button"
+                  onClick={() => setCommentTrigger(previous => previous + 1)}
+                  aria-keyshortcuts="Control+/"
+                  title="Toggle // comments on the current line or every selected line (Ctrl+/; Cmd+/ on macOS)">
+                  Comment / uncomment
+                </button>
+                <button type="button" aria-pressed={wordWrap}
+                  onClick={() => setWordWrap(previous => !previous)}
+                  title="Wrap long source lines visually without changing the code">
+                  {wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
+                </button>
                 <button type="button" onClick={() => setNavigationTrigger(previous => previous + 1)}
                   title="Navigate to the source declaration under the editor cursor (F12)">
                   Go to definition
