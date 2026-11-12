@@ -73,3 +73,10 @@ preview cancellation and correct output after renaming.
 
 This feature uses the pinned Scarp v0.0.6-alpha.7 compiler index, without a
 compiler repository mutation or new Playground prerelease.
+
+## Undo an applied symbol rename
+
+After Apply, the toolbar's **Undo bulk change** restores the complete original
+workspace if no further source or project change has occurred. It is an
+in-memory, single-step undo separate from Monaco typing undo. See
+[bulk undo](bulk-undo.md).
