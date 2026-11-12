@@ -16,7 +16,7 @@ environment.MonacoEnvironment = { getWorker: () => new EditorWorker() };
 
 monaco.languages.register({ id: 'scarp' });
 // Monaco's native line-comment command requires the language's comment syntax.
-// Scarp alpha.7 supports // comments, but not /* ... */ block comments.
+// Scarp alpha.8 supports // comments, but not /* ... */ block comments.
 monaco.languages.setLanguageConfiguration('scarp', {
   comments: { lineComment: '//' },
   brackets: [['{', '}'], ['[', ']'], ['(', ')']],
@@ -37,7 +37,7 @@ monaco.languages.setMonarchTokensProvider('scarp', {
   keywords: [
     'bind', 'var', 'funcra', 'pure', 'pub', 'return', 'if', 'elif', 'else', 'while',
     'repeat', 'as', 'break', 'continue', 'import', 'and', 'or', 'not', 'true',
-    'false', 'integer', 'float', 'boolean', 'string', 'unit', 'vector', 'tile',
+    'false', 'assert', 'integer', 'float', 'boolean', 'string', 'unit', 'vector', 'tile',
     'needs', 'ensures', 'tuple', 'read_line', 'text_to_integer', 'text_to_float',
     'integer_to_text', 'float_to_text', 'text_trim', 'text_replace',
     'println', 'print', 'write', 'eprint', 'ewrite',

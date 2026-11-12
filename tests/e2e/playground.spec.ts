@@ -1,4 +1,10 @@
 import { expect, test } from '@playwright/test';
+import { readFileSync } from 'node:fs';
+
+// Playwright runs in Node.js, not Vite: read JSON without an ESM JSON import.
+const compilerCompatibility = JSON.parse(
+  readFileSync(new URL('../../compiler-compatibility.json', import.meta.url), 'utf8'),
+) as { version: string; releaseUrl: string };
 
 // These tests deliberately use the built Rust/WASM compiler, not mock responses.
 // The preview server serves the same /scarp-playground/ base path as GitHub Pages.
@@ -7,9 +13,9 @@ test('boots the real interpreter and executes the official hello sample', async 
   await expect(page.getByRole('heading', { name: 'Code. Run. Learn.' })).toBeVisible();
   await expect(page.getByText('Development preview', { exact: true })).toBeVisible();
   // The embedded compiler is pinned independently of Playground's own published v0.0.2 tag.
-  await expect(page.getByText('Scarp v0.0.6-alpha.7', { exact: true })).toBeVisible();
+  await expect(page.getByText('Scarp v' + compilerCompatibility.version, { exact: true })).toBeVisible();
   await expect(page.getByRole('link', { name: /Compiler release notes/ }))
-    .toHaveAttribute('href', 'https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.7');
+    .toHaveAttribute('href', compilerCompatibility.releaseUrl);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
   await expect(page.locator('.result-status.success')).toBeVisible();

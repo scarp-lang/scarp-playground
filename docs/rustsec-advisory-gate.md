@@ -14,7 +14,7 @@ The `Playground CI and Pages` workflow has a separate
 checks. This job:
 
 1. Checks out the exact PR or main-branch commit.
-2. Verifies npm/Cargo dependency sources and the Scarp alpha.2 source
+2. Verifies npm/Cargo dependency sources and the Scarp alpha.8 source
    SHA through the existing local lockfile provenance checker.
 3. Installs a version-selected `cargo-audit 0.22.2` from its Cargo.lock.
 4. Runs `cargo audit --file bridge/Cargo.lock`, fetching fresh RustSec

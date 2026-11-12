@@ -71,7 +71,7 @@ WASM build and real Chromium/Firefox/WebKit end-to-end suite. Browser E2E
 verifies the official cross-file import example, collision rejection, stale
 preview cancellation and correct output after renaming.
 
-This feature uses the pinned Scarp v0.0.6-alpha.7 compiler index, without a
+This feature uses the pinned Scarp v0.0.6-alpha.8 compiler index, without a
 compiler repository mutation or new Playground prerelease.
 
 ## Undo an applied symbol rename

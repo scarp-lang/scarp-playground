@@ -17,6 +17,14 @@ describe('Scarp editor syntax hints', () => {
       kind: 'snippet', replaceLength: 3,
     });
     expect(editorCompletionHints('whi', 'main.srp', files).map((x) => x.label)).toContain('while');
+    const assertion = editorCompletionHints('ass', 'main.srp', files).find((item) => item.label === 'assert');
+    expect(assertion).toEqual({
+      label: 'assert',
+      insertText: 'assert(${1:true}, "${2:reason}");',
+      detail: 'Check a Boolean condition with an optional literal message',
+      kind: 'snippet',
+      replaceLength: 3,
+    });
     expect(editorCompletionHints('zz', 'main.srp', files)).toEqual([]);
   });
 

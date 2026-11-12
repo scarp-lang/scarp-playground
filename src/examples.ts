@@ -233,6 +233,14 @@ write("done");
     },
   },
   {
+    title: 'Boolean assertions',
+    description: 'Check typed program invariants (alpha.8)',
+    entry: 'main.srp',
+    files: {
+      'main.srp': "// Official Scarp v0.0.6-alpha.8 examples/assertions.srp\npure funcra nonnegative(value: integer) -> integer {\n    assert(value >= 0, \"value must be nonnegative\");\n    return value;\n}\n\nvar sum = 0;\nrepeat 3 as index {\n    assert(index < 3);\n    sum += nonnegative(index);\n}\nassert(sum == 3, \"sum of 0, 1, 2 is 3\");\nprint(sum);\n",
+    },
+  },
+  {
     title: 'Import a module',
     description: 'Two real .srp source files',
     entry: 'main.srp',

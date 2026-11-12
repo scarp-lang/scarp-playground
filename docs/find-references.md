@@ -1,7 +1,7 @@
 # Compiler-backed Find References
 
 Scarp Playground's **Find references** command (Shift+F12 in Monaco)
-uses the published Scarp **v0.0.6-alpha.6** symbol index, not a text
+uses the published Scarp **v0.0.6-alpha.8** symbol index, not a text
 search or an AI guess.
 
 Place the cursor inside a resolved symbol and press Shift+F12, or select

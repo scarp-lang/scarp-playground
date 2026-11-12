@@ -1,6 +1,6 @@
 # Locked dependency provenance and advisory review
 
-**Status:** development-preview security gate, November 6, 2026.
+**Status:** development-preview security gate, reviewed 12 November 2026.
 
 Scarp Playground builds static assets on GitHub Actions with both
 `package-lock.json` and `bridge/Cargo.lock` committed to the repository.
@@ -40,9 +40,13 @@ The deterministic local checker rejects:
 - A Cargo registry crate whose origin differs from crates.io's official
   index or whose entry omits a 64-digit SHA-256 checksum.
 - The Scarp compiler moving away from the published
-  **v0.0.6-alpha.2** revision
-  `398b8ff705154a02423fe458ce3a427401e81e31`.
-  Both the Cargo manifest and lockfile must match this reviewed revision.
+  **v0.0.6-alpha.8** release-source revision
+  `37253e7805c0ca594560700dd1deb3928458e60d`.
+  The Cargo manifest and lockfile must match this reviewed revision.
+- Browser-displayed compatibility metadata whose compiler version, immutable
+  revision or release URL diverges from the same independent reviewed pin.
+  `compiler-compatibility.json` is loaded by the UI and the boot test but
+  checked against independent constants before deployment.
 - Any unexpected extra local Cargo crate or alternate Git dependency.
 
 The npm graph currently contains **bundled subdependencies** inside the
