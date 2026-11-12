@@ -118,17 +118,41 @@ export function validateCargoLock(manifestText, lockText) {
   return { errors, packages: entries.length, registryCount };
 }
 
+/** The visible browser version may never drift from the reviewed Rust pin. */
+export function validateCompilerMetadata(metadata) {
+  const errors = [];
+  if (!metadata || typeof metadata !== 'object' || Array.isArray(metadata)) {
+    return { errors: ['Missing or invalid compiler compatibility metadata.'] };
+  }
+  if (metadata.version !== REVIEWED_SCARP_VERSION) {
+    errors.push('Browser compiler version differs from the reviewed Rust version.');
+  }
+  if (metadata.commit !== REVIEWED_SCARP_COMMIT) {
+    errors.push('Browser compiler commit differs from the reviewed Rust pin.');
+  }
+  const expectedReleaseUrl =
+    'https://github.com/scarp-lang/scarp/releases/tag/v' + REVIEWED_SCARP_VERSION;
+  if (metadata.releaseUrl !== expectedReleaseUrl) {
+    errors.push('Browser compiler release URL does not match the reviewed version.');
+  }
+  if (Object.keys(metadata).sort().join(',') !== 'commit,releaseUrl,version') {
+    errors.push('Compiler compatibility metadata contains unexpected fields.');
+  }
+  return { errors };
+}
+
 export function validateProjectFiles(rootDir) {
   const read = (path) => readFileSync(resolve(rootDir, path), 'utf8');
   return {
     npm: validateNpmLock(JSON.parse(read('package.json')), JSON.parse(read('package-lock.json'))),
     cargo: validateCargoLock(read('bridge/Cargo.toml'), read('bridge/Cargo.lock')),
+    compatibility: validateCompilerMetadata(JSON.parse(read('compiler-compatibility.json'))),
   };
 }
 
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const { npm, cargo } = validateProjectFiles(resolve('.'));
-  const errors = [...npm.errors, ...cargo.errors];
+  const { npm, cargo, compatibility } = validateProjectFiles(resolve('.'));
+  const errors = [...npm.errors, ...cargo.errors, ...compatibility.errors];
   if (errors.length) {
     process.stderr.write(errors.map((message) => 'Dependency lock violation: ' + message).join('\n') + '\n');
     process.exitCode = 1;
