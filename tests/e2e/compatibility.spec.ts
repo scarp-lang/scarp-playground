@@ -59,3 +59,19 @@ test('recovers from a bounded interpreter failure in a fresh worker', async ({ p
   await expect(page.locator('.stdout')).toHaveText('recovered\n', { timeout: 30_000 });
   await expect(page.locator('.error-panel')).toHaveCount(0);
 });
+
+test('alpha.8 assertions fail atomically and recover in a fresh Worker across browsers', async ({ page }) => {
+  await page.goto('./#code=' + encodeURIComponent(
+    'print("before"); assert(false, "compatibility failure");',
+  ));
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.error-title')).toContainText('E0065', { timeout: 30_000 });
+  await expect(page.locator('.stdout')).toHaveCount(0);
+
+  await page.goto('./#code=' + encodeURIComponent(
+    'assert(true); print("after");',
+  ));
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('after\n', { timeout: 30_000 });
+  await expect(page.locator('.error-panel')).toHaveCount(0);
+});
