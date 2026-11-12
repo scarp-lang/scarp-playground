@@ -70,7 +70,10 @@ Playground:** the browser still runs Scarp modules exclusively through
 `MemorySourceLoader` without OS or server filesystem access.
 
 Do not change the compiler Git revision without rerunning the real interpreter
-tests and updating this compatibility table. The original Playground `v0.0.1` alpha archive embeds compiler alpha.3,
+tests and updating this compatibility table. The live compatibility badge and
+Playwright boot test share `compiler-compatibility.json`; lock verification
+independently checks the exact version, immutable source revision and release URL
+to prevent silent version drift. The original Playground `v0.0.1` alpha archive embeds compiler alpha.3,
 whereas the separately tagged `v0.0.2` alpha archive embeds compiler alpha.4.
 Updating `main` does not modify either historical release.
 
