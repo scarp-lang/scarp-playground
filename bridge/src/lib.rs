@@ -570,7 +570,7 @@ mod tests {
             ("main.srp", "assert(2 + 2 == 4, \"arithmetic holds\"); print(3);"),
         ]))).unwrap();
         assert_eq!(result["ok"], true, "{result}");
-        assert_eq!(result["stdout"], "3\\n");
+        assert_eq!(result["stdout"], "3\n");
         assert_eq!(result["stderr"], "");
     }
 
