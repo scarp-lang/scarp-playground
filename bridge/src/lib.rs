@@ -565,6 +565,39 @@ mod tests {
 
 
     #[test]
+    fn alpha8_assertions_run_through_the_real_bounded_interpreter() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", "assert(2 + 2 == 4, \"arithmetic holds\"); print(3);"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "3\\n");
+        assert_eq!(result["stderr"], "");
+    }
+
+    #[test]
+    fn alpha8_assertion_failure_in_import_is_source_located_and_discards_stdout() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", "import \"lib/math.srp\" as math; print(\"before\"); print(math.double(-2));"),
+            ("lib/math.srp", "pub pure funcra double(value: integer) -> integer { assert(value >= 0, \"positive input required\"); return value * 2; }"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["stdout"], "", "{result}");
+        assert_eq!(result["diagnostic"]["schema_version"], 1);
+        assert_eq!(result["diagnostic"]["code"], "E0065");
+        assert_eq!(result["diagnostic"]["primary"]["path"], "lib/math.srp");
+    }
+
+    #[test]
+    fn alpha8_playground_check_evaluates_reachable_assertions() {
+        let result: Value = serde_json::from_str(&check_request(&request(&[
+            ("main.srp", "assert(false, \"reached by check\");"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["stdout"], "");
+        assert_eq!(result["diagnostic"]["code"], "E0065");
+    }
+
+    #[test]
     fn rename_updates_only_the_compiler_resolved_symbol_across_imports() {
         let main = "import \"left.srp\" as left; import \"right.srp\" as right; print(left.twice(7), right.twice(9));";
         let request = json!({
