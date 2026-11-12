@@ -39,7 +39,7 @@ export function createBulkEditUndo(
   }
 
   if (label === 'file removal') {
-    if (moved || !removed || !validPath(removed) ||
+    if (moved || duplicated || !removed || !validPath(removed) ||
         !Object.hasOwn(before.files, removed) ||
         Object.hasOwn(after.files, removed) ||
         oldPaths.length !== newPaths.length + 1 ||
