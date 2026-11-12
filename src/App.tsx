@@ -20,6 +20,7 @@ import { MAX_FILES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
+import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
 import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
 
@@ -75,6 +76,7 @@ export function App() {
   const [replacePreview, setReplacePreview] = useState<{
     snapshot: Workspace; plan: Extract<ReplacePlan, { ok: true }>;
   } | null>(null);
+  const [lastBulkEdit, setLastBulkEdit] = useState<BulkEditUndo | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const executionScope = useRef(new ExecutionScope());
@@ -104,6 +106,12 @@ export function App() {
   const files = Object.keys(workspace.files);
   const searchResult = useMemo(() =>
     searchProjectFiles(workspace.files, searchQuery), [workspace.files, searchQuery]);
+
+  // A normal editor change or project switch makes the previous undo token stale.
+  // Only the exact post-edit workspace remains eligible for atomic restoration.
+  useEffect(() => {
+    if (lastBulkEdit && workspace !== lastBulkEdit.after) setLastBulkEdit(null);
+  }, [workspace, lastBulkEdit]);
 
   useEffect(() => {
     if (searchOpen) searchInputRef.current?.focus();
@@ -146,11 +154,33 @@ export function App() {
     // Apply the entire validated replacement atomically; remount Monaco models
     // so stale editor buffers cannot overwrite an updated secondary file.
     const { plan } = replacePreview;
+    const undoToken = createBulkEditUndo(workspace, plan.workspace, 'project-wide replacement');
+    if (!undoToken) {
+      setReplacePreview(null);
+      setNotice('Unable to prepare an atomic workspace replacement. No edits were made.');
+      return;
+    }
     invalidateExecution();
     setWorkspace(plan.workspace);
+    setLastBulkEdit(undoToken);
     setEditorSession(previous => previous + 1);
     setNotice('Replaced ' + plan.changes + ' literal text occurrence(s) in ' +
       plan.changedFiles.length + ' .srp file(s). Check the program before running.');
+  }
+
+  function undoLastBulkChange() {
+    const original = undoBulkEdit(workspace, lastBulkEdit);
+    if (!original || !lastBulkEdit) {
+      setLastBulkEdit(null);
+      setNotice('The previous bulk change is no longer safe to undo.');
+      return;
+    }
+    const label = lastBulkEdit.label;
+    invalidateExecution();
+    setWorkspace(original);
+    setLastBulkEdit(null);
+    setEditorSession(previous => previous + 1);
+    setNotice('Undid the last ' + label + ' across all affected files.');
   }
 
   function invalidateExecution() {
@@ -340,7 +370,14 @@ export function App() {
     const { old_name, new_name, changes, changed_files, files: renamedFiles } = renamePreview;
     invalidateExecution();
     // Monaco models intentionally remount for this atomic multi-file change.
-    setWorkspace({ entry: workspace.entry, files: { ...renamedFiles } });
+    const nextWorkspace = { entry: workspace.entry, files: { ...renamedFiles } };
+    const undoToken = createBulkEditUndo(workspace, nextWorkspace, 'symbol rename');
+    if (!undoToken) {
+      setNotice('Unable to prepare an atomic symbol rename. No edits were made.');
+      return;
+    }
+    setWorkspace(nextWorkspace);
+    setLastBulkEdit(undoToken);
     setEditorSession(previous => previous + 1);
     setNotice('Renamed ' + old_name + ' to ' + new_name + ' at ' + changes +
       ' compiler-resolved sites in ' + changed_files.length + ' file(s).');
@@ -754,6 +791,12 @@ export function App() {
                 onChange={(event) => void importWorkspaceFile(event)}
               />
               <button type="button" className="button-secondary" onClick={() => importFileRef.current?.click()}>Import project</button>
+              <button type="button" className="button-secondary"
+                title="Undo the latest complete symbol rename or project-wide replacement"
+                onClick={undoLastBulkChange}
+                disabled={!lastBulkEdit || workspace !== lastBulkEdit.after}>
+                Undo bulk change
+              </button>
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
               <button type="button" className="button-secondary"
                 aria-expanded={searchOpen} aria-controls="project-search-panel"
