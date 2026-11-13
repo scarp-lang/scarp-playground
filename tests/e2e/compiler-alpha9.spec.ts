@@ -45,7 +45,14 @@ test('alpha.9 Check code evaluates BigInt without returning program output', asy
 
 test('alpha.9 enforces the 2048-digit browser quota and discards partial output', async ({ page }) => {
   const source = 'print("before"); print(bigint("' + '9'.repeat(2_049) + '"));';
-  await page.goto('./#code=' + encodeURIComponent(source));
+  // Legacy #code links deliberately reject snippets over 2,000 bytes.
+  // Enter the larger regression directly through Monaco instead.
+  await page.goto('./');
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await expect(editor).toBeAttached();
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText(source);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.result-status.failure')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('.stdout')).toHaveCount(0);
