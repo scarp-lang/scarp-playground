@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.8** (published prerelease) |
-| Pinned compiler revision | `37253e7805c0ca594560700dd1deb3928458e60d` |
+| Scarp compiler | **v0.0.6-alpha.9** (published prerelease) |
+| Pinned compiler revision | `0814997dc43982eb707a9a1aee72aab3a7ac8b41` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -45,6 +45,16 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.9 adds exact signed `bigint` values with explicitly checked conversions,
+signed arithmetic and comparisons. The Playground now embeds the released
+interpreter for two real examples, including an imported typed function.
+Browser execution clamps BigInt to **2,048 decimal digits** and a **256 KiB
+cumulative limb reservation budget**, tighter than the native defaults.
+Limits are logical accounting, not a browser process-memory cap. The new
+native `scarp test --json=v2` report is a filesystem-backed CLI operation and
+is **not** exposed through the Playground. See
+[alpha.9 compatibility notes](docs/compiler-alpha9-bigint.md).
 
 Alpha.8 adds typed Boolean `assert(...)` statements with optional static
 messages and source-located E0065 failures. The browser uses the released
