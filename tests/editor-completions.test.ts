@@ -25,6 +25,16 @@ describe('Scarp editor syntax hints', () => {
       kind: 'snippet',
       replaceLength: 3,
     });
+    const bigint = editorCompletionHints('big', 'main.srp', files)
+      .find((item) => item.label === 'bigint');
+    expect(bigint).toEqual({
+      label: 'bigint',
+      insertText: 'bigint("${1:12345678901234567890}")',
+      detail: 'Parse a bounded exact decimal integer (alpha.9)',
+      kind: 'snippet', replaceLength: 3,
+    });
+    expect(editorCompletionHints('bigint_', 'main.srp', files).map((item) => item.label))
+      .toEqual(['bigint_from_integer', 'bigint_to_integer', 'bigint_abs']);
     expect(editorCompletionHints('zz', 'main.srp', files)).toEqual([]);
   });
 

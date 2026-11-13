@@ -241,6 +241,21 @@ write("done");
     },
   },
   {
+    title: 'Exact big integers',
+    description: 'Bounded exact signed arithmetic beyond i64 (alpha.9)',
+    entry: 'main.srp',
+    files: { 'main.srp': "// Scarp v0.0.6-alpha.9: published exact BigInt arithmetic example.\nbind a: bigint = bigint(\"999999999999999999999999999999\");\nbind one = bigint_from_integer(1);\nprint(a + one);\nprint(a * bigint(\"123456789\"));\nprint(-a / bigint(\"1000000000000000000\"));\nprint(-a % bigint(\"1000000000000000000\"));\nprint(a > one, bigint_abs(-a) == a, bigint_to_integer(one));\n" },
+  },
+  {
+    title: 'BigInt across modules',
+    description: 'Typed exact integers in an imported pure function (alpha.9)',
+    entry: 'main.srp',
+    files: {
+      'main.srp': "import \"modules/bigint_math.srp\" as exact;\nprint(exact.twice(bigint(\"123456789012345678901234567890\")));\n",
+      'modules/bigint_math.srp': "// Runtime constructors in exported pure functions, not folded constants.\npub pure funcra twice(n: bigint) -> bigint {\n    return n * bigint_from_integer(2);\n}\n",
+    },
+  },
+  {
     title: 'Import a module',
     description: 'Two real .srp source files',
     entry: 'main.srp',

@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.8.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.9.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions, InputLimits};
 use serde::Deserialize;
@@ -474,6 +474,10 @@ fn process_request(json_source: &str, check_only: bool) -> String {
         max_vector_bytes: 2 * 1024 * 1024,
         max_text_bytes: 2 * 1024 * 1024,
         max_tuple_bytes: 1024 * 1024,
+        // Tighter than upstream defaults: browser quotas are logical limits,
+        // not a physical Worker memory cap or protection against process OOM.
+        max_bigint_digits: 2_048,
+        max_bigint_bytes: 256 * 1024,
     };
     // Input is supplied ONLY from this request's bounded, copied text. Never
     // borrow process stdin, user filesystem, or a remote service in WebAssembly.
@@ -563,6 +567,44 @@ mod tests {
     }
 
 
+
+
+    #[test]
+    fn alpha9_exact_bigints_run_through_the_bounded_browser_bridge() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp",
+                "bind a: bigint = bigint(\"999999999999999999999999999999\"); \
+                 bind one = bigint_from_integer(1); \
+                 print(a + one); \
+                 print(-a / bigint(\"1000000000000000000\")); \
+                 print(bigint_to_integer(one));"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "1000000000000000000000000000000\\n-999999999999\\n1\\n");
+        assert_eq!(result["stderr"], "");
+    }
+
+    #[test]
+    fn alpha9_bigint_decimal_errors_discard_prior_stdout() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", "print(\"before\"); print(bigint(\"not-decimal\"));"),
+        ]))).unwrap();
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["stdout"], "");
+        assert_eq!(result["diagnostic"]["schema_version"], 1);
+        assert_eq!(result["diagnostic"]["code"], "E0051");
+    }
+
+    #[test]
+    fn alpha9_bigint_digit_budget_is_enforced_without_output() {
+        let source = format!("print(\"before\"); print(bigint(\"{}\"));", "9".repeat(2_049));
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", &source),
+        ]))).unwrap();
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["stdout"], "");
+        assert!(result["diagnostic"].is_object(), "{result}");
+    }
 
     #[test]
     fn alpha8_assertions_run_through_the_real_bounded_interpreter() {

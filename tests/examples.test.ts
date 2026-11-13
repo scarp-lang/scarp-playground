@@ -24,6 +24,15 @@ describe('shipped compiler-backed learning examples', () => {
     expect(source).toContain('if true { 7 } else { 1 / 0 }');
   });
 
+  it('ships the published alpha.9 BigInt fixtures without JS arithmetic emulation', () => {
+    const arithmetic = examples.find((example) => example.title === 'Exact big integers');
+    expect(arithmetic?.files['main.srp']).toContain('bind a: bigint = bigint(');
+    expect(arithmetic?.files['main.srp']).toContain('bigint_to_integer(one)');
+    const modules = examples.find((example) => example.title === 'BigInt across modules');
+    expect(modules?.files['main.srp']).toContain('exact.twice(bigint(');
+    expect(modules?.files['modules/bigint_math.srp']).toContain('pub pure funcra twice(n: bigint) -> bigint');
+  });
+
   it('ships the released alpha.8 assertion fixture with no obsolete prerelease caveat', () => {
     const fixture = examples.find((example) => example.title === 'Boolean assertions');
     expect(fixture).toBeDefined();
