@@ -580,7 +580,7 @@ mod tests {
                  print(bigint_to_integer(one));"),
         ]))).unwrap();
         assert_eq!(result["ok"], true, "{result}");
-        assert_eq!(result["stdout"], "1000000000000000000000000000000\\n-999999999999\\n1\\n");
+        assert_eq!(result["stdout"], "1000000000000000000000000000000\n-999999999999\n1\n");
         assert_eq!(result["stderr"], "");
     }
 
