@@ -66,6 +66,29 @@ export function hasSupportedDiagnosticEncoding(diagnostic: CompilerDiagnostic): 
  * Markers are added only when the exact file is in the current virtual
  * workspace and the compiler announces the understood schema/encoding.
  */
+/**
+ * Resolve a compiler-owned source span to a safe editor cursor target.
+ * The location must belong to a known workspace file and advertise the
+ * supported diagnostic encoding. A bad source position never moves Monaco.
+ */
+export function diagnosticNavigationPosition(
+  files: Readonly<Record<string, string>>,
+  diagnostic: CompilerDiagnostic | null | undefined,
+  location: DiagnosticLocation | null | undefined,
+): { path: string; line: number; column: number } | null {
+  if (!diagnostic || !hasSupportedDiagnosticEncoding(diagnostic) || !location ||
+      !Object.hasOwn(files, location.path)) return null;
+  const source = files[location.path];
+  if (typeof source !== 'string') return null;
+  const range = sourceLocationToEditorRange(source, location);
+  if (!range) return null;
+  return {
+    path: location.path,
+    line: range.startLineNumber,
+    column: range.startColumn,
+  };
+}
+
 export function diagnosticLocations(
   diagnostic: CompilerDiagnostic | null | undefined,
 ): Array<{ location: DiagnosticLocation; message: string; isPrimary: boolean }> {

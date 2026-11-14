@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   diagnosticLocations,
+  diagnosticNavigationPosition,
   hasSupportedDiagnosticEncoding,
   scalarToUtf16Column,
   sourceLocationToEditorRange,
@@ -114,6 +115,48 @@ describe('compiler schema-v1 diagnostic coordinates', () => {
     expect(hasSupportedDiagnosticEncoding({ ...diagnostic, column_encoding: 'utf-16' })).toBe(false);
     expect(hasSupportedDiagnosticEncoding({ ...diagnostic, schema_version: 2 })).toBe(false);
     expect(diagnosticLocations({ ...diagnostic, span_encoding: undefined })).toEqual([]);
+  });
+
+  it('navigates primary and related spans with Unicode scalar-to-UTF-16 mapping', () => {
+    const files = {
+      'math.srp': 'print("first");\n😀unknown()',
+      'main.srp': '😀bind n = 1;',
+    };
+    const primary = {
+      path: 'math.srp',
+      start: { line: 2, column: 2 },
+      end: { line: 2, column: 9 },
+    };
+    const related = {
+      path: 'main.srp',
+      start: { line: 1, column: 2 },
+      end: { line: 1, column: 6 },
+    };
+    expect(diagnosticNavigationPosition(files, diagnostic, primary)).toEqual({
+      path: 'math.srp', line: 2, column: 3,
+    });
+    expect(diagnosticNavigationPosition(files, diagnostic, related)).toEqual({
+      path: 'main.srp', line: 1, column: 3,
+    });
+  });
+
+  it('refuses unsupported, missing and out-of-range diagnostic navigation', () => {
+    const files = { 'main.srp': 'bind value = 1;' };
+    expect(diagnosticNavigationPosition(files, diagnostic, null)).toBeNull();
+    expect(diagnosticNavigationPosition(files, {
+      ...diagnostic, column_encoding: 'utf-16',
+    }, diagnostic.primary)).toBeNull();
+    expect(diagnosticNavigationPosition(files, diagnostic, diagnostic.primary)).toBeNull();
+    expect(diagnosticNavigationPosition(files, diagnostic, {
+      path: 'main.srp',
+      start: { line: 2, column: 1 },
+      end: { line: 2, column: 2 },
+    })).toBeNull();
+    expect(diagnosticNavigationPosition(files, diagnostic, {
+      path: '__proto__',
+      start: { line: 1, column: 1 },
+      end: { line: 1, column: 2 },
+    })).toBeNull();
   });
 
   it('retains the primary and file-specific related locations', () => {
