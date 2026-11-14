@@ -34,7 +34,13 @@ describe('Scarp editor syntax hints', () => {
       kind: 'snippet', replaceLength: 3,
     });
     expect(editorCompletionHints('bigint_', 'main.srp', files).map((item) => item.label))
-      .toEqual(['bigint_from_integer', 'bigint_to_integer', 'bigint_abs']);
+      .toEqual(expect.arrayContaining(['bigint_from_integer', 'bigint_to_integer', 'bigint_abs', 'bigint_pow', 'bigint_divmod']));
+    expect(editorCompletionHints('arr', 'main.srp', files).map((item) => item.label))
+      .toEqual(['array literal', 'array type']);
+    expect(editorCompletionHints('try_read', 'main.srp', files)[0]?.insertText)
+      .toBe('try_read_line()');
+    expect(editorCompletionHints('read_line_o', 'main.srp', files)[0]?.label)
+      .toBe('read_line_or');
     expect(editorCompletionHints('zz', 'main.srp', files)).toEqual([]);
   });
 
