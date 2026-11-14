@@ -9,7 +9,7 @@ test('clicking a compiler error focuses the exact token in an imported module', 
   await editor.focus();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.insertText(
-    'pub pure funcra twice(n: integer) -> integer {\n  return missing;\n}\n',
+    'pub pure funcra twice(n: integer) -> integer { return missing; }\n',
   );
   await page.getByRole('tab', { name: /main.srp/ }).click();
   await page.getByRole('button', { name: 'Run code' }).click();
