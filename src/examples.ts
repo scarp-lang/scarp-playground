@@ -255,6 +255,69 @@ write("done");
       'modules/bigint_math.srp': "// Runtime constructors in exported pure functions, not folded constants.\npub pure funcra twice(n: bigint) -> bigint {\n    return n * bigint_from_integer(2);\n}\n",
     },
   },
+
+  {
+    title: 'Fixed-size arrays',
+    description: 'Immutable typed arrays, indexing and nesting (alpha.10)',
+    entry: 'main.srp',
+    files: {
+      // Published compiler examples/fixed_arrays.srp.
+      'main.srp': `pure funcra labels(values: array<string, 2> = [array: "नमस्ते", "Scarp"])
+    -> array<string, 2> ensures result == values; {
+    return values;
+}
+var index = 1;
+bind grid = [array: [array: 1, 2], [array: 3, 4]];
+bind empty = [array: <array<integer, 2>>];
+print(labels()[index], grid[index][0], empty);
+print(labels(), grid[0] == [array: 1, 2]);
+`,
+    },
+  },
+  {
+    title: 'Advanced BigInt',
+    description: 'Exact divmod, powers, radix and GCD (alpha.10)',
+    entry: 'main.srp',
+    files: {
+      // Published compiler examples/bigint_exact.srp.
+      'main.srp': `bind amount = bigint("1000000000000000000000000000007");
+bind parts = bigint_divmod(amount, bigint("9"));
+print(parts[0], parts[1]);
+
+bind width = bigint_pow(bigint("2"), 128);
+print(bigint_bit_length(width), bigint_to_radix(width, 16));
+print(bigint_sqrt(width), bigint_gcd(bigint("-84"), bigint("30")));
+`,
+    },
+  },
+  {
+    title: 'EOF-aware input',
+    description: 'Distinguish blank UTF-8 lines from EOF (alpha.10)',
+    entry: 'main.srp',
+    files: {
+      // Published compiler examples/line_inventory.srp.
+      'main.srp': `// Read explicit UTF-8 input, preserving blank lines.
+var entries: integer = 0;
+var line = try_read_line();
+while line[0] {
+    entries += 1;
+    print(entries, "[", line[1], "]");
+    line = try_read_line();
+}
+print("Lines:", entries);
+`,
+    },
+    stdin: 'नमस्ते\n\ncafé 🌍',
+  },
+  {
+    title: 'Input with fallback',
+    description: 'Read a line or select a default at EOF (alpha.10)',
+    entry: 'main.srp',
+    files: {
+      'main.srp': 'bind first = read_line_or("Anonymous");\nbind second = read_line_or("Guest");\nprint(first, second);\n',
+    },
+    stdin: 'Ada\n',
+  },
   {
     title: 'Import a module',
     description: 'Two real .srp source files',

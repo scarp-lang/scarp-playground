@@ -52,8 +52,8 @@ checksum = "cf54715a573b99ac80df0bc206da022bcd442c974952c7b9720069370852e21f"
 
 [[package]]
 name = "scarp"
-version = "0.0.6-alpha.9"
-source = "git+https://github.com/scarp-lang/scarp?rev=0814997dc43982eb707a9a1aee72aab3a7ac8b41#0814997dc43982eb707a9a1aee72aab3a7ac8b41"
+version = "0.0.6-alpha.10"
+source = "git+https://github.com/scarp-lang/scarp?rev=44fcd0f77ccb92648cdb1fc7632495c506c87cb3#44fcd0f77ccb92648cdb1fc7632495c506c87cb3"
 
 [[package]]
 name = "scarp-playground-wasm"

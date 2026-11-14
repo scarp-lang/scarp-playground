@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.9.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.10.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions, InputLimits};
 use serde::Deserialize;
@@ -478,6 +478,9 @@ fn process_request(json_source: &str, check_only: bool) -> String {
         // not a physical Worker memory cap or protection against process OOM.
         max_bigint_digits: 2_048,
         max_bigint_bytes: 256 * 1024,
+        // Alpha.10 adds cumulative immutable array allocations.
+        // This logical budget is not a physical WASM memory cap.
+        max_array_bytes: 1024 * 1024,
     };
     // Input is supplied ONLY from this request's bounded, copied text. Never
     // borrow process stdin, user filesystem, or a remote service in WebAssembly.
@@ -568,6 +571,78 @@ mod tests {
 
 
 
+
+
+    #[test]
+    fn alpha10_fixed_arrays_match_published_fixture() {
+        let source = r#"pure funcra labels(values: array<string, 2> = [array: "नमस्ते", "Scarp"])
+    -> array<string, 2> ensures result == values; {
+    return values;
+}
+var index = 1;
+bind grid = [array: [array: 1, 2], [array: 3, 4]];
+bind empty = [array: <array<integer, 2>>];
+print(labels()[index], grid[index][0], empty);
+print(labels(), grid[0] == [array: 1, 2]);
+"#;
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", source)]),
+        )).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], r#"Scarp 3 [array: <array<integer, 2>>]
+[array: "नमस्ते", "Scarp"] true
+"#);
+        assert_eq!(result["stderr"], "");
+    }
+
+    #[test]
+    fn alpha10_advanced_bigints_match_published_fixture() {
+        let source = r#"bind amount = bigint("1000000000000000000000000000007");
+bind parts = bigint_divmod(amount, bigint("9"));
+print(parts[0], parts[1]);
+
+bind width = bigint_pow(bigint("2"), 128);
+print(bigint_bit_length(width), bigint_to_radix(width, 16));
+print(bigint_sqrt(width), bigint_gcd(bigint("-84"), bigint("30")));
+"#;
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", source)]),
+        )).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "111111111111111111111111111111 8\n129 100000000000000000000000000000000\n18446744073709551616 6\n");
+    }
+
+    #[test]
+    fn alpha10_try_read_line_distinguishes_empty_line_from_eof() {
+        let input = json!({
+            "entry": "main.srp",
+            "files": {"main.srp": r#"bind first = try_read_line();
+print(first[0], first[1]);
+bind blank = try_read_line();
+print(blank[0], blank[1] == "");
+bind eof = try_read_line();
+print(eof[0], eof[1] == "");
+"#},
+            "stdin": "नमस्ते\r\n\n"
+        }).to_string();
+        let result: Value = serde_json::from_str(&execute_request(&input)).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "true नमस्ते\ntrue true\nfalse true\n");
+    }
+
+    #[test]
+    fn alpha10_interactive_prompt_has_no_noninteractive_browser_capability() {
+        let input = json!({
+            "entry": "main.srp",
+            "files": {"main.srp": r#"print("before"); print(ask_or("Name> ", "Guest"));"#},
+            "stdin": "Ada\n"
+        }).to_string();
+        let result: Value = serde_json::from_str(&execute_request(&input)).unwrap();
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["diagnostic"]["code"], "E0054", "{result}");
+        assert_eq!(result["stdout"], "");
+        assert_eq!(result["stderr"], "");
+    }
 
     #[test]
     fn alpha9_exact_bigints_run_through_the_bounded_browser_bridge() {

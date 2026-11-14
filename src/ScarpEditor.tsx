@@ -42,6 +42,12 @@ monaco.languages.setMonarchTokensProvider('scarp', {
     'bigint_to_integer', 'bigint_abs', 'read_line', 'text_to_integer', 'text_to_float',
     'integer_to_text', 'float_to_text', 'text_trim', 'text_replace',
     'println', 'print', 'write', 'eprint', 'ewrite',
+    'try_read_line', 'read_line_or', 'input', 'ask', 'ask_or',
+    'input_integer', 'input_float', 'input_bigint', 'flush_stdout', 'flush_stderr',
+    'bigint_pow', 'bigint_gcd', 'bigint_lcm', 'bigint_sqrt', 'bigint_bit_length',
+    'bigint_to_text', 'bigint_from_radix', 'bigint_to_radix', 'bigint_and',
+    'bigint_or', 'bigint_xor', 'bigint_not', 'bigint_shl', 'bigint_shr',
+    'bigint_pow_mod', 'bigint_divmod',
   ],
   tokenizer: {
     root: [

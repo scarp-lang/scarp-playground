@@ -33,6 +33,21 @@ describe('shipped compiler-backed learning examples', () => {
     expect(modules?.files['modules/bigint_math.srp']).toContain('pub pure funcra twice(n: bigint) -> bigint');
   });
 
+  it('ships alpha.10 arrays, BigInt arithmetic and explicit input examples', () => {
+    const arrays = examples.find((example) => example.title === 'Fixed-size arrays');
+    expect(arrays?.files['main.srp']).toContain('[array: [array: 1, 2]');
+    expect(arrays?.files['main.srp']).toContain('array<string, 2>');
+    const bigints = examples.find((example) => example.title === 'Advanced BigInt');
+    expect(bigints?.files['main.srp']).toContain('bigint_divmod(');
+    expect(bigints?.files['main.srp']).toContain('bigint_pow(');
+    const input = examples.find((example) => example.title === 'EOF-aware input');
+    expect(input?.files['main.srp']).toContain('try_read_line()');
+    expect(input?.stdin).toContain('café 🌍');
+    const fallback = examples.find((example) => example.title === 'Input with fallback');
+    expect(fallback?.files['main.srp']).toContain('read_line_or("Guest")');
+    expect(fallback?.stdin).toBe('Ada\n');
+  });
+
   it('ships the released alpha.8 assertion fixture with no obsolete prerelease caveat', () => {
     const fixture = examples.find((example) => example.title === 'Boolean assertions');
     expect(fixture).toBeDefined();

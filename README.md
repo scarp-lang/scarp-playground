@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.9** (published prerelease) |
-| Pinned compiler revision | `0814997dc43982eb707a9a1aee72aab3a7ac8b41` |
+| Scarp compiler | **v0.0.6-alpha.10** (published prerelease) |
+| Pinned compiler revision | `44fcd0f77ccb92648cdb1fc7632495c506c87cb3` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -45,6 +45,15 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.10 adds immutable fixed arrays, exact BigInt operations, and EOF-aware
+buffered input through `try_read_line()` / `read_line_or()`. The browser uses
+an additional **1 MiB fixed-array allocation budget**; examples exercise the
+published compiler's array, number-theory and Unicode input fixtures. Native
+CLI interactive prompts (`input`, `ask`, `ask_or`, `--interactive`) are **not
+enabled** in the browser's noninteractive Worker. Only the explicit 16 KiB
+ephemeral input box supplies stdin. See
+[alpha.10 integration notes](docs/compiler-alpha10-integration.md).
 
 Alpha.9 adds exact signed `bigint` values with explicitly checked conversions,
 signed arithmetic and comparisons. The Playground now embeds the released
