@@ -14,9 +14,9 @@ import { findReferences, type SourceRange } from './navigation/references';
 import { previewSymbolRename, validRenameName, type RenameResult } from './navigation/rename';
 import { buildRenameDiff } from './navigation/rename-diff';
 import { initialReferenceIndex, stepReferenceIndex } from './navigation/reference-view';
-import { sourceLocationToEditorRange } from './diagnostics';
+import { diagnosticNavigationPosition, sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
-import type { RunResult } from './runner/types';
+import type { DiagnosticLocation, RunResult } from './runner/types';
 import { MAX_FILES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
@@ -255,6 +255,8 @@ export function App() {
     setRunning(true);
     setOperation(mode);
     setResult(null);
+    // A new compiler result must not inherit a previous cursor target.
+    setNavigationTarget(null);
     setNotice(null);
     setReferenceResult(null);
     setSelectedReferenceIndex(-1);
@@ -264,10 +266,15 @@ export function App() {
         : await runWorkspace(workspace, execution.controller.signal, programInput);
       if (!executionScope.current.isCurrent(execution)) return;
       setResult(response);
-      // Open the originating virtual file only for the snapshot that ran.
-      const sourcePath = response.diagnostic?.primary?.path;
-      if (!response.ok && sourcePath && Object.hasOwn(workspace.files, sourcePath)) {
-        setActiveFile(sourcePath);
+      // Navigate only to a valid source span from this exact execution snapshot.
+      const target = !response.ok
+        ? diagnosticNavigationPosition(workspace.files, response.diagnostic, response.diagnostic?.primary)
+        : null;
+      if (target) {
+        setActiveFile(target.path);
+        setNavigationTarget(previous => ({
+          ...target, sequence: (previous?.sequence ?? 0) + 1,
+        }));
       }
     } catch (problem) {
       if (!executionScope.current.isCurrent(execution)) return;
@@ -281,6 +288,22 @@ export function App() {
       if (executionScope.current.finish(execution)) setRunning(false);
     }
   }, [workspace, programInput]);
+
+  function jumpToCompilerDiagnostic(location: DiagnosticLocation | null | undefined) {
+    const target = diagnosticNavigationPosition(workspace.files, result?.diagnostic, location);
+    if (!target) {
+      setNotice('This diagnostic location is unavailable in the current source.');
+      return;
+    }
+    // Repeated clicks on the same link must still move the cursor after editing
+    // or manual navigation. Incrementing sequence retriggers the Monaco effect.
+    setActiveFile(target.path);
+    setNavigationTarget(previous => ({
+      ...target, sequence: (previous?.sequence ?? 0) + 1,
+    }));
+    setNotice('Opened compiler location ' + target.path + ':' +
+      location!.start.line + ':' + location!.start.column + '.');
+  }
 
   const locateReferences = useCallback(async (
     path: string, line: number, column: number, source: string,
@@ -1535,8 +1558,8 @@ export function App() {
                               className="diagnostic-jump"
                               aria-label={'Go to error in ' + location.path}
                               title="Jump to the compiler error location"
-                              disabled={!Object.hasOwn(workspace.files, location.path)}
-                              onClick={() => setActiveFile(location.path)}
+                              disabled={!diagnosticNavigationPosition(workspace.files, diagnostic, location)}
+                              onClick={() => jumpToCompilerDiagnostic(location)}
                             >
                               {location.path + ':' + location.start.line + ':' + location.start.column}
                             </button>
@@ -1550,8 +1573,8 @@ export function App() {
                           key={index}
                           type="button"
                           className="diagnostic-related"
-                          disabled={!Object.hasOwn(workspace.files, note.location.path)}
-                          onClick={() => { if (note.location) setActiveFile(note.location.path); }}
+                          disabled={!diagnosticNavigationPosition(workspace.files, diagnostic, note.location)}
+                          onClick={() => jumpToCompilerDiagnostic(note.location)}
                         >
                           {note.message + ' · ' + note.location.path + ':' +
                             note.location.start.line + ':' + note.location.start.column}

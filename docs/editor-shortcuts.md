@@ -24,6 +24,17 @@ is inconvenient. The action is available for every open Scarp source module.
 - A comment may make previously used declarations unavailable; use
   **Check code** to get authoritative compiler diagnostics after editing.
 
+## Compiler diagnostics
+
+When Check code or Run code reports a compiler error with a valid source span,
+the Playground navigates to the exact Scarp location, including an imported
+module. Clicking the error location or any related declaration link reopens the
+reported module and focuses its actual token, not merely its tab. Repeated
+clicks work even after moving the cursor. Scarp uses Unicode-scalar source
+columns; the browser converts them to Monaco UTF-16 columns so locations after
+emoji remain accurate. Unknown files and unsupported/malformed locations do not
+navigate. Editing the source clears stale diagnostic markers.
+
 ## Other editor conveniences
 
 | Shortcut or control | Action |
