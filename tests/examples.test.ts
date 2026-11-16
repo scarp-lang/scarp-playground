@@ -60,6 +60,28 @@ describe('shipped compiler-backed learning examples', () => {
     expect(input?.stdin).toBe('1.225\n');
   });
 
+
+  it('ships exactly the published alpha.12 structured data examples and multi-file task board', () => {
+    for (const title of [
+      'Data destructuring', 'Typed records and lists', 'Typed immutable maps',
+      'Option/Result propagation', 'Map projections', 'Task board across modules',
+    ]) {
+      const example = examples.find(e => e.title === title);
+      expect(example).toBeDefined();
+      expect(example!.description).toContain('alpha.12');
+      expect(validateWorkspace({ entry: example!.entry, files: example!.files })).toBeNull();
+    }
+    const task = examples.find(e => e.title === 'Task board across modules')!;
+    expect(task.files['main.srp']).toContain('tasks.apply(');
+    expect(task.files['board.srp']).toContain('pub variant Action');
+    expect(task.files['board.srp']).toContain('list_push(');
+    expect(task.files['board.srp']).toContain('map_set(');
+    expect(task.files['board.srp']).toContain('result<record Board, string>');
+    const maps = examples.find(e => e.title === 'Typed immutable maps')!;
+    expect(maps.files['main.srp']).toContain('map<boolean, string>');
+    expect(maps.files['main.srp']).toContain('map<integer, list<integer>>');
+  });
+
   it('ships the released alpha.8 assertion fixture with no obsolete prerelease caveat', () => {
     const fixture = examples.find((example) => example.title === 'Boolean assertions');
     expect(fixture).toBeDefined();
