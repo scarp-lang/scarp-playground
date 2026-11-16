@@ -9,6 +9,7 @@ type CompilerBridge = {
   default: () => Promise<unknown>;
   execute: (payload: string) => string;
   check: (payload: string) => string;
+  verify: (payload: string) => string;
   definition: (payload: string) => string;
   references: (payload: string) => string;
   rename: (payload: string) => string;
@@ -50,8 +51,9 @@ self.addEventListener('message', async (event: MessageEvent<RunRequest | Definit
       self.postMessage({ id, rename } satisfies RenameResponse);
     } else {
       const result = decodeCompilerReply(
-        mode === 'check' ? compiler.check(JSON.stringify(workspace)) :
-          compiler.execute(JSON.stringify({ ...workspace, stdin: request.stdin ?? '' })),
+        mode === 'verify' ? compiler.verify(JSON.stringify(workspace)) :
+          mode === 'check' ? compiler.check(JSON.stringify(workspace)) :
+            compiler.execute(JSON.stringify({ ...workspace, stdin: request.stdin ?? '' })),
       );
       self.postMessage({ id, result } satisfies RunResponse);
     }

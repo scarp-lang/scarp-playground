@@ -420,6 +420,27 @@ fn rename_request(json_source: &str) -> String {
     }).to_string()
 }
 
+/// Compile and resolve without evaluating user program statements.
+/// Compile-time constant evaluation may still occur under the compiler's
+/// bounded constant-expression rules; this is not an interpreter run.
+fn verify_request(json_source: &str) -> String {
+    if json_source.len() > MAX_REQUEST_JSON_BYTES {
+        return error("The compiler request exceeds the 1 MiB JSON limit.");
+    }
+    let request: Request = match serde_json::from_str(json_source) {
+        Ok(request) => request,
+        Err(_) => return error("Malformed playground request."),
+    };
+    let (entry, loader) = match load_workspace(request) {
+        Ok(loaded) => loaded,
+        Err(problem) => return error(problem),
+    };
+    match modules::compile_with_loader(&entry, &loader, module_limits()) {
+        Ok(_) => json!({ "ok": true, "stdout": "", "stderr": "" }).to_string(),
+        Err(problem) => compiler_error(problem),
+    }
+}
+
 fn execute_request(json_source: &str) -> String {
     process_request(json_source, false)
 }
@@ -531,6 +552,13 @@ pub fn execute(request_json: &str) -> String {
     execute_request(request_json)
 }
 
+/// Compile, resolve and type-check a virtual project without running
+/// program statements, input functions, assertions or runtime print calls.
+#[wasm_bindgen]
+pub fn verify(request_json: &str) -> String {
+    verify_request(request_json)
+}
+
 /// Validate an isolated module graph with the same interpreter budgets,
 /// without returning any program stdout or stderr.
 #[wasm_bindgen]
@@ -572,6 +600,52 @@ mod tests {
 
 
 
+
+    #[test]
+    fn static_verify_does_not_run_assertions_or_read_stdin() {
+        for source in [
+            r#"print("side effect"); assert(false, "reachable failure");"#,
+            r#"print(read_line());"#,
+            r#"print(decimal("not a number"));"#,
+        ] {
+            let input = request(&[("main.srp", source)]);
+            let verified: Value = serde_json::from_str(&verify_request(&input)).unwrap();
+            assert_eq!(verified["ok"], true, "{verified}");
+            assert_eq!(verified["stdout"], "", "{verified}");
+            assert_eq!(verified["stderr"], "", "{verified}");
+        }
+        let runtime: Value = serde_json::from_str(&check_request(&request(&[
+            ("main.srp", r#"assert(false, "reached");"#),
+        ]))).unwrap();
+        assert_eq!(runtime["diagnostic"]["code"], "E0065", "{runtime}");
+    }
+
+    #[test]
+    fn static_verify_reports_real_compiler_diagnostics_without_executing() {
+        for (entry, error_path) in [
+            (r#"print(missing_symbol);"#, "main.srp"),
+            (r#"import "lib/missing.srp" as missing; print(1);"#, "main.srp"),
+        ] {
+            let result: Value = serde_json::from_str(&verify_request(&request(&[
+                ("main.srp", entry),
+            ]))).unwrap();
+            assert_eq!(result["ok"], false, "{result}");
+            assert_eq!(result["stdout"], "", "{result}");
+            assert_eq!(result["stderr"], "", "{result}");
+            assert_eq!(result["diagnostic"]["schema_version"], 1, "{result}");
+            assert_eq!(result["diagnostic"]["primary"]["path"], error_path, "{result}");
+        }
+    }
+
+    #[test]
+    fn static_verify_enforces_workspace_json_and_module_limits() {
+        let excessive = "x".repeat(MAX_REQUEST_JSON_BYTES + 1);
+        let failure: Value = serde_json::from_str(&verify_request(&excessive)).unwrap();
+        assert_eq!(failure["ok"], false);
+        let missing_entry = json!({"entry":"main.srp","files":{"a.srp":"print(1);"}}).to_string();
+        let rejected: Value = serde_json::from_str(&verify_request(&missing_entry)).unwrap();
+        assert_eq!(rejected["ok"], false, "{rejected}");
+    }
 
     #[test]
     fn alpha11_decimal_fixture_has_exact_published_output() {

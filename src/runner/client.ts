@@ -9,8 +9,8 @@ const cancelled: RunResult = {
   ok: false, stdout: '', stderr: '', error: 'Execution cancelled.',
 };
 
-/** Both modes use disposable workers; abort terminates stale validation and output. */
-function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check', signal?: AbortSignal, stdin = ''): Promise<RunResult> {
+/** Each mode uses a disposable Worker. Aborting prevents stale results or output. */
+function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check' | 'verify', signal?: AbortSignal, stdin = ''): Promise<RunResult> {
   if (signal?.aborted) return Promise.resolve(cancelled);
   const problem = validateWorkspace(workspace);
   if (problem) {
@@ -103,4 +103,9 @@ export function runWorkspace(workspace: Workspace, signal?: AbortSignal, stdin =
 /** Validate Scarp with identical budgets, without emitting program output. */
 export function checkWorkspace(workspace: Workspace, signal?: AbortSignal): Promise<RunResult> {
   return evaluateWorkspace(workspace, 'check', signal);
+}
+
+/** Compile and resolve without evaluating program statements or requesting stdin. */
+export function verifyWorkspace(workspace: Workspace, signal?: AbortSignal): Promise<RunResult> {
+  return evaluateWorkspace(workspace, 'verify', signal);
 }
