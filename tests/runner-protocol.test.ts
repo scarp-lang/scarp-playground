@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeCompilerReply, decodeWorkerResult, decodeVerifyResult, MAX_COMPILER_JSON_CHARS, MAX_OUTPUT_BYTES } from '../src/runner/protocol';
+import { decodeCompilerReply, decodeWorkerResult, decodeSilentResult, decodeVerifyResult, MAX_COMPILER_JSON_CHARS, MAX_OUTPUT_BYTES } from '../src/runner/protocol';
 
 const success = { ok: true, stdout: 'Hello\\n', stderr: '' };
 const diagnostic = {
@@ -31,6 +31,33 @@ describe('bounded compiler-worker protocol', () => {
       expect(result.stdout).toBe('');
       expect(result.stderr).toBe('');
       expect(result.error).toMatch(/Invalid or oversized/);
+    }
+  });
+
+  it('rejects contradictory success or partial failure output at both protocol boundaries', () => {
+    for (const bad of [
+      { ok: false, stdout: 'leak', stderr: '', error: 'runtime failed' },
+      { ok: false, stdout: '', stderr: 'leak', error: 'runtime failed' },
+      { ok: true, stdout: '', stderr: '', error: 'contradiction' },
+      { ok: true, stdout: '', stderr: '', diagnostic },
+    ]) {
+      expect(decodeWorkerResult(bad)).toMatchObject({
+        ok: false, stdout: '', stderr: '',
+        error: expect.stringMatching(/Invalid or oversized/),
+      });
+      expect(decodeCompilerReply(JSON.stringify(bad)).error).toMatch(/Invalid or oversized/);
+    }
+  });
+
+  it('rejects stdout and stderr in Check as well as Verify, preserving valid failures', () => {
+    const failure = { ok: false, stdout: '', stderr: '', error: 'E0010', diagnostic };
+    expect(decodeSilentResult(failure)).toEqual(failure);
+    for (const output of [
+      { ...success, stdout: 'accidental output' },
+      { ...success, stderr: 'stderr from Check' },
+    ]) {
+      expect(decodeSilentResult(output).error).toMatch(/Invalid or oversized/);
+      expect(decodeVerifyResult(output).ok).toBe(false);
     }
   });
 

@@ -36,7 +36,7 @@ No response-time SLA or hardened isolation guarantee is asserted.
 
 `npm run verify:locks` checks npm tarball integrity/provenance, manifest-lock
 consistency, Cargo registry checksums and the reviewed immutable Scarp
-`v0.0.6-alpha.2` source commit. `npm run test:locks` verifies that
+`v0.0.6-alpha.11` source commit (`79b57395957f47e1270ee542a856c844b82386de`). `npm run test:locks` verifies that
 registry substitution, removed integrity and compiler pin drift are rejected.
 CI also runs `npm audit --audit-level=high` against the complete locked npm
 build/development graph before packaging. See
@@ -66,8 +66,14 @@ deserialization. The browser also validates a 128 KiB total source budget.
 The disposable Worker rejects compiler replies larger than 8 MiB of raw JSON
 text before parsing them. Worker and main-thread checks enforce a combined
 1 MiB stdout/stderr UTF-8 limit and validate schema-1 diagnostic locations
-before rendering. Invalid worker messages and cloning failures produce
-controlled errors and worker termination.
+before rendering. The browser now rejects missing/malformed workspace fields
+before allocating a Worker, and the Worker independently rejects invalid
+operation names, oversized stdin, malformed navigation positions and duplicate
+messages **before loading WASM**. Run failures must have empty stdout/stderr;
+Check and Verify must never return any program output even on success.
+See [worker request/response boundaries](docs/worker-request-boundary.md).
+Invalid worker messages and cloning failures produce controlled errors and
+worker termination.
 
 ## Production browser Content Security Policy
 
@@ -86,7 +92,7 @@ does not use the production policy. See
 
 ## Cross-operation compiler Worker capacity
 
-The Run, Check and Go to Definition browser clients share a single
+The Run, Check, Verify and compiler navigation browser clients share a single
 active compiler Worker slot. Starting a different valid operation cancels
 the previous one and terminates that Worker before allocating another.
 Aborts, timeouts and failed starts release capacity; stale worker replies

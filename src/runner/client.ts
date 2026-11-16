@@ -1,10 +1,11 @@
 import { validateWorkspace, type Workspace } from '../workspace';
 import type { RunResponse, RunResult } from './types';
-import { decodeWorkerResult, decodeVerifyResult } from './protocol';
+import { decodeWorkerResult, decodeSilentResult } from './protocol';
 import { claimCompilerWorker } from './worker-slot';
+import { MAX_PROGRAM_INPUT_BYTES } from './limits';
+export { MAX_PROGRAM_INPUT_BYTES } from './limits';
 
 const RUN_TIMEOUT_MS = 12_000;
-export const MAX_PROGRAM_INPUT_BYTES = 16 * 1024;
 const cancelled: RunResult = {
   ok: false, stdout: '', stderr: '', error: 'Execution cancelled.',
 };
@@ -76,8 +77,8 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check' | 'verify
       });
     };
     activeWorker.onmessage = (event: MessageEvent<RunResponse>) => {
-      if (event.data?.id === id) complete(mode === 'verify'
-        ? decodeVerifyResult(event.data.result) : decodeWorkerResult(event.data.result));
+      if (event.data?.id === id) complete(mode === 'run'
+        ? decodeWorkerResult(event.data.result) : decodeSilentResult(event.data.result));
     };
     activeWorker.onmessageerror = () => complete({
       ok: false, stdout: '', stderr: '',
