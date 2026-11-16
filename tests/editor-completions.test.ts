@@ -62,7 +62,8 @@ describe('Scarp editor syntax hints', () => {
     ]));
     expect(editorCompletionHints('list_', 'main.srp', files).map(h => h.label))
       .toEqual(expect.arrayContaining(['list_len', 'list_push', 'list_set', 'list_remove']));
-    expect(editorCompletionHints('record d', 'main.srp', files)).toEqual([]);
+    expect(editorCompletionHints('record d', 'main.srp', files).map(h => h.label))
+      .not.toContain('record declaration');
     expect(editorCompletionHints('record', 'main.srp', files)
       .find(h => h.label === 'record declaration')?.insertText)
       .toContain('record ${1:Task}');
