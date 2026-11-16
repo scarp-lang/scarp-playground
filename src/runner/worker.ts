@@ -1,6 +1,7 @@
 /// <reference lib="webworker" />
 import type { RunRequest, RunResponse, DefinitionRequest, DefinitionResponse, ReferencesRequest, ReferencesResponse, RenameRequest, RenameResponse } from './types';
-import { decodeCompilerReply } from './protocol';
+import { decodeCompilerReply, decodeSilentResult } from './protocol';
+import { validatedCompilerWorkerRequest, rejectedCompilerWorkerRequest } from './request';
 import { decodeDefinitionReply } from '../navigation/protocol';
 import { decodeReferencesReply } from '../navigation/references';
 import { decodeRenameReply } from '../navigation/rename';
@@ -28,8 +29,18 @@ async function loadCompiler(): Promise<CompilerBridge> {
   return loadPromise;
 }
 
-self.addEventListener('message', async (event: MessageEvent<RunRequest | DefinitionRequest | ReferencesRequest | RenameRequest>) => {
-  const request = event.data;
+let requestClaimed = false;
+self.addEventListener('message', async (event: MessageEvent<unknown>) => {
+  // Each disposable Worker handles at most one request. Never run a second
+  // program or allocate a second compiler task through a reused Worker.
+  if (requestClaimed) return;
+  requestClaimed = true;
+  const request = validatedCompilerWorkerRequest(event.data);
+  if (!request) {
+    const rejected = rejectedCompilerWorkerRequest(event.data);
+    if (rejected) self.postMessage(rejected);
+    return;
+  }
   const { id, workspace, mode } = request;
   try {
     const compiler = await loadCompiler();
@@ -55,7 +66,7 @@ self.addEventListener('message', async (event: MessageEvent<RunRequest | Definit
           mode === 'check' ? compiler.check(JSON.stringify(workspace)) :
             compiler.execute(JSON.stringify({ ...workspace, stdin: request.stdin ?? '' })),
       );
-      self.postMessage({ id, result } satisfies RunResponse);
+      self.postMessage({ id, result: mode === 'run' ? result : decodeSilentResult(result) } satisfies RunResponse);
     }
   } catch {
     const error = 'Unable to load or execute the Scarp WebAssembly compiler.';
