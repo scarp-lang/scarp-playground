@@ -247,7 +247,12 @@ alpha predates these features.
 All compilation and execution happens inside a short-lived Web Worker, not
 the React main thread. The bridge restricts file count, source bytes, imports,
 logical interpreter work, calls, output capture, numeric allocations and
-text allocations. The calling page terminates the worker after 12 seconds.
+text allocations. The calling page terminates the worker after 12 seconds. The browser validates
+workspace structure and resource ceilings before creating a Worker, and each
+one-shot Worker independently validates its message before loading WASM.
+Unknown operation modes are refused instead of falling back to execution;
+Run failures cannot expose partial stdout/stderr, and Check/Verify cannot
+return program output. See [Worker boundary tests](docs/worker-request-boundary.md).
 
 **These controls are not a hardened sandbox**. They do not impose a strict
 WebAssembly process-memory limit, and a browser crash may still occur with
