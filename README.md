@@ -183,6 +183,9 @@ load failure — it never fakes a successful program result.
   official example outputs plus domain-error and Worker-recovery tests in
   the real browser interpreter. These do not provide stochastic sampling,
   model training, GPU computation or native executable generation.
+- **Scarp alpha.11 exact decimals:** the real interpreter handles exact base-10
+  operations, typed imports and explicit rounding; ephemeral stdin is supported,
+  but native interactive prompts remain disabled in the browser.
 - **Scarp alpha.8 assertions:** use the official Rust `assert` statement for
   typed Boolean invariants; failures return source-located E0065 errors and
   suppress buffered partial stdout, including across imported modules.
