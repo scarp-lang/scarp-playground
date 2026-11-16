@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.10.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.11.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions, InputLimits};
 use serde::Deserialize;
@@ -572,6 +572,78 @@ mod tests {
 
 
 
+
+    #[test]
+    fn alpha11_decimal_fixture_has_exact_published_output() {
+        let source = r#"pure funcra taxed(price: decimal, rate: decimal) -> decimal {
+    return price + price * rate;
+}
+bind total: decimal = taxed(decimal("199.99"), decimal("0.18"));
+bind scores: array<decimal, 2> = [array: decimal("0.1"), decimal("0.2")];
+print(decimal_format(total, 2, "half_even"));
+print(scores[0] + scores[1]);
+print(decimal_div_rounded(decimal("1"), decimal("3"), 2, "half_even"));
+"#;
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", source)]),
+        )).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "235.99\n0.3\n0.33\n");
+        assert_eq!(result["stderr"], "");
+    }
+
+    #[test]
+    fn alpha11_decimal_imports_preserve_exact_arithmetic() {
+        let result: Value = serde_json::from_str(&execute_request(&request(&[
+            ("main.srp", r#"import "math/price.srp" as price;
+print(price.sum(decimal("0.1"), decimal("0.2")));"#),
+            ("math/price.srp", r#"pub pure funcra sum(a: decimal, b: decimal) -> decimal {
+    return a + b;
+}"#),
+        ]))).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "0.3\n");
+    }
+
+    #[test]
+    fn alpha11_decimal_errors_discard_stdout_and_have_source_diagnostics() {
+        for (source, code) in [
+            (r#"print("before"); print(decimal("oops"));"#, "E0068"),
+            (r#"print("before"); print(decimal("1") / decimal("3"));"#, "E0070"),
+        ] {
+            let result: Value = serde_json::from_str(&execute_request(
+                &request(&[("main.srp", source)]),
+            )).unwrap();
+            assert_eq!(result["ok"], false, "{result}");
+            assert_eq!(result["stdout"], "", "{result}");
+            assert_eq!(result["stderr"], "", "{result}");
+            assert_eq!(result["diagnostic"]["schema_version"], 1, "{result}");
+            assert_eq!(result["diagnostic"]["code"], code, "{result}");
+            assert_eq!(result["diagnostic"]["primary"]["path"], "main.srp");
+        }
+    }
+
+    #[test]
+    fn alpha11_decimal_reads_bounded_stdin_but_not_interactive_prompts() {
+        let buffered = json!({
+            "entry": "main.srp",
+            "files": {"main.srp": r#"print(decimal_format(decimal(read_line()), 2, "half_even"));"#},
+            "stdin": "1.225\n"
+        }).to_string();
+        let result: Value = serde_json::from_str(&execute_request(&buffered)).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "1.22\n");
+
+        let interactive = json!({
+            "entry": "main.srp",
+            "files": {"main.srp": r#"print("before"); print(input_decimal("Amount> "));"#},
+            "stdin": "1.225\n"
+        }).to_string();
+        let blocked: Value = serde_json::from_str(&execute_request(&interactive)).unwrap();
+        assert_eq!(blocked["ok"], false, "{blocked}");
+        assert_eq!(blocked["diagnostic"]["code"], "E0054", "{blocked}");
+        assert_eq!(blocked["stdout"], "", "{blocked}");
+    }
 
     #[test]
     fn alpha10_fixed_arrays_match_published_fixture() {

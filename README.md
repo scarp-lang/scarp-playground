@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.10** (published prerelease) |
-| Pinned compiler revision | `44fcd0f77ccb92648cdb1fc7632495c506c87cb3` |
+| Scarp compiler | **v0.0.6-alpha.11** (published prerelease) |
+| Pinned compiler revision | `79b57395957f47e1270ee542a856c844b82386de` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -45,6 +45,12 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.11 adds exact base-10 `decimal` arithmetic, explicit rounding and
+typed module imports. The published compiler fixture executes in the real
+Rust/WASM interpreter; `decimal(read_line())` uses explicit ephemeral stdin.
+Host-only `input_decimal(prompt)` remains unavailable. See
+[alpha.11 browser integration](docs/compiler-alpha11-decimal.md).
 
 Alpha.10 adds immutable fixed arrays, exact BigInt operations, and EOF-aware
 buffered input through `try_read_line()` / `read_line_or()`. The browser uses
