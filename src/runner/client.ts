@@ -1,6 +1,6 @@
 import { validateWorkspace, type Workspace } from '../workspace';
 import type { RunResponse, RunResult } from './types';
-import { decodeWorkerResult } from './protocol';
+import { decodeWorkerResult, decodeVerifyResult } from './protocol';
 import { claimCompilerWorker } from './worker-slot';
 
 const RUN_TIMEOUT_MS = 12_000;
@@ -76,7 +76,8 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check' | 'verify
       });
     };
     activeWorker.onmessage = (event: MessageEvent<RunResponse>) => {
-      if (event.data?.id === id) complete(decodeWorkerResult(event.data.result));
+      if (event.data?.id === id) complete(mode === 'verify'
+        ? decodeVerifyResult(event.data.result) : decodeWorkerResult(event.data.result));
     };
     activeWorker.onmessageerror = () => complete({
       ok: false, stdout: '', stderr: '',
