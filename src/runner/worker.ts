@@ -1,5 +1,5 @@
 /// <reference lib="webworker" />
-import type { RunRequest, RunResponse, DefinitionRequest, DefinitionResponse, ReferencesRequest, ReferencesResponse, RenameRequest, RenameResponse } from './types';
+import type { RunResponse, DefinitionResponse, ReferencesResponse, RenameResponse } from './types';
 import { decodeCompilerReply, decodeSilentResult } from './protocol';
 import { validatedCompilerWorkerRequest, rejectedCompilerWorkerRequest } from './request';
 import { decodeDefinitionReply } from '../navigation/protocol';
