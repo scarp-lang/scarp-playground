@@ -48,6 +48,18 @@ describe('shipped compiler-backed learning examples', () => {
     expect(fallback?.stdin).toBe('Ada\n');
   });
 
+  it('includes real exact decimal fixtures and transient stdin without host prompts', () => {
+    const exact = examples.find((e) => e.title === 'Exact decimal arithmetic');
+    expect(exact?.files['main.srp']).toContain('decimal_format(total, 2, "half_even")');
+    expect(exact?.files['main.srp']).toContain('array<decimal, 2>');
+    const imported = examples.find((e) => e.title === 'Decimal across modules');
+    expect(imported?.files['math/price.srp']).toContain('-> decimal');
+    const input = examples.find((e) => e.title === 'Buffered decimal input');
+    expect(input?.files['main.srp']).toContain('decimal(read_line())');
+    expect(input?.files['main.srp']).not.toContain('input_decimal(');
+    expect(input?.stdin).toBe('1.225\n');
+  });
+
   it('ships the released alpha.8 assertion fixture with no obsolete prerelease caveat', () => {
     const fixture = examples.find((example) => example.title === 'Boolean assertions');
     expect(fixture).toBeDefined();
