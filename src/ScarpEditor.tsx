@@ -51,6 +51,10 @@ monaco.languages.setMonarchTokensProvider('scarp', {
     'decimal', 'decimal_abs', 'decimal_from_integer', 'decimal_to_integer',
     'decimal_to_text', 'decimal_round', 'decimal_format', 'decimal_div_rounded',
     'input_decimal',
+    'record', 'variant', 'new', 'match', 'on', 'case', 'option', 'result',
+    'list', 'map', 'list_len', 'list_push', 'list_set', 'list_remove',
+    'map_len', 'map_contains', 'map_get_or', 'map_set', 'map_remove',
+    'map_keys', 'map_values',
   ],
   tokenizer: {
     root: [
@@ -59,7 +63,7 @@ monaco.languages.setMonarchTokensProvider('scarp', {
       [/\b(?:0x[0-9a-fA-F]+|0b[01]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/, 'number'],
       [/[a-zA-Z_][\w]*/, { cases: { '@keywords': 'keyword', '@default': 'identifier' } }],
       [/[{}()[\]]/, '@brackets'],
-      [new RegExp('[+*/%=<>!&|:-]+'), 'operator'],
+      [new RegExp('[+*/%=<>!&|:?-]+'), 'operator'],
     ],
   },
 });

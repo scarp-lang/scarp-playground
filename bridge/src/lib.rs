@@ -648,6 +648,89 @@ mod tests {
     }
 
     #[test]
+    fn alpha12_data_destructure_matches_published_output() {
+        let program = "// Structural destructuring evaluates one initializer for multiple bindings.\npure funcra make_pair(value: integer) -> tuple<integer, string> {\n    return (value * 2, \"ready\");\n}\n\nbind (result, state) = make_pair(21);\nprint(result, state);\n\nvar [first, second, third] = [array: 3, 5, 7];\nfirst += second;\nprint(first, third);\n\n// The underscore ignores the corresponding element, without storing it.\nbind (_, answer) = (true, 42);\nprint(answer);\n\n{\n    bind (result, note) = (5, \"inner\");\n    print(result, note);\n}\nprint(result);\n\nbind ([(quantity, unit_price), (_, spare_price)], currency) =\n    ([array: (2, 15), (1, 7)], \"INR\");\nprint(quantity * unit_price + spare_price, currency);\n";
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", program)]),
+        )).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "42 ready\n8 7\n42\n5 inner\n42\n37 INR\n", "{result}");
+        assert_eq!(result["stderr"], "", "{result}");
+    }
+
+    #[test]
+    fn alpha12_typed_dynamic_lists_matches_published_output() {
+        let program = "// Source-level typed dynamic lists: immutable values with a length-independent type.\n// Every binding retains a snapshot and list indexing is checked at runtime.\nrecord Task {\n    title: string,\n    done: boolean,\n}\n\npure funcra first_title(tasks: list<record Task>) -> string {\n    return tasks[0]->title;\n}\n\nbind one: list<record Task> = [list:\n    new Task { title: \"Draft\", done: false },\n    new Task { title: \"Review\", done: true },\n];\nbind unchanged = one;\n\nvar tasks: list<record Task> = one;\nprint(\"First\", first_title(tasks));\ntasks = [list:\n    new Task { title: \"Ready\", done: true },\n    new Task { title: \"Review\", done: true },\n    new Task { title: \"Publish\", done: false },\n];\nassert(unchanged[0]->title == \"Draft\");\nprint(\"Updated\", first_title(tasks), tasks[2]->title);\nbind empty: list<integer> = [list: <integer>];\nprint(\"Empty\", empty);\nbind nested: list<list<integer>> = [list: [list: 1, 2], [list: 3]];\nprint(\"Nested\", nested[0][1], nested[1][0]);\n";
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", program)]),
+        )).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "First Draft\nUpdated Ready Publish\nEmpty [list: <integer>]\nNested 2 3\n", "{result}");
+        assert_eq!(result["stderr"], "", "{result}");
+    }
+
+    #[test]
+    fn alpha12_typed_maps_matches_published_output() {
+        let program = "// Typed, immutable maps have canonical ordering irrespective of source order.\npure funcra labels() -> map<string, integer> {\n    return [map: \"z\": 9, \"a\": 1];\n}\n\nbind original = labels();\nbind reversed = [map: \"a\": 1, \"z\": 9];\nprint(original);\nprint(original == reversed);\nbind empty: map<integer, string> = [map: <integer, string>];\nprint(empty);\nbind features: map<boolean, string> = [map: true: \"enabled\", false: \"disabled\"];\nprint(features);\nbind nested: map<integer, list<integer>> = [map:\n    2: [list: 1, 2],\n    1: [list: 3],\n];\nprint(nested);\n";
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", program)]),
+        )).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "[map: \"a\": 1, \"z\": 9]\ntrue\n[map: <integer, string>]\n[map: false: \"disabled\", true: \"enabled\"]\n[map: 1: [list: 3], 2: [list: 1, 2]]\n", "{result}");
+        assert_eq!(result["stderr"], "", "{result}");
+    }
+
+    #[test]
+    fn alpha12_typed_propagation_matches_published_output() {
+        let program = "// Development-only: explicit propagation from immutable bindings.\nrecord Task { title: string }\n\npure funcra validate_title(value: option<string>) -> result<string, string> {\n    match on value {\n        case None { return new result<string, string>::Err(\"title missing\"); }\n        case Some(title) {\n            if title == \"\" {\n                return new result<string, string>::Err(\"title empty\");\n            }\n            return new result<string, string>::Ok(title);\n        }\n    }\n}\n\n// Failure skips the remaining body and returns Err from this function.\n// The successful payload is bound to title, with no unchecked extraction.\npure funcra submit(value: option<string>) -> result<record Task, string> {\n    bind title: string = validate_title(value)?;\n    return new result<record Task, string>::Ok(new Task { title: title });\n}\n\n// Absence also propagates between distinct Option payload types.\npure funcra has_title(value: option<string>) -> option<boolean> {\n    bind title = value?;\n    return new option<boolean>::Some(title != \"\");\n}\n\nfuncra present(outcome: result<record Task, string>) -> unit {\n    match on outcome {\n        case Ok(task) { print(\"Saved\", task->title); }\n        case Err(message) { print(\"Rejected\", message); }\n    }\n}\n\npresent(submit(new option<string>::Some(\"Review PR\")));\npresent(submit(new option<string>::Some(\"\")));\npresent(submit(new option<string>::None()));\nmatch on has_title(new option<string>::None()) {\n    case None { print(\"No title\"); }\n    case Some(value) { print(value); }\n}\nmatch on has_title(new option<string>::Some(\"Ready\")) {\n    case None { print(\"No title\"); }\n    case Some(value) { print(value); }\n}\n";
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", program)]),
+        )).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "Saved Review PR\nRejected title empty\nRejected title missing\nNo title\ntrue\n", "{result}");
+        assert_eq!(result["stderr"], "", "{result}");
+    }
+
+    #[test]
+    fn alpha12_map_projections_matches_published_output() {
+        let program = "// Maps expose their canonical ordering as immutable typed lists.\npure funcra ordered_labels(items: map<string, integer>) -> list<string> {\n    return map_keys(items);\n}\n\nbind mixed = [map: \"z\": 9, \"a\": 1, \"m\": 5];\nbind keys: list<string> = ordered_labels(mixed);\nbind values: list<integer> = map_values(mixed);\nprint(keys);\nprint(values);\nprint(keys[0], values[0]);\nprint(map_len(mixed));\n\nbind none: map<integer, string> = [map: <integer, string>];\nprint(map_keys(none));\nprint(map_values(none));\n\nbind boolean_keys = [map: true: \"enabled\", false: \"disabled\"];\nprint(map_keys(boolean_keys));\nprint(map_values(boolean_keys));\n";
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", program)]),
+        )).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "[list: \"a\", \"m\", \"z\"]\n[list: 1, 5, 9]\na 1\n3\n[list: <integer>]\n[list: <string>]\n[list: false, true]\n[list: \"disabled\", \"enabled\"]\n", "{result}");
+        assert_eq!(result["stderr"], "", "{result}");
+    }
+
+    #[test]
+    fn alpha12_task_board_imports_records_variants_and_collections() {
+        let input = request(&[
+            ("main.srp", "import \"board.srp\" as tasks;\n\nbind initial = tasks.empty();\nvar board = initial;\nmatch on tasks.apply(board, new tasks.Action::Add(new option<string>::Some(\"Review PR\"))) {\n    case Ok(next) { board = next; print(\"Created Review PR\"); }\n    case Err(message) { print(message); }\n}\nmatch on tasks.apply(board, new tasks.Action::Complete(\"Review PR\")) {\n    case Ok(next) { board = next; }\n    case Err(message) { print(message); }\n}\nmatch on tasks.find(board, \"Review PR\") {\n    case Some(task) { print(task->title, task->done); }\n    case None { print(\"Task missing\"); }\n}\nmatch on tasks.apply(board, new tasks.Action::Complete(\"Missing\")) {\n    case Ok(_) { print(\"Unexpected success\"); }\n    case Err(message) { print(\"Rejected\", message); }\n}\nprint(\"Original size\", list_len(initial->tasks));\n"),
+            ("board.srp", "// A bounded task store with an exact-title index and pure transitions.\npub record Task {\n    title: string,\n    done: boolean,\n}\n\npub record Board {\n    tasks: list<record Task>,\n    positions: map<string, integer>,\n}\n\npub variant Action {\n    Add(option<string>),\n    Complete(string),\n}\n\npub pure funcra empty() -> record Board {\n    return new Board {\n        tasks: [list: <record Task>],\n        positions: [map: <string, integer>],\n    };\n}\n\npub pure funcra find(board: record Board, title: string) -> option<record Task> {\n    if not map_contains(board->positions, title) {\n        return new option<record Task>::None();\n    }\n    bind index = map_get_or(board->positions, title, 0);\n    return new option<record Task>::Some(board->tasks[index]);\n}\n\npure funcra accept_title(input: option<string>) -> result<string, string> {\n    match on input {\n        case None { return new result<string, string>::Err(\"title missing\"); }\n        case Some(title) {\n            if title == \"\" {\n                return new result<string, string>::Err(\"title empty\");\n            }\n            return new result<string, string>::Ok(title);\n        }\n    }\n}\n\npub pure funcra apply(board: record Board, action: variant Action) -> result<record Board, string> {\n    match on action {\n        case Add(input) {\n            bind title = accept_title(input)?;\n            if map_contains(board->positions, title) {\n                return new result<record Board, string>::Err(\"task already exists\");\n            }\n            bind index = list_len(board->tasks);\n            if index >= 128 {\n                return new result<record Board, string>::Err(\"board is full\");\n            }\n            return new result<record Board, string>::Ok(new Board {\n                tasks: list_push(board->tasks, new Task { title: title, done: false }),\n                positions: map_set(board->positions, title, index),\n            });\n        }\n        case Complete(title) {\n            match on find(board, title) {\n                case None {\n                    return new result<record Board, string>::Err(\"task not found\");\n                }\n                case Some(task) {\n                    if task->done {\n                        return new result<record Board, string>::Ok(board);\n                    }\n                    bind index = map_get_or(board->positions, title, 0);\n                    return new result<record Board, string>::Ok(new Board {\n                        tasks: list_set(board->tasks, index, new Task { title: title, done: true }),\n                        positions: board->positions,\n                    });\n                }\n            }\n        }\n    }\n}\n"),
+        ]);
+        let checked: Value = serde_json::from_str(&verify_request(&input)).unwrap();
+        assert_eq!(checked["ok"], true, "{checked}");
+        let result: Value = serde_json::from_str(&execute_request(&input)).unwrap();
+        assert_eq!(result["ok"], true, "{result}");
+        assert_eq!(result["stdout"], "Created Review PR\nReview PR true\nRejected task not found\nOriginal size 0\n", "{result}");
+        assert_eq!(result["stderr"], "", "{result}");
+    }
+
+    #[test]
+    fn alpha12_duplicate_map_key_errors_are_atomic() {
+        let source = r#"print("before");
+bind items = [map: "repeat": 1, "repeat": 2];
+print(items);"#;
+        let result: Value = serde_json::from_str(&execute_request(
+            &request(&[("main.srp", source)]),
+        )).unwrap();
+        assert_eq!(result["ok"], false, "{result}");
+        assert_eq!(result["diagnostic"]["code"], "E0082", "{result}");
+        assert_eq!(result["stdout"], "", "{result}");
+        assert_eq!(result["stderr"], "", "{result}");
+    }
+
+    #[test]
     fn alpha11_decimal_fixture_has_exact_published_output() {
         let source = r#"pure funcra taxed(price: decimal, rate: decimal) -> decimal {
     return price + price * rate;

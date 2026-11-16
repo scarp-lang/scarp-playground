@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.11** (published prerelease) |
-| Pinned compiler revision | `79b57395957f47e1270ee542a856c844b82386de` |
+| Scarp compiler | **v0.0.6-alpha.12** (published prerelease) |
+| Pinned compiler revision | `a1f9c2fc1c6bc8f3e04878d30d658bb38fab441d` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -45,6 +45,17 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.12 adds source records, tagged variants, tuple/array destructuring,
+`option<T>`, `result<T,E>` and explicit `?` propagation, immutable typed lists,
+and deterministic sorted maps with pure snapshot operations. Six browser
+examples reproduce released fixture source including a two-module task board.
+The same pinned Rust interpreter handles Verify, Check, Run, imports and
+source diagnostics; no native code generator or host filesystem is exposed.
+List/map storage uses the existing logical **1 MiB aggregate/array allocation
+budget**, and record/variant data shares the **1 MiB tuple payload budget**;
+these do not cap physical browser memory. See
+[alpha.12 browser integration](docs/compiler-alpha12-structured-data.md).
 
 Alpha.11 adds exact base-10 `decimal` arithmetic, explicit rounding and
 typed module imports. The published compiler fixture executes in the real

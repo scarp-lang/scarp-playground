@@ -54,6 +54,27 @@ describe('Scarp editor syntax hints', () => {
     expect(editorCompletionHints('print("decimal_', 'main.srp', files)).toEqual([]);
   });
 
+
+  it('offers released alpha.12 typed records, lists, maps, and sum-type syntax', () => {
+    const hints = editorCompletionHints('map_', 'main.srp', files);
+    expect(hints.map(hint => hint.label)).toEqual(expect.arrayContaining([
+      'map_keys', 'map_values', 'map_contains', 'map_set', 'map_remove', 'map_get_or',
+    ]));
+    expect(editorCompletionHints('list_', 'main.srp', files).map(h => h.label))
+      .toEqual(expect.arrayContaining(['list_len', 'list_push', 'list_set', 'list_remove']));
+    expect(editorCompletionHints('record d', 'main.srp', files).map(h => h.label))
+      .not.toContain('record declaration');
+    expect(editorCompletionHints('record', 'main.srp', files)
+      .find(h => h.label === 'record declaration')?.insertText)
+      .toContain('record ${1:Task}');
+    expect(editorCompletionHints('option', 'main.srp', files).map(h => h.label))
+      .toEqual(expect.arrayContaining(['option type', 'option Some', 'option None']));
+    expect(editorCompletionHints('result', 'main.srp', files).map(h => h.label))
+      .toEqual(expect.arrayContaining(['result type', 'result Ok', 'result Err']));
+    expect(editorCompletionHints('// map_', 'main.srp', files)).toEqual([]);
+    expect(editorCompletionHints('print("list_', 'main.srp', files)).toEqual([]);
+  });
+
   it('resolves module import suggestions relative to current file, not the project root', () => {
     expect(relativeImportPath('lib/main.srp', 'lib/math.srp')).toBe('math.srp');
     expect(relativeImportPath('lib/main.srp', 'science/stats.srp')).toBe('../science/stats.srp');
