@@ -20,13 +20,18 @@ the five samples above. The language uses `funcra` for functions, `var`
 for mutable bindings, and both bounded `while` and counted `repeat`
 loops. Run each sample and change small inputs to see how the output changes.
 
-These examples use the pinned Scarp `v0.0.6-alpha.8` compiler. The
+These examples run with the pinned Scarp `v0.0.6-alpha.11` compiler. The
 **Boolean assertions** example is based on the released
 [`examples/assertions.srp`](https://github.com/scarp-lang/scarp/blob/v0.0.6-alpha.8/examples/assertions.srp)
 fixture and prints `3` followed by a newline. Its conditions use the actual
 compiler's runtime assertion semantics; a reached failure reports E0065. See
 [the alpha.8 browser guide](compiler-alpha8-assertions.md). Changes to the
 language are tested against the actual interpreter, not speculative syntax.
+
+**Exact decimal arithmetic** runs the published alpha.11 example, printing
+`235.99`, `0.3`, and `0.33` on separate lines. **Buffered decimal input**
+uses the explicit stdin box: `1.225` is displayed as `1.22` after
+`half_even` rounding. See [alpha.11 browser integration](compiler-alpha11-decimal.md).
 
 Click **Save locally** to keep an edited workspace in this browser, or
 **Export project** to preserve it as a source-only JSON file. Built-in

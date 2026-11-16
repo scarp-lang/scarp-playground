@@ -319,6 +319,28 @@ print("Lines:", entries);
     stdin: 'Ada\n',
   },
   {
+    title: 'Exact decimal arithmetic',
+    description: 'Exact base-10 arithmetic, arrays and rounded division (alpha.11)',
+    entry: 'main.srp',
+    files: { 'main.srp': "pure funcra taxed(price: decimal, rate: decimal) -> decimal {\n    return price + price * rate;\n}\n\nbind total: decimal = taxed(decimal(\"199.99\"), decimal(\"0.18\"));\nbind scores: array<decimal, 2> = [array: decimal(\"0.1\"), decimal(\"0.2\")];\nprint(decimal_format(total, 2, \"half_even\"));\nprint(scores[0] + scores[1]);\nprint(decimal_div_rounded(decimal(\"1\"), decimal(\"3\"), 2, \"half_even\"));\n" },
+  },
+  {
+    title: 'Decimal across modules',
+    description: 'Imported typed exact decimal function (alpha.11)',
+    entry: 'main.srp',
+    files: {
+      'main.srp': "import \"math/price.srp\" as price;\nprint(price.sum(decimal(\"0.1\"), decimal(\"0.2\")));\n",
+      'math/price.srp': "pub pure funcra sum(a: decimal, b: decimal) -> decimal {\n    return a + b;\n}\n",
+    },
+  },
+  {
+    title: 'Buffered decimal input',
+    description: 'Exact decimal with ephemeral stdin, not interactive prompts (alpha.11)',
+    entry: 'main.srp',
+    files: { 'main.srp': "print(decimal_format(decimal(read_line()), 2, \"half_even\"));\n" },
+    stdin: '1.225\n',
+  },
+  {
     title: 'Import a module',
     description: 'Two real .srp source files',
     entry: 'main.srp',

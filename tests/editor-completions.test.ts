@@ -44,6 +44,16 @@ describe('Scarp editor syntax hints', () => {
     expect(editorCompletionHints('zz', 'main.srp', files)).toEqual([]);
   });
 
+  it('suggests published alpha.11 decimal helpers, not snippets within strings', () => {
+    expect(editorCompletionHints('decimal_', 'main.srp', files).map((x) => x.label))
+      .toEqual(expect.arrayContaining(['decimal_round', 'decimal_format', 'decimal_div_rounded']));
+    expect(editorCompletionHints('decimal', 'main.srp', files)
+      .find((x) => x.label === 'decimal')?.insertText)
+      .toBe('decimal("${1:199.99}")');
+    expect(editorCompletionHints('// decimal_', 'main.srp', files)).toEqual([]);
+    expect(editorCompletionHints('print("decimal_', 'main.srp', files)).toEqual([]);
+  });
+
   it('resolves module import suggestions relative to current file, not the project root', () => {
     expect(relativeImportPath('lib/main.srp', 'lib/math.srp')).toBe('math.srp');
     expect(relativeImportPath('lib/main.srp', 'science/stats.srp')).toBe('../science/stats.srp');

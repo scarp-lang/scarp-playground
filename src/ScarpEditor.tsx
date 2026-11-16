@@ -48,6 +48,9 @@ monaco.languages.setMonarchTokensProvider('scarp', {
     'bigint_to_text', 'bigint_from_radix', 'bigint_to_radix', 'bigint_and',
     'bigint_or', 'bigint_xor', 'bigint_not', 'bigint_shl', 'bigint_shr',
     'bigint_pow_mod', 'bigint_divmod',
+    'decimal', 'decimal_abs', 'decimal_from_integer', 'decimal_to_integer',
+    'decimal_to_text', 'decimal_round', 'decimal_format', 'decimal_div_rounded',
+    'input_decimal',
   ],
   tokenizer: {
     root: [
