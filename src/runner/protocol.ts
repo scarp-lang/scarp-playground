@@ -92,3 +92,13 @@ export function decodeCompilerReply(raw: unknown): RunResult {
 export function decodeWorkerResult(value: unknown): RunResult {
   return validatedRunResult(value) ?? protocolFailure();
 }
+
+/** Reject any compiler/Worker output in static verification mode, even if
+ * a future bridge regression or corrupted message attempts to return it. */
+export function decodeVerifyResult(value: unknown): RunResult {
+  const result = validatedRunResult(value);
+  if (!result || result.stdout !== '' || result.stderr !== '') {
+    return protocolFailure();
+  }
+  return result;
+}

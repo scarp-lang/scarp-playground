@@ -7,7 +7,7 @@ const ScarpEditor = lazy(() =>
 );
 import { examples } from './examples';
 import compilerCompatibility from '../compiler-compatibility.json';
-import { checkWorkspace, runWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
+import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
 import { editorPositionToByteOffset } from './navigation/coordinates';
 import { findDefinition } from './navigation/client';
 import { findReferences, type SourceRange } from './navigation/references';
@@ -71,7 +71,7 @@ export function App() {
   const [savingLocally, setSavingLocally] = useState(initial.savingLocally);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
-  const [operation, setOperation] = useState<'run' | 'check'>('run');
+  const [operation, setOperation] = useState<'run' | 'check' | 'verify'>('run');
   const [result, setResult] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   // Runtime input is intentionally ephemeral: never saved or placed in shared links.
@@ -242,7 +242,7 @@ export function App() {
   }, []);
 
 
-  const run = useCallback(async (mode: 'run' | 'check' = 'run') => {
+  const run = useCallback(async (mode: 'run' | 'check' | 'verify' = 'run') => {
     // A synchronous guard also protects Ctrl+Enter from starting two Workers
     // before React has committed the next disabled-button render.
     const execution = executionScope.current.start();
@@ -261,9 +261,11 @@ export function App() {
     setReferenceResult(null);
     setSelectedReferenceIndex(-1);
     try {
-      const response = mode === 'check'
-        ? await checkWorkspace(workspace, execution.controller.signal)
-        : await runWorkspace(workspace, execution.controller.signal, programInput);
+      const response = mode === 'verify'
+        ? await verifyWorkspace(workspace, execution.controller.signal)
+        : mode === 'check'
+          ? await checkWorkspace(workspace, execution.controller.signal)
+          : await runWorkspace(workspace, execution.controller.signal, programInput);
       if (!executionScope.current.isCurrent(execution)) return;
       setResult(response);
       // Navigate only to a valid source span from this exact execution snapshot.
@@ -1062,12 +1064,17 @@ export function App() {
                 Find in project
               </button>
               <button type="button" className="button-secondary" onClick={() => void share()} title="Copy a link to the complete project when it fits the URL limit">Share ↗</button>
-              <button type="button" className="button-secondary" onClick={() => void run('check')} disabled={running}>
+              <button type="button" className="button-secondary" onClick={() => void run('verify')}
+                title="Parse, resolve, and type-check the project without running its statements" disabled={running}>
+                Verify code
+              </button>
+              <button type="button" className="button-secondary" onClick={() => void run('check')}
+                title="Evaluate the program to validate selected runtime paths without returning output" disabled={running}>
                 Check code
               </button>
               {running ? (
                 <button type="button" className="button-secondary" onClick={invalidateExecution}>
-                  Stop {operation === 'check' ? 'check' : 'run'}
+                  Stop {operation === 'verify' ? 'verification' : operation === 'check' ? 'check' : 'run'}
                 </button>
               ) : (
                 <button type="button" className="button-primary" onClick={() => void run()}>
@@ -1527,22 +1534,23 @@ export function App() {
                 setProgramInput(event.target.value);
               }} />
             <p>Buffered input is supplied only when you run the program. It is not
-              interactive, is not saved or shared, and cannot be read in Check code mode.</p>
+              interactive, is not saved or shared, and is not read by Verify code or Check code.</p>
           </section>
 
           <section className="console-card" aria-label="Program output">
             <div className="console-toolbar">
-              <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">{operation === 'check' ? 'Compiler validation' : 'Real compiler execution'}</span></div>
+              <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">{operation === 'verify' ? 'Static compiler verification' : operation === 'check' ? 'Runtime validation' : 'Real compiler execution'}</span></div>
               <div className="console-right">
                 {result && <span className={'result-status ' + (result.ok ? 'success' : 'failure')}>{result.ok ? '● Success' : '● Error'}</span>}
                 <button type="button" onClick={invalidateExecution}>Clear</button>
               </div>
             </div>
             <div className="terminal-output" aria-live="polite">
-              {running && <p className="terminal-muted">{operation === 'check' ? 'Checking Scarp with the real compiler…' : 'Loading compiler and executing program…'}</p>}
+              {running && <p className="terminal-muted">{operation === 'verify' ? 'Verifying source without running program statements…' : operation === 'check' ? 'Checking Scarp with the real interpreter…' : 'Loading compiler and executing program…'}</p>}
               {!running && !result && <p className="terminal-muted">$ Select an example or write code, then click Run code.</p>}
               {result && (
                 <>
+                  {result.ok && operation === 'verify' && <p className="terminal-muted">Static verification passed. Program statements were not executed.</p>}
                   {result.ok && operation === 'check' && <p className="terminal-muted">Checks passed. No program output was emitted.</p>}
                   {result.stdout && <pre className="stdout">{result.stdout}</pre>}
                   {result.stderr && <pre className="stderr">{result.stderr}</pre>}

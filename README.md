@@ -172,6 +172,10 @@ load failure — it never fakes a successful program result.
   temporarily without overwriting a saved project. Choose **Save locally**
   again to explicitly replace the existing browser copy.
 - Actual interpreter stdout, stderr and schema-1 compiler diagnostics.
+- **Verify code** statically compiles and type-checks the module graph using the
+  official Rust compiler, without running program statements or consuming input.
+  It may still evaluate bounded compile-time constants; it is not a runtime
+  safety proof. See [static verification](docs/static-verification.md).
 - **Check code** validates the entire virtual module graph and evaluates selected
   paths under the same work, print, call, capture and allocation budgets as Run,
   but never returns program stdout or stderr. The real compiler reports source

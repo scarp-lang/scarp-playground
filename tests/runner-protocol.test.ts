@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { decodeCompilerReply, decodeWorkerResult, MAX_COMPILER_JSON_CHARS, MAX_OUTPUT_BYTES } from '../src/runner/protocol';
+import { decodeCompilerReply, decodeWorkerResult, decodeVerifyResult, MAX_COMPILER_JSON_CHARS, MAX_OUTPUT_BYTES } from '../src/runner/protocol';
 
 const success = { ok: true, stdout: 'Hello\\n', stderr: '' };
 const diagnostic = {
@@ -15,6 +15,23 @@ describe('bounded compiler-worker protocol', () => {
     const failure = { ok: false, stdout: '', stderr: '', error: 'unknown identifier', diagnostic };
     expect(decodeCompilerReply(JSON.stringify(failure))).toEqual(failure);
     expect(decodeWorkerResult(failure)).toEqual(failure);
+  });
+
+  it('strictly suppresses forged stdout and stderr in static verification mode', () => {
+    expect(decodeVerifyResult({ ok: true, stdout: '', stderr: '' })).toEqual({
+      ok: true, stdout: '', stderr: '',
+    });
+    for (const forged of [
+      { ok: true, stdout: 'secret', stderr: '' },
+      { ok: false, stdout: '', stderr: 'side effect', error: 'compile failed' },
+      { ok: true, stdout: [], stderr: '' },
+    ]) {
+      const result = decodeVerifyResult(forged);
+      expect(result.ok).toBe(false);
+      expect(result.stdout).toBe('');
+      expect(result.stderr).toBe('');
+      expect(result.error).toMatch(/Invalid or oversized/);
+    }
   });
 
   it('rejects malformed or oversized JSON before parsing', () => {
