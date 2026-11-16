@@ -39,7 +39,7 @@ export function validateWorkspace(value: unknown): string | null {
   let total = 0;
   const encoder = new TextEncoder();
   for (const [path, source] of entries) {
-    if (!validPath(path)) return 'Invalid .srp path: ' + path.slice(0, 128);
+    if (!validPath(path)) return 'Invalid .srp path: ' + String(path).slice(0, 128);
     if (typeof source !== 'string') {
       return 'The source in ' + path + ' must be text.';
     }
