@@ -30,6 +30,11 @@ The existing limits remain: 12 files, 128 KiB source, 16 KiB stdin,
 256 KiB BigInt memory charges, and a 12-second disposable Worker timeout.
 These logical resource ceilings are **not a hardened sandbox**.
 
+**Static Verify code:** the browser can type-check decimal source without
+interpreting runtime decimal constructors. Invalid decimal *text* E0068 is
+reported by Run/Check on selected paths, not by static Verify alone.
+See [static verification](static-verification.md).
+
 ## Merge requirements
 
 Require exact-head locked native Rust tests, real wasm-pack, JS unit and
