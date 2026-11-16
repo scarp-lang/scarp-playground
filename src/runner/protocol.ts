@@ -69,6 +69,10 @@ export function validatedRunResult(value: unknown): RunResult | null {
       !boundedText(value.stderr, MAX_OUTPUT_BYTES) ||
       encoder.encode(value.stdout).byteLength + encoder.encode(value.stderr).byteLength >
         MAX_OUTPUT_BYTES ||
+      // Failed executions are atomic: never accept partial stdout/stderr.
+      (!value.ok && (value.stdout !== '' || value.stderr !== '')) ||
+      // A successful execution must not carry a contradictory error envelope.
+      (value.ok && (value.error !== undefined || value.diagnostic != null)) ||
       (value.error !== undefined && !boundedText(value.error, MAX_DIAGNOSTIC_BYTES)) ||
       (value.diagnostic !== undefined && value.diagnostic !== null &&
        !diagnostic(value.diagnostic))) {
@@ -93,12 +97,15 @@ export function decodeWorkerResult(value: unknown): RunResult {
   return validatedRunResult(value) ?? protocolFailure();
 }
 
-/** Reject any compiler/Worker output in static verification mode, even if
- * a future bridge regression or corrupted message attempts to return it. */
-export function decodeVerifyResult(value: unknown): RunResult {
+/** Reject output for both silent compiler operations (Check and Verify), even
+ * if a future bridge regression or corrupted message attempts to return it. */
+export function decodeSilentResult(value: unknown): RunResult {
   const result = validatedRunResult(value);
   if (!result || result.stdout !== '' || result.stderr !== '') {
     return protocolFailure();
   }
   return result;
 }
+
+/** Kept as a descriptive alias for Verify callers. */
+export const decodeVerifyResult = decodeSilentResult;

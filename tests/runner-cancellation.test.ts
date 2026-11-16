@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { checkWorkspace, runWorkspace } from '../src/runner/client';
+import { checkWorkspace, runWorkspace, verifyWorkspace } from '../src/runner/client';
 import type { RunResponse } from '../src/runner/types';
 
 const workspace = { entry: 'main.srp', files: { 'main.srp': 'print("hello");' } };
@@ -46,6 +46,29 @@ describe('disposable compiler worker cancellation', () => {
     expect(worker.posted[0]).toEqual({ id: 1, workspace, mode: 'check' });
     worker.send({ id: 1, result: { ok: true, stdout: '', stderr: '' } });
     expect(await pending).toEqual({ ok: true, stdout: '', stderr: '' });
+    expect(worker.terminated).toBe(1);
+  });
+
+  it('never starts the compiler worker for a malformed workspace', async () => {
+    const invalid = { entry: 'main.srp', files: { 'main.srp': 7 } };
+    for (const evaluate of [runWorkspace, checkWorkspace, verifyWorkspace]) {
+      const result = await evaluate(invalid as unknown as typeof workspace);
+      expect(result.error).toMatch(/must be text/);
+    }
+    expect(FakeWorker.instances).toHaveLength(0);
+    const next = runWorkspace(workspace);
+    FakeWorker.instances[0].send({ id: 1, result: { ok: true, stdout: 'safe\n', stderr: '' } });
+    expect((await next).stdout).toBe('safe\n');
+  });
+
+  it('discards unexpected output from a Check worker, even when otherwise successful', async () => {
+    const pending = checkWorkspace(workspace);
+    const worker = FakeWorker.instances[0];
+    worker.send({ id: 1, result: { ok: true, stdout: 'must not print', stderr: '' } });
+    const result = await pending;
+    expect(result.ok).toBe(false);
+    expect(result.stdout).toBe('');
+    expect(result.error).toMatch(/Invalid or oversized/);
     expect(worker.terminated).toBe(1);
   });
 

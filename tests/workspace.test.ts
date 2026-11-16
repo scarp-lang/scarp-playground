@@ -15,6 +15,40 @@ describe('virtual .srp workspace', () => {
     expect(validateWorkspace({ entry: 'main.srp', files: { 'main.srp': 'print(1);' } })).toBeNull();
   });
 
+  it('rejects structurally invalid project JSON without coercion or crashes', () => {
+    for (const value of [
+      null, undefined, {}, [], 'not a workspace',
+      { entry: 'main.srp', files: null },
+      { entry: 'main.srp', files: [] },
+      { entry: 'main.srp', files: { 'main.srp': null } },
+      { entry: 'main.srp', files: { 'main.srp': 17 } },
+      { entry: 'main.srp', files: { 'main.srp': ['print(1);'] } },
+      { entry: {}, files: { 'main.srp': 'print(1);' } },
+      { entry: 'main.srp', files: { 'main.srp': true } },
+    ]) {
+      expect(() => validateWorkspace(value)).not.toThrow();
+      expect(validateWorkspace(value)).toEqual(expect.any(String));
+    }
+    expect(validPath(Symbol('main.srp'))).toBe(false);
+    expect(validPath('m'.repeat(200_000) + '.srp')).toBe(false);
+    const longPath = 'm'.repeat(200_000) + '.srp';
+    const bad = validateWorkspace({
+      entry: 'main.srp',
+      files: { 'main.srp': 'print(1);', [longPath]: '' },
+    });
+    expect(bad).toMatch(/Invalid .srp path/);
+    expect(bad!.length).toBeLessThan(160);
+  });
+
+  it('accepts null-prototype source maps but refuses inherited entry files', () => {
+    const files = Object.assign(Object.create(null) as Record<string, string>, {
+      'main.srp': 'print("hello");',
+    });
+    expect(validateWorkspace({ entry: 'main.srp', files })).toBeNull();
+    const inherited = Object.create({ 'main.srp': 'print("inherited");' }) as Record<string, string>;
+    expect(validateWorkspace({ entry: 'main.srp', files: inherited })).toMatch(/entry/);
+  });
+
   it('round trips Unicode snippets without using a server', () => {
     const code = 'print("नमस्ते");';
     const url = makeShareUrl('https://example.org', '/playground/', code);
