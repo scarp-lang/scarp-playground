@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.12** (published prerelease) |
-| Pinned compiler revision | `a1f9c2fc1c6bc8f3e04878d30d658bb38fab441d` |
+| Scarp compiler | **v0.0.6-alpha.13** (published prerelease) |
+| Pinned compiler revision | `e755fda37cdaeed29434e848cb5dd41f2f2e7eb2` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -45,6 +45,16 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.13 updates the Playground to the **published and annotated** Scarp
+compiler source at `e755fda37cdaeed29434e848cb5dd41f2f2e7eb2`. It retains the alpha.12
+language features and brings more efficient immutable Option/Result error
+propagation. Four new executable examples reproduce the upstream compiler's
+map/list snapshot regression fixtures, with byte-for-byte golden stdout tests.
+The alpha.13 editor-generation and adaptive cache APIs are **host-side Rust
+APIs**: this browser preview continues to compile each request in a fresh,
+disposable Worker, with no persisted compiler graph or cache. See
+[alpha.13 integration](docs/compiler-alpha13-integration.md).
 
 Alpha.12 adds source records, tagged variants, tuple/array destructuring,
 `option<T>`, `result<T,E>` and explicit `?` propagation, immutable typed lists,
