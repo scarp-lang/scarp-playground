@@ -390,6 +390,31 @@ print("Lines:", entries);
     "board.srp": "// A bounded task store with an exact-title index and pure transitions.\npub record Task {\n    title: string,\n    done: boolean,\n}\n\npub record Board {\n    tasks: list<record Task>,\n    positions: map<string, integer>,\n}\n\npub variant Action {\n    Add(option<string>),\n    Complete(string),\n}\n\npub pure funcra empty() -> record Board {\n    return new Board {\n        tasks: [list: <record Task>],\n        positions: [map: <string, integer>],\n    };\n}\n\npub pure funcra find(board: record Board, title: string) -> option<record Task> {\n    if not map_contains(board->positions, title) {\n        return new option<record Task>::None();\n    }\n    bind index = map_get_or(board->positions, title, 0);\n    return new option<record Task>::Some(board->tasks[index]);\n}\n\npure funcra accept_title(input: option<string>) -> result<string, string> {\n    match on input {\n        case None { return new result<string, string>::Err(\"title missing\"); }\n        case Some(title) {\n            if title == \"\" {\n                return new result<string, string>::Err(\"title empty\");\n            }\n            return new result<string, string>::Ok(title);\n        }\n    }\n}\n\npub pure funcra apply(board: record Board, action: variant Action) -> result<record Board, string> {\n    match on action {\n        case Add(input) {\n            bind title = accept_title(input)?;\n            if map_contains(board->positions, title) {\n                return new result<record Board, string>::Err(\"task already exists\");\n            }\n            bind index = list_len(board->tasks);\n            if index >= 128 {\n                return new result<record Board, string>::Err(\"board is full\");\n            }\n            return new result<record Board, string>::Ok(new Board {\n                tasks: list_push(board->tasks, new Task { title: title, done: false }),\n                positions: map_set(board->positions, title, index),\n            });\n        }\n        case Complete(title) {\n            match on find(board, title) {\n                case None {\n                    return new result<record Board, string>::Err(\"task not found\");\n                }\n                case Some(task) {\n                    if task->done {\n                        return new result<record Board, string>::Ok(board);\n                    }\n                    bind index = map_get_or(board->positions, title, 0);\n                    return new result<record Board, string>::Ok(new Board {\n                        tasks: list_set(board->tasks, index, new Task { title: title, done: true }),\n                        positions: board->positions,\n                    });\n                }\n            }\n        }\n    }\n}\n"
   }
 },
+  // Exact public fixture source from the annotated Scarp v0.0.6-alpha.13 tag.
+  {
+    title: "Ordered map snapshots",
+    description: "Canonical map key/value order and immutable updates (alpha.13)",
+    entry: 'main.srp',
+    files: { 'main.srp': "// Canonical order and immutable snapshots after persistent map updates.\nbind original = [map: 3: \"three\", 1: \"one\", 2: \"two\"];\nbind keys = map_keys(original);\nbind values = map_values(original);\nbind updated = map_set(original, 2, \"TWO\");\nbind reduced = map_remove(updated, 1);\nprint(keys);\nprint(values);\nprint(map_keys(reduced));\nprint(map_values(reduced));\nprint(map_len(original), map_len(reduced));\n" },
+  },
+  {
+    title: "Boolean map snapshots",
+    description: "Deterministic Boolean map snapshots (alpha.13)",
+    entry: 'main.srp',
+    files: { 'main.srp': "// Persistent map projections and deterministic boolean key order.\nbind flags = [map: true: \"enabled\", false: \"disabled\"];\nbind original_keys = map_keys(flags);\nbind original_values = map_values(flags);\nbind changed = map_set(flags, false, \"off\");\nprint(original_keys);\nprint(original_values);\nprint(map_values(changed));\nprint(map_len(flags), map_len(changed));\n" },
+  },
+  {
+    title: "Persistent task list snapshots",
+    description: "Pure persistent task collection operations (alpha.13)",
+    entry: 'main.srp',
+    files: { 'main.srp': "// Pure persistent collection operations: no mutation of published snapshots.\nrecord Task { title: string, done: boolean }\n\npure funcra add_task(tasks: list<record Task>, title: string) -> list<record Task> {\n    return list_push(tasks, new Task { title: title, done: false });\n}\n\nbind empty: list<record Task> = [list: <record Task>];\nbind first = add_task(empty, \"Draft\");\nbind second = add_task(first, \"Review\");\nprint(\"Counts\", list_len(empty), list_len(first), list_len(second));\nprint(\"First\", second[0]->title, second[1]->title);\n\n// Replacing and removing return new lists without affecting their input.\nbind reviewed = list_set(second, 1, new Task { title: \"Approved\", done: true });\nbind only_one = list_remove(reviewed, 0);\nprint(\"Snapshots\", second[1]->title, reviewed[1]->title);\nprint(\"Remaining\", list_len(only_one), only_one[0]->title);\nassert(list_len(empty) == 0);\nassert(list_len(first) == 1);\nassert(list_len(second) == 2);\nassert(only_one[0]->done);\n\n// Length-independent list<T> permits assigning a new complete snapshot.\nvar active: list<record Task> = first;\nactive = only_one;\nprint(\"Active\", active[0]->title);\n" },
+  },
+  {
+    title: "Immutable compiler fixture",
+    description: "Immutable map outputs in an official alpha.13 cache regression fixture",
+    entry: 'main.srp',
+    files: { 'main.srp': "// The same immutable program can be executed from a fresh or cached compile.\nbind initial = [map: \"b\": 2, \"a\": 1];\nbind updated = map_set(initial, \"a\", 7);\nprint(map_get_or(initial, \"a\", 0));\nprint(map_get_or(updated, \"a\", 0));\nprint(map_keys(updated)[0]);\n" },
+  },
   {
     title: 'Import a module',
     description: 'Two real .srp source files',

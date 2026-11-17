@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.11.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.13.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions, InputLimits};
 use serde::Deserialize;
@@ -585,6 +585,9 @@ pub fn references(request_json: &str) -> String {
 pub fn rename(request_json: &str) -> String {
     rename_request(request_json)
 }
+
+#[cfg(test)]
+mod alpha13;
 
 #[cfg(test)]
 mod tests {
