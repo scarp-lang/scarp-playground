@@ -37,7 +37,7 @@ describe('published Scarp alpha.13 browser examples', () => {
       expect(example?.files['main.srp']).toBe(source);
       expect(readFileSync(new URL(
         '../bridge/tests/fixtures/alpha13/' + fixture.file + '.stdout', import.meta.url,
-      ), 'utf8').endsWith('\\n')).toBe(true);
+      ), 'utf8').endsWith(String.fromCharCode(10))).toBe(true);
     });
   }
 });
