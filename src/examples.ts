@@ -415,6 +415,19 @@ print("Lines:", entries);
     entry: 'main.srp',
     files: { 'main.srp': "// The same immutable program can be executed from a fresh or cached compile.\nbind initial = [map: \"b\": 2, \"a\": 1];\nbind updated = map_set(initial, \"a\", 7);\nprint(map_get_or(initial, \"a\", 0));\nprint(map_get_or(updated, \"a\", 0));\nprint(map_keys(updated)[0]);\n" },
   },
+  // Exact source from the immutable Scarp v0.0.6-alpha.14 release.
+  {
+    title: "Nested pattern matching",
+    description: "Nominal record/variant matching and tuple binding (alpha.14)",
+    entry: 'main.srp',
+    files: { 'main.srp': "// Nested record and tuple patterns must bind exactly once per selected arm.\nrecord Point { x: integer, y: integer }\nvariant Event { Move(record Point), Idle }\n\nbind event = new Event::Move(new Point { x: 12, y: 30 });\nmatch on event {\n    case Move({x: horizontal, y: vertical}) {\n        print(horizontal);\n        print(vertical);\n    }\n    case Idle { print(0); }\n}\n\nbind pair = (4, 9);\nbind (first, second) = pair;\nprint(first + second);\n" },
+  },
+  {
+    title: "Ordered string-map projections",
+    description: "Immutable map snapshots with paired keys and values (alpha.14)",
+    entry: 'main.srp',
+    files: { 'main.srp': "// Deterministic map projections remain paired after persistent updates.\nbind original = [map: \"z\": 9, \"a\": 1, \"m\": 5];\nbind inserted = map_set(original, \"b\", 2);\nbind replaced = map_set(inserted, \"m\", 50);\nbind removed = map_remove(replaced, \"z\");\n\nprint(map_keys(original));\nprint(map_values(original));\nprint(map_keys(inserted));\nprint(map_values(inserted));\nprint(map_keys(replaced));\nprint(map_values(replaced));\nprint(map_keys(removed));\nprint(map_values(removed));\nprint(map_keys(original));\nprint(map_values(original));\n" },
+  },
   {
     title: 'Import a module',
     description: 'Two real .srp source files',

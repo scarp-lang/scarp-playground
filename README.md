@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.13** (published prerelease) |
-| Pinned compiler revision | `e755fda37cdaeed29434e848cb5dd41f2f2e7eb2` |
+| Scarp compiler | **v0.0.6-alpha.14** (published prerelease) |
+| Pinned compiler revision | `43627b74af5fccccc5e233e98207413983ebafc1` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -45,6 +45,16 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.14 upgrades the browser to the annotated Scarp compiler source at
+`43627b74af5fccccc5e233e98207413983ebafc1`, retaining the existing language and JSON contracts.
+Two new exact upstream fixtures cover nested nominal patterns and deterministic
+string-map key/value projections. Their source and expected output are checked
+by native bridge, TypeScript and real three-browser WebAssembly tests. The
+improved nested destructuring punctuation diagnostics are checked for atomic
+failure. Host-only adaptive compiler caches and checked ELF64 object emission
+are **not** exposed by this browser preview. See
+[alpha.14 integration](docs/compiler-alpha14-integration.md).
 
 Alpha.13 updates the Playground to the **published and annotated** Scarp
 compiler source at `e755fda37cdaeed29434e848cb5dd41f2f2e7eb2`. It retains the alpha.12
