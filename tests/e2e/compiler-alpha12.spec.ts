@@ -21,7 +21,7 @@ const published: Array<{ title: string; stdout: string }> = [
 for (const fixture of published) {
   test('alpha.12 runs published source: ' + fixture.title, async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('button', { name: new RegExp(fixture.title, 'i') }).click();
+    await page.getByRole('button', { name: fixture.title, exact: true }).click();
     await page.getByRole('button', { name: 'Verify code' }).click();
     await expect(page.locator('.terminal-output')).toContainText(
       'Static verification passed', { timeout: 30_000 },
