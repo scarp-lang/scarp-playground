@@ -1,6 +1,6 @@
 # Locked dependency provenance and advisory review
 
-**Status:** development-preview security gate, reviewed 12 November 2026.
+**Status:** development-preview security gate, updated 18 November 2026 for Scarp compiler v0.0.6-alpha.14.
 
 Scarp Playground builds static assets on GitHub Actions with both
 `package-lock.json` and `bridge/Cargo.lock` committed to the repository.
@@ -21,12 +21,14 @@ cargo audit --file bridge/Cargo.lock
 ```
 
 The regular **Playground CI and Pages** workflow gates deployment on both
-the full Rust/WebAssembly/browser checks and a separate RustSec advisory scan
-of the exact bridge Cargo.lock. The RustSec job uses a fresh advisory database
-and runs in parallel with the browser build. The npm audit checks
-both production and development dependencies used to produce the served
-bundle. A high- or critical-severity advisory **fails the workflow**;
-do not introduce broad silent ignores merely to keep publishing green.
+the full Rust/WebAssembly/browser checks, a separate RustSec advisory scan
+of the exact bridge Cargo.lock, and an independent, **mandatory** npm advisory
+audit. These three jobs execute independently and must all pass before
+deployment can begin. The RustSec job uses a fresh advisory database.
+The npm audit checks both production and development dependencies used
+to produce the served bundle. A high- or critical-severity advisory
+**fails the security gate**; do not introduce broad silent ignores or
+run `npm audit --omit=dev` as a substitute for the required full audit.
 
 ## Exact guarantees and review boundaries
 
@@ -40,8 +42,8 @@ The deterministic local checker rejects:
 - A Cargo registry crate whose origin differs from crates.io's official
   index or whose entry omits a 64-digit SHA-256 checksum.
 - The Scarp compiler moving away from the published
-  **v0.0.6-alpha.8** release-source revision
-  `37253e7805c0ca594560700dd1deb3928458e60d`.
+  **v0.0.6-alpha.14** release-source revision
+  `43627b74af5fccccc5e233e98207413983ebafc1`.
   The Cargo manifest and lockfile must match this reviewed revision.
 - Browser-displayed compatibility metadata whose compiler version, immutable
   revision or release URL diverges from the same independent reviewed pin.
@@ -61,6 +63,31 @@ The advisory check uses npm's **live vulnerability database**, so results
 can change without any committed dependency change. It should be run on
 all PRs and main-branch deployments; investigation of failed advisories must
 use the exact package paths and affected versions from the CI log.
+
+## Active upstream npm advisory checkpoint (18 November 2026)
+
+The full lockfile audit currently fails on
+[`GHSA-fc5q-39xc-vjpf`](https://github.com/advisories/GHSA-fc5q-39xc-vjpf):
+`picomatch@4.0.7` is affected by a high-severity ReDoS issue involving
+repeated extglob patterns. The dependency reaches the Playground through
+**development/build tooling** including Vite, Vitest, fdir and tinyglobby.
+The npm lockfile marks the affected installed package as `dev: true`.
+That reduces the served-app exposure but is **not a reason to skip build
+dependency auditing**, especially in CI.
+
+As of this review, no compatible published fixed `picomatch` release is
+confirmed. The audit also reports a moderate
+[`GHSA-g3hv-75wg-m249`](https://github.com/advisories/GHSA-g3hv-75wg-m249)
+finding in a nested `minimatch` dependency used by TypeScript-ESLint.
+Do not blindly use `npm audit fix --force`: its proposed Vitest downgrade
+does not demonstrate a safe, compatible remediation and can break
+the validated test graph.
+
+**Next gate:** wait for a verified upstream fix or a separately reviewed
+replacement dependency graph. Regenerate and inspect `package-lock.json`,
+rerun `npm ci`, `npm run verify:locks`, `npm audit --audit-level=high`,
+the full JS/Rust/WASM checks and all three browsers. Keep this PR unmerged
+and the Pages deployment skipped while the full audit is red.
 
 ## Not proven by this milestone
 
