@@ -7,6 +7,7 @@ const ScarpEditor = lazy(() =>
 );
 import { examples } from './examples';
 import { ExampleBrowser } from './ExampleBrowser';
+import { isUntouchedExampleSession } from './example-session';
 import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
 import { editorPositionToByteOffset } from './navigation/coordinates';
@@ -668,8 +669,19 @@ export function App() {
   }
 
   function selectExample(index: number) {
-    invalidateExecution();
     const example = examples[index];
+    if (!example) return;
+    // Do not discard user-authored source or input without consent.
+    // An untouched built-in sample can switch immediately; external,
+    // edited, or imported sessions require an explicit decision first.
+    // A cancelled switch must not stop an ongoing compiler Worker.
+    if (!isUntouchedExampleSession(workspace, programInput) &&
+        !window.confirm(
+          'Replace the open workspace with the built-in example "' + example.title +
+          '"? Current source edits and program input will be lost. ' +
+          'Your locally saved browser copy will not be overwritten.',
+        )) return;
+    invalidateExecution();
     // Loading a sample replaces the editor session, not the user's saved
     // project. Stop autosaving before switching workspaces; explicit Save
     // locally is required to replace the browser's previous snapshot.

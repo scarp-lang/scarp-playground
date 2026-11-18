@@ -41,3 +41,58 @@ test('searches descriptions, explains empty results and clears with button or Es
   await expect(filter).toHaveValue('');
   await expect(buttons).toHaveCount(allCount);
 });
+
+test('switches untouched examples without prompting, but protects edited work on cancel', async ({ page }) => {
+  await page.goto('./');
+  const target = page.locator('.example-button').filter({
+    has: page.getByText('Bindings & arithmetic', { exact: true }),
+  });
+  // Ordinary browsing between unmodified official fixtures should be immediate.
+  await target.click();
+  await expect(page.locator('.monaco-editor .view-lines')).toContainText('bind width = 6');
+
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText('print("unsaved work");');
+  await expect(page.locator('.monaco-editor .view-lines')).toContainText('unsaved work');
+
+  const next = page.locator('.example-button').filter({
+    has: page.getByText('While loops', { exact: true }),
+  });
+  const dismiss = page.waitForEvent('dialog').then(async dialog => {
+    expect(dialog.message()).toContain('Current source edits and program input will be lost');
+    await dialog.dismiss();
+  });
+  await next.click();
+  await dismiss;
+  await expect(page.locator('.monaco-editor .view-lines')).toContainText('unsaved work');
+
+  const accept = page.waitForEvent('dialog').then(async dialog => {
+    await dialog.accept();
+  });
+  await next.click();
+  await accept;
+  await expect(page.locator('.monaco-editor .view-lines')).toContainText('var index = 0');
+});
+
+test('protects modified stdin even when the sample sources are unchanged', async ({ page }) => {
+  await page.goto('./');
+  await page.locator('.example-button').filter({
+    has: page.getByText('Input with fallback', { exact: true }),
+  }).click();
+  const input = page.getByRole('textbox', { name: /program input/i });
+  await expect(input).toBeVisible();
+  await input.fill('my personal input\n');
+
+  const next = page.locator('.example-button').filter({
+    has: page.getByText('Hello, Scarp', { exact: true }),
+  });
+  const dismiss = page.waitForEvent('dialog').then(async dialog => {
+    expect(dialog.message()).toContain('program input will be lost');
+    await dialog.dismiss();
+  });
+  await next.click();
+  await dismiss;
+  await expect(input).toHaveValue('my personal input\n');
+});

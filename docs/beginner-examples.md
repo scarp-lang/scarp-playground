@@ -44,4 +44,8 @@ uses the explicit stdin box: `1.225` is displayed as `1.22` after
 
 Click **Save locally** to keep an edited workspace in this browser, or
 **Export project** to preserve it as a source-only JSON file. Built-in
-example selection does not overwrite a previously saved project.
+example selection does not overwrite a previously saved project. Switching
+between unchanged examples is immediate; if you edited a sample, changed its
+program input, or opened your own workspace, switching examples asks for
+confirmation before discarding the open session. Choosing Cancel leaves your
+code and input in place.
