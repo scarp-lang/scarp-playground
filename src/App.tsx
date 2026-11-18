@@ -6,6 +6,7 @@ const ScarpEditor = lazy(() =>
   import('./ScarpEditor').then(({ ScarpEditor }) => ({ default: ScarpEditor })),
 );
 import { examples } from './examples';
+import { ExampleBrowser } from './ExampleBrowser';
 import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
 import { editorPositionToByteOffset } from './navigation/coordinates';
@@ -999,19 +1000,7 @@ export function App() {
           <div className="section-label">GET STARTED</div>
           <h1 className="sidebar-heading">Code. Run. Learn.</h1>
           <p className="sidebar-copy">Experiment with Scarp using its real Rust interpreter, compiled for your browser.</p>
-          <div className="section-label mt-8">EXAMPLE PROGRAMS</div>
-          <div className="example-list">
-            {examples.map((example, index) => (
-              <button key={example.title} className="example-button" type="button" onClick={() => selectExample(index)}>
-                <span className="example-symbol">{index === 0 ? '✦' : index === 1 ? '∑' : '⌘'}</span>
-                <span className="example-details">
-                  <strong>{example.title}</strong>
-                  <small>{example.description}</small>
-                </span>
-                <span className="example-arrow">›</span>
-              </button>
-            ))}
-          </div>
+          <ExampleBrowser onSelect={selectExample} />
           <div className="sidebar-bottom">
             <div className="section-label">COMPATIBILITY</div>
             <strong>Scarp v{compilerCompatibility.version}</strong>
