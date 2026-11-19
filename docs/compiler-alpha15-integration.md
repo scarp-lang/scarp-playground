@@ -57,7 +57,9 @@ npm audit --audit-level=high
 cargo audit --file bridge/Cargo.lock
 ```
 
-**Security gate:** the high-severity `picomatch` advisory found on the alpha.14
-PR remains a blocking external dependency issue until the updated exact npm
-lockfile independently passes the full audit. Do not disable the audit, force a
-Vitest downgrade, merge a red PR or publish a new Playground release.
+**Security gate:** a high-severity `picomatch` advisory failed the 18 November
+full npm audit, but the unchanged lockfile passed the 19 November
+`npm audit --audit-level=high` gate (seven moderate findings remained).
+Advisory results are live and must be independently checked again for this
+alpha.15 head. Do not disable the audit, force an unreviewed downgrade, merge
+a red PR or publish an unauthorized Playground release.

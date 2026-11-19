@@ -64,30 +64,29 @@ can change without any committed dependency change. It should be run on
 all PRs and main-branch deployments; investigation of failed advisories must
 use the exact package paths and affected versions from the CI log.
 
-## Active upstream npm advisory checkpoint (18 November 2026)
+## npm advisory checkpoint (19 November 2026)
 
-The full lockfile audit currently fails on
-[`GHSA-fc5q-39xc-vjpf`](https://github.com/advisories/GHSA-fc5q-39xc-vjpf):
-`picomatch@4.0.7` is affected by a high-severity ReDoS issue involving
-repeated extglob patterns. The dependency reaches the Playground through
-**development/build tooling** including Vite, Vitest, fdir and tinyglobby.
-The npm lockfile marks the affected installed package as `dev: true`.
-That reduces the served-app exposure but is **not a reason to skip build
-dependency auditing**, especially in CI.
+On **18 November 2026**, PR #69's independent full npm audit failed with
+six high-severity advisories traced to `picomatch` and six moderate findings,
+including nested `minimatch`. The failing report named
+[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf)
+and [GHSA-g3hv-75wg-m249](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+The npm lockfile placed the affected `picomatch` in build/dev tooling, but
+that **did not justify skipping the full audit**.
 
-As of this review, no compatible published fixed `picomatch` release is
-confirmed. The audit also reports a moderate
-[`GHSA-g3hv-75wg-m249`](https://github.com/advisories/GHSA-g3hv-75wg-m249)
-finding in a nested `minimatch` dependency used by TypeScript-ESLint.
-Do not blindly use `npm audit fix --force`: its proposed Vitest downgrade
-does not demonstrate a safe, compatible remediation and can break
-the validated test graph.
+On **19 November 2026**, the [successful alpha.14 CI run](https://github.com/scarp-lang/scarp-playground/actions/runs/44553792079)
+re-audited the **unchanged npm lockfile** and reported **seven moderate
+vulnerabilities, with no high/critical findings**. The full
+`npm audit --audit-level=high` step therefore passed. This was a change
+in live advisory results, **not a dependency upgrade or evidence that an
+upstream vulnerability was independently fixed**. Do not silently waive
+or dismiss the earlier finding.
 
-**Next gate:** wait for a verified upstream fix or a separately reviewed
-replacement dependency graph. Regenerate and inspect `package-lock.json`,
-rerun `npm ci`, `npm run verify:locks`, `npm audit --audit-level=high`,
-the full JS/Rust/WASM checks and all three browsers. Keep this PR unmerged
-and the Pages deployment skipped while the full audit is red.
+The remaining moderate `minimatch` chain should receive a separately
+reviewed compatible update. Do not force a breaking Vitest downgrade as an
+unverified fix. Audit outcomes can change again; each new candidate commit
+must run the full npm audit alongside lockfile provenance, RustSec, native
+Rust, WASM and three-browser tests before merge or deployment.
 
 ## Not proven by this milestone
 
