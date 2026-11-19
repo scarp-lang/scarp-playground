@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { replaceExampleAfterEdit } from './support/example-switch';
 
 // These tests exercise the real alpha.8 Rust compiler compiled to browser WASM.
 test('alpha.8 runs the official Boolean assertion example', async ({ page }) => {
@@ -50,7 +51,7 @@ test('alpha.8 diagnostics locate failed assertions in a real imported module', a
   await expect(page.locator('.stdout')).toHaveCount(0);
 
   // A compiler error in an imported file must never poison the next Worker.
-  await page.getByRole('button', { name: /Hello, Scarp/ }).click();
+  await replaceExampleAfterEdit(page, /Hello, Scarp/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
   await expect(page.locator('.error-panel')).toHaveCount(0);
