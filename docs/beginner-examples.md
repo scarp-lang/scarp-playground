@@ -13,6 +13,15 @@ proposals or unimplemented syntax.
 | Typed functions | [`examples/functions.srp`](https://github.com/scarp-lang/scarp/blob/main/examples/functions.srp) | Use funcra, parameters, return and pure | "35\nHello Scarp\n6\n" |
 | Writing output | [`examples/output.srp`](https://github.com/scarp-lang/scarp/blob/main/examples/output.srp) | Compare print, write and newlines | "Hello, Scarp 3 true\n\ndone" |
 
+## Find a program
+
+Use **Find an example** in the sidebar to filter by title, description,
+compiler alpha version (for example, `alpha.14`), or module file path.
+Search terms are case-insensitive and all terms must match somewhere in the
+example metadata. The search only changes the visible list; selecting a result
+still loads its original source files and the search does not save any data.
+Use **Clear** or Escape in the search field to restore all examples.
+
 ## Recommended order
 
 Start with **Hello, Scarp** and **Bindings & arithmetic**, then work through
@@ -20,7 +29,7 @@ the five samples above. The language uses `funcra` for functions, `var`
 for mutable bindings, and both bounded `while` and counted `repeat`
 loops. Run each sample and change small inputs to see how the output changes.
 
-These examples run with the pinned Scarp `v0.0.6-alpha.11` compiler. The
+These examples run with the pinned Scarp `v0.0.6-alpha.15` compiler. The
 **Boolean assertions** example is based on the released
 [`examples/assertions.srp`](https://github.com/scarp-lang/scarp/blob/v0.0.6-alpha.8/examples/assertions.srp)
 fixture and prints `3` followed by a newline. Its conditions use the actual
@@ -35,4 +44,8 @@ uses the explicit stdin box: `1.225` is displayed as `1.22` after
 
 Click **Save locally** to keep an edited workspace in this browser, or
 **Export project** to preserve it as a source-only JSON file. Built-in
-example selection does not overwrite a previously saved project.
+example selection does not overwrite a previously saved project. Switching
+between unchanged examples is immediate; if you edited a sample, changed its
+program input, or opened your own workspace, switching examples asks for
+confirmation before discarding the open session. Choosing Cancel leaves your
+code and input in place.

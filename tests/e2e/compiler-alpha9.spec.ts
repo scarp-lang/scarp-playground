@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { replaceExampleAfterEdit } from './support/example-switch';
 
 // These tests execute the published alpha.9 compiler inside the actual browser WASM Worker.
 test('alpha.9 runs the official exact signed BigInt arithmetic fixture', async ({ page }) => {
@@ -28,7 +29,7 @@ test('alpha.9 rejects malformed decimal input atomically, then recovers', async 
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.error-title')).toContainText('E0051', { timeout: 30_000 });
   await expect(page.locator('.stdout')).toHaveCount(0);
-  await page.getByRole('button', { name: /Exact big integers/ }).click();
+  await replaceExampleAfterEdit(page, /Exact big integers/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toContainText('1000000000000000000000000000000', { timeout: 30_000 });
   await expect(page.locator('.error-panel')).toHaveCount(0);
@@ -56,7 +57,7 @@ test('alpha.9 enforces the 2048-digit browser quota and discards partial output'
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.result-status.failure')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('.stdout')).toHaveCount(0);
-  await page.getByRole('button', { name: /Hello, Scarp/ }).click();
+  await replaceExampleAfterEdit(page, /Hello, Scarp/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });
 });
