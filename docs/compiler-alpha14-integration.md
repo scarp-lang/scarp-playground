@@ -1,5 +1,9 @@
 # Scarp v0.0.6-alpha.14 Playground browser integration
 
+> Historical integration note: these alpha.14 regression fixtures remain in the
+> Playground after the newer [alpha.15 compiler pin](compiler-alpha15-integration.md).
+> The source revision recorded below is the alpha.14 release, not the current pin.
+
 **Published upstream prerelease:** https://github.com/scarp-lang/scarp/releases/tag/v0.0.6-alpha.14
 
 **Annotated Git tag object:** `1942378190fac68845563478c6e64d00d8b7f083`
