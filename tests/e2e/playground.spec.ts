@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { replaceExampleAfterEdit } from './support/example-switch';
 import { readFileSync } from 'node:fs';
 
 // Playwright runs in Node.js, not Vite: read JSON without an ESM JSON import.
@@ -70,7 +71,7 @@ test('alpha.3 rejects an invalid temperature without partial output and recovers
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.error-title')).toContainText('E0034', { timeout: 30_000 });
   await expect(page.locator('.stdout')).toHaveCount(0);
-  await page.getByRole('button', { name: /Temperature softmax/ }).click();
+  await replaceExampleAfterEdit(page, /Temperature softmax/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText(
     '[0.5, 0.5]\n[0.0]\n[integer: 1, 2, 3]\n',
@@ -98,7 +99,7 @@ test('alpha.4 rejects zero-vector cosine inputs atomically and recovers', async 
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.result-status.failure')).toBeVisible({ timeout: 30_000 });
   await expect(page.locator('.stdout')).toHaveCount(0);
-  await page.getByRole('button', { name: /Cosine similarity/ }).click();
+  await replaceExampleAfterEdit(page, /Cosine similarity/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('1.0\n0.0\n-1.0\n', { timeout: 30_000 });
 });
@@ -128,7 +129,7 @@ test('alpha.5 rejects invalid Top-P and zero-variance Pearson atomically, then r
     await expect(page.locator('.error-title')).toContainText('E0034', { timeout: 30_000 });
     await expect(page.locator('.stdout')).toHaveCount(0);
     await expect(page.locator('.result-status.failure')).toBeVisible();
-    await page.getByRole('button', { name: /Pearson correlation/ }).click();
+    await replaceExampleAfterEdit(page, /Pearson correlation/);
     await page.getByRole('button', { name: 'Run code' }).click();
     await expect(page.locator('.stdout')).toHaveText('1.0\n-1.0\n0.0\n', { timeout: 30_000 });
   }
