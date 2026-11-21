@@ -82,6 +82,18 @@ describe('shipped compiler-backed learning examples', () => {
     expect(maps.files['main.srp']).toContain('map<integer, list<integer>>');
   });
 
+  it('ships alpha.16 statistics and Unicode modules in bounded workspaces', () => {
+    const stats = examples.find((example) => example.title === 'Median and quantiles');
+    const utils = examples.find((example) => example.title === 'Unicode and integer utilities');
+    expect(stats?.description).toContain('alpha.16');
+    expect(utils?.description).toContain('alpha.16');
+    expect(stats?.files['main.srp']).toContain('print(quantile(samples, 0.25));');
+    expect(stats?.files['main.srp']).toContain('window(samples, 1, 3)');
+    expect(utils?.files['main.srp']).toContain('collections.labels()');
+    expect(utils?.files['modules/collection_tools.srp']).toContain('pub pure funcra labels(');
+    expect(validateWorkspace({ entry: utils!.entry, files: utils!.files })).toBeNull();
+  });
+
   it('ships the released alpha.8 assertion fixture with no obsolete prerelease caveat', () => {
     const fixture = examples.find((example) => example.title === 'Boolean assertions');
     expect(fixture).toBeDefined();
