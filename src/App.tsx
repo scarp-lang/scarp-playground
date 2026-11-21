@@ -764,6 +764,24 @@ export function App() {
     }
   }
 
+  // Preserve the latest opted-in source even if a 350-ms autosave debounce
+  // has not fired. If storage fails, refuse to destroy the live editor.
+  function preserveSavedSourceBeforeSwitch(): boolean {
+    if (!savingLocally) return true;
+    let problem: string | null;
+    try {
+      problem = saveLocalWorkspace(window.localStorage, workspace, activeFile);
+    } catch {
+      problem = 'Browser storage is unavailable.';
+    }
+    if (problem) {
+      setNotice(problem + ' The current workspace was not replaced.');
+      return false;
+    }
+    setSavedWorkspace(workspace);
+    return true;
+  }
+
   function selectExample(index: number) {
     const example = examples[index];
     if (!example) return;
@@ -777,6 +795,7 @@ export function App() {
           '"? Current source edits and program input will be lost. ' +
           'Your locally saved browser copy will not be overwritten.',
         )) return;
+    if (!preserveSavedSourceBeforeSwitch()) return;
     invalidateExecution();
     // Loading a sample replaces the editor session, not the user's saved
     // project. Stop autosaving before switching workspaces; explicit Save
@@ -1029,7 +1048,8 @@ export function App() {
         'Replace the open workspace with this project? Unsaved changes to the open editor will be lost. Your locally saved browser copy will not be overwritten.',
       )) return;
       // A portable import is session-only until the user explicitly opts in.
-      // Stop any previously enabled autosave; keep the old saved snapshot.
+      // Flush pending opted-in writes before stopping autosave.
+      if (!preserveSavedSourceBeforeSwitch()) return;
       invalidateExecution();
       setSavingLocally(false);
       setWorkspace(imported.workspace);
