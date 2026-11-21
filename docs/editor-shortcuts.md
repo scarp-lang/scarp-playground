@@ -47,6 +47,7 @@ navigate. Editing the source clears stale diagnostic markers.
 | Shift+F12 | Compiler-backed Find references |
 | F2 | Preview compiler-validated symbol rename |
 | Ctrl+Enter (Cmd+Enter) | Run Scarp using the browser WebAssembly worker |
+| Ctrl+S (Cmd+S) | Save all source files locally in the current browser profile (opt-in; stdin is never saved) |
 | Ctrl+Shift+F (Cmd+Shift+F) | Find literal text in the entire virtual project |
 | Enable/Disable word wrap | Toggle visual wrapping without changing any source bytes |
 | Copy source | Copy the active module's exact source through the browser clipboard |
@@ -62,3 +63,25 @@ compiler code generation or a guarantee that entered source is valid.
 The keyboard shortcuts operate in the Monaco source editor. When focus is
 inside an unrelated text input or search box, typing follows that control's
 normal behavior instead. No program source is uploaded by these editor actions.
+
+## Unsaved-work protection
+
+The workspace header reports **Saved locally**, **Unsaved work**, or a
+recoverable temporary example/link. Ctrl+S / Cmd+S opts into versioned,
+bounded browser-local autosaving, or saves the latest source immediately.
+Neither saving nor this keyboard shortcut uploads files or stores stdin.
+
+Before leaving or reloading an unprotected edited workspace, the browser may
+show its native unsaved-work warning. For an opted-in local workspace, the
+Playground attempts a final synchronous save before navigation; it warns if
+storage fails. Changed buffered stdin remains ephemeral and can still trigger
+a warning. The exact text and availability of reload dialogs depend on
+browser restrictions (including prior user interaction).
+
+Opening a different valid `#code=` or `#project=` share fragment inside the
+same tab also checks for unprotected work. Rejecting the confirmation leaves
+the current editor and address intact. Switching built-in examples and
+importing JSON projects retain their separate explicit confirmation workflows.
+Unsaved imported files or an explicitly forgotten browser snapshot are
+marked unprotected until saved again. No automatic session backup is created
+without a user-directed save.

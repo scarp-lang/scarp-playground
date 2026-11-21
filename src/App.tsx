@@ -31,6 +31,7 @@ import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
 import { forgetLocalWorkspace, restoreLocalWorkspace, saveLocalWorkspace } from './persistence';
+import { hasUnprotectedSessionWork, sameWorkspaceContents, type SessionCheckpoint } from './session-safety';
 import { MAX_PORTABLE_WORKSPACE_BYTES, parsePortableWorkspace, serializePortableWorkspace } from './portable-workspace';
 
 type InitialSession = { workspace: Workspace; activeFile: string; savingLocally: boolean };
@@ -71,6 +72,15 @@ export function App() {
   const [activeFile, setActiveFile] = useState(initial.activeFile);
   const [editorSession, setEditorSession] = useState(0);
   const [savingLocally, setSavingLocally] = useState(initial.savingLocally);
+  const [savedWorkspace, setSavedWorkspace] = useState<Workspace | null>(
+    initial.savingLocally ? initial.workspace : null,
+  );
+  const [checkpoint, setCheckpoint] = useState<SessionCheckpoint>({
+    workspace: initial.workspace,
+    stdin: '',
+    recoverable: true,
+  });
+  const acceptedHash = useRef(window.location.hash);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
   const [operation, setOperation] = useState<'run' | 'check' | 'verify'>('run');
@@ -129,6 +139,15 @@ export function App() {
   const [navigationTarget, setNavigationTarget] = useState<{
     path: string; line: number; column: number; sequence: number;
   } | null>(null);
+  const latestSession = useRef({
+    workspace, activeFile, programInput, savingLocally, savedWorkspace, checkpoint,
+  });
+  latestSession.current = {
+    workspace, activeFile, programInput, savingLocally, savedWorkspace, checkpoint,
+  };
+  const unprotectedWork = hasUnprotectedSessionWork(
+    workspace, programInput, savingLocally, savedWorkspace, checkpoint,
+  );
   const files = Object.keys(workspace.files);
   const activeStats = useMemo(() => scarpFileStats(activeFile, workspace.files[activeFile] ?? ''),
     [activeFile, workspace.files]);
@@ -564,6 +583,11 @@ export function App() {
         event.preventDefault();
         setSearchOpen(true);
         searchInputRef.current?.focus();
+      } else if ((event.ctrlKey || event.metaKey) && !event.shiftKey &&
+          !event.altKey && event.key.toLowerCase() === 's') {
+        // Keep Ctrl+S/Cmd+S in the editor, not the browser's Save Page dialog.
+        event.preventDefault();
+        if (!event.repeat) enableLocalSaving();
       } else if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
         event.preventDefault();
         void run();
@@ -571,7 +595,7 @@ export function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [run]);
+  }, [run, workspace, activeFile, savingLocally]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
@@ -582,15 +606,75 @@ export function App() {
     }
   }, [dark]);
 
-  // Both legacy #code= and versioned #project= links can navigate within the
-  // same document. Opening one never replaces the opt-in local saved copy.
+  // A browser warning is a last resort. Try a synchronous snapshot first,
+  // but only after the user opted into saving. No stdin is ever persisted.
+  useEffect(() => {
+    const protectDraft = (event: BeforeUnloadEvent) => {
+      let persisted = savedWorkspace;
+      if (savingLocally && (!persisted || !sameWorkspaceContents(workspace, persisted))) {
+        try {
+          if (!saveLocalWorkspace(window.localStorage, workspace, activeFile)) {
+            persisted = workspace;
+          }
+        } catch {
+          // Storage may be denied; fall through to the browser warning.
+        }
+      }
+      if (hasUnprotectedSessionWork(
+        workspace, programInput, savingLocally, persisted, checkpoint,
+      )) {
+        event.preventDefault();
+        event.returnValue = '';
+      }
+    };
+    window.addEventListener('beforeunload', protectDraft);
+    return () => window.removeEventListener('beforeunload', protectDraft);
+  }, [workspace, activeFile, programInput, savingLocally, savedWorkspace, checkpoint]);
+
+  // Both legacy #code= and versioned #project= links can navigate in this
+  // document. Guard this path too: beforeunload does not fire on hash changes.
   useEffect(() => {
     const onHashChange = () => {
-      const shared = readSharedWorkspace(window.location.hash);
+      const newHash = window.location.hash;
+      const shared = readSharedWorkspace(newHash);
+      if (shared === null && newHash !== '') {
+        acceptedHash.current = newHash;
+        return;
+      }
+      const session = latestSession.current;
+      let persisted = session.savedWorkspace;
+      if (session.savingLocally &&
+          (!persisted || !sameWorkspaceContents(session.workspace, persisted))) {
+        try {
+          if (!saveLocalWorkspace(
+            window.localStorage, session.workspace, session.activeFile,
+          )) {
+            persisted = session.workspace;
+            setSavedWorkspace(session.workspace);
+          }
+        } catch {
+          // Preserve the warning if browser storage failed.
+        }
+      }
+      if (hasUnprotectedSessionWork(
+        session.workspace, session.programInput, session.savingLocally,
+        persisted, session.checkpoint,
+      ) && !window.confirm(
+        'Open a different Scarp workspace? Unsaved code or program input ' +
+        'may be lost. Export the project or save locally to keep your source.',
+      )) {
+        // replaceState does not trigger another hashchange, avoiding a loop.
+        window.history.replaceState(
+          null, '', window.location.pathname + window.location.search + acceptedHash.current,
+        );
+        return;
+      }
+      acceptedHash.current = newHash;
       if (shared !== null) {
         invalidateExecution();
         setSavingLocally(false);
         setWorkspace(shared.workspace);
+        setCheckpoint({ workspace: shared.workspace, stdin: '', recoverable: true });
         setProgramInput('');
         setEditorSession((number) => number + 1);
         setActiveFile(shared.activeFile);
@@ -598,22 +682,29 @@ export function App() {
         setNotice('Opened shared project. Your locally saved workspace remains unchanged.');
         return;
       }
-      if (window.location.hash !== '') return;
       try {
         const saved = restoreLocalWorkspace(window.localStorage);
         if (saved) {
           invalidateExecution();
           setWorkspace(saved.workspace);
+          setSavedWorkspace(saved.workspace);
+          setCheckpoint({ workspace: saved.workspace, stdin: '', recoverable: true });
           setProgramInput('');
           setEditorSession((number) => number + 1);
           setActiveFile(saved.activeFile);
           setSavingLocally(true);
           setResult(null);
           setNotice('Restored your locally saved workspace.');
+          return;
         }
       } catch {
-        // No persistent access: leave the current editor intact.
+        // No persistent access: retain the current editor.
       }
+      // Clearing an existing share fragment without a local snapshot removes
+      // the URL's recovery path, even though the code stays open for now.
+      setCheckpoint({
+        workspace: session.workspace, stdin: session.programInput, recoverable: false,
+      });
     };
     window.addEventListener('hashchange', onHashChange);
     return () => window.removeEventListener('hashchange', onHashChange);
@@ -632,6 +723,8 @@ export function App() {
       if (error) {
         setSavingLocally(false);
         setNotice(error + ' Local autosave was disabled.');
+      } else {
+        setSavedWorkspace(workspace);
       }
     }, 350);
     return () => window.clearTimeout(timer);
@@ -648,6 +741,7 @@ export function App() {
       setNotice(error);
       return;
     }
+    setSavedWorkspace(workspace);
     setSavingLocally(true);
     setNotice('Workspace saved on this browser. Future edits will autosave locally; storage is not encrypted.');
   }
@@ -662,6 +756,8 @@ export function App() {
     }
     if (success) {
       setSavingLocally(false);
+      setSavedWorkspace(null);
+      setCheckpoint({ workspace, stdin: programInput, recoverable: false });
       setNotice('Saved browser copy removed. The open workspace is still available until you leave.');
     } else {
       setNotice('Unable to remove the saved workspace from browser storage.');
@@ -686,7 +782,11 @@ export function App() {
     // project. Stop autosaving before switching workspaces; explicit Save
     // locally is required to replace the browser's previous snapshot.
     setSavingLocally(false);
-    setWorkspace({ entry: example.entry, files: { ...example.files } });
+    const nextWorkspace = { entry: example.entry, files: { ...example.files } };
+    setWorkspace(nextWorkspace);
+    setCheckpoint({
+      workspace: nextWorkspace, stdin: example.stdin ?? '', recoverable: true,
+    });
     setProgramInput(example.stdin ?? '');
     setEditorSession((number) => number + 1);
     setActiveFile(example.entry);
@@ -696,6 +796,7 @@ export function App() {
         ? ' — your locally saved workspace is preserved. Choose Save locally to replace it.'
         : ' — ready to execute with the real compiler.'));
     window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    acceptedHash.current = '';
   }
 
   function changeSource(path: string, source: string) {
@@ -932,6 +1033,7 @@ export function App() {
       invalidateExecution();
       setSavingLocally(false);
       setWorkspace(imported.workspace);
+      setCheckpoint({ workspace: imported.workspace, stdin: '', recoverable: false });
       setProgramInput('');
       setEditorSession((number) => number + 1);
       setActiveFile(imported.activeFile);
@@ -939,6 +1041,7 @@ export function App() {
       setNotice('Imported ' + Object.keys(imported.workspace.files).length +
         ' Scarp source files. Save locally if you want this project to persist after reload.');
       window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      acceptedHash.current = '';
     } catch {
       setNotice('The selected project could not be read.');
     }
@@ -1026,9 +1129,18 @@ export function App() {
             <div>
               <div className="workspace-heading">Workspace <span className="workspace-count">{files.length} .srp {files.length === 1 ? 'file' : 'files'}</span></div>
               <p>Write Scarp and press Ctrl + Enter to execute.</p>
+              <p className={'workspace-save-status' + (unprotectedWork ? ' unsaved' : '')}
+                data-testid="session-save-status" role="status">
+                {unprotectedWork
+                  ? 'Unsaved work · Ctrl+S / Cmd+S to save source'
+                  : savingLocally ? 'Saved locally' : 'Temporary, recoverable example or link'}
+              </p>
             </div>
             <div className="toolbar-actions">
-              <button type="button" className="button-secondary" onClick={() => savingLocally ? forgetLocalSaving() : enableLocalSaving()}>
+              <button type="button" className="button-secondary"
+                aria-keyshortcuts="Control+S Meta+S"
+                title="Ctrl+S / Cmd+S saves all Scarp files in this browser; never saves stdin"
+                onClick={() => savingLocally ? forgetLocalSaving() : enableLocalSaving()}>
                 {savingLocally ? 'Forget saved copy' : 'Save locally'}
               </button>
               <input
