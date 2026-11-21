@@ -55,6 +55,11 @@ monaco.languages.setMonarchTokensProvider('scarp', {
     'list', 'map', 'list_len', 'list_push', 'list_set', 'list_remove',
     'map_len', 'map_contains', 'map_get_or', 'map_set', 'map_remove',
     'map_keys', 'map_values',
+    'median', 'quantile', 'text_lower', 'text_upper', 'text_reverse',
+    'text_from_codepoint', 'text_rfind', 'text_count',
+    'bits_count_ones', 'bits_leading_zeros', 'bits_trailing_zeros',
+    'bits_reverse', 'bits_swap_bytes', 'bits_rotate_left', 'bits_rotate_right',
+    'integer_abs', 'integer_sign', 'integer_gcd', 'integer_lcm',
   ],
   tokenizer: {
     root: [

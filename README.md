@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.15** (published prerelease) |
-| Pinned compiler revision | `a21b7b6d942bd1ca9abbbbb522f92f9c8e21e281` |
+| Scarp compiler | **v0.0.6-alpha.16** (published prerelease) |
+| Pinned compiler revision | `244f713b4fa48f02a98b8e3e3c11025363f35260` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -45,6 +45,16 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.16 pins the published Scarp compiler source at `244f713b4fa48f02a98b8e3e3c11025363f35260`. Two
+new browser examples reproduce the upstream compiler's exact source and stdout
+for bounded finite-vector median/type-7 quantiles and Unicode/64-bit integer
+utilities across imported modules. Monaco exposes verified completion hints and
+syntax highlighting for these functions. Native bridge checks and real three-browser
+WebAssembly tests cover the exact fixtures plus atomic errors. Rust-only
+constant-cache retention controls and experimental ELF64 stack handling remain
+**unavailable** in the Playground. See
+[alpha.16 integration](docs/compiler-alpha16-integration.md).
 
 Alpha.15 pins the published compiler source at `a21b7b6d942bd1ca9abbbbb522f92f9c8e21e281`, preserving
 the alpha.14 language, sample files, JSON diagnostic schema, and disposable
@@ -227,6 +237,11 @@ load failure — it never fakes a successful program result.
   official example outputs plus domain-error and Worker-recovery tests in
   the real browser interpreter. These do not provide stochastic sampling,
   model training, GPU computation or native executable generation.
+- **Scarp alpha.16 statistics and scalar utilities:** `median`, `quantile`,
+  Unicode transformations and searches, checked 64-bit bit patterns and
+  integer GCD/LCM execute in the pinned Rust WebAssembly interpreter,
+  not JavaScript approximations. The example browser has two exact
+  upstream fixtures, including a two-file import graph.
 - **Scarp alpha.11 exact decimals:** the real interpreter handles exact base-10
   operations, typed imports and explicit rounding; ephemeral stdin is supported,
   but native interactive prompts remain disabled in the browser.

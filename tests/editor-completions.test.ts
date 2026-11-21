@@ -75,6 +75,28 @@ describe('Scarp editor syntax hints', () => {
     expect(editorCompletionHints('print("list_', 'main.srp', files)).toEqual([]);
   });
 
+  it('offers published alpha.16 numeric, Unicode and bitwise hints safely', () => {
+    expect(editorCompletionHints('quant', 'main.srp', files)
+      .find((hint) => hint.label === 'quantile')?.insertText)
+      .toBe('quantile(${1:values}, ${2:0.5})');
+    expect(editorCompletionHints('median', 'main.srp', files)[0]?.insertText)
+      .toBe('median(${1:values})');
+    expect(editorCompletionHints('text_', 'main.srp', files).map((hint) => hint.label))
+      .toEqual(expect.arrayContaining([
+        'text_lower', 'text_upper', 'text_reverse', 'text_from_codepoint',
+        'text_rfind', 'text_count',
+      ]));
+    expect(editorCompletionHints('bits_', 'main.srp', files).map((hint) => hint.label))
+      .toEqual(expect.arrayContaining([
+        'bits_count_ones', 'bits_leading_zeros', 'bits_trailing_zeros',
+        'bits_reverse', 'bits_swap_bytes', 'bits_rotate_left', 'bits_rotate_right',
+      ]));
+    expect(editorCompletionHints('integer_', 'main.srp', files).map((hint) => hint.label))
+      .toEqual(expect.arrayContaining(['integer_abs', 'integer_sign', 'integer_gcd', 'integer_lcm']));
+    expect(editorCompletionHints('// quantile', 'main.srp', files)).toEqual([]);
+    expect(editorCompletionHints('print("bits_', 'main.srp', files)).toEqual([]);
+  });
+
   it('resolves module import suggestions relative to current file, not the project root', () => {
     expect(relativeImportPath('lib/main.srp', 'lib/math.srp')).toBe('math.srp');
     expect(relativeImportPath('lib/main.srp', 'science/stats.srp')).toBe('../science/stats.srp');

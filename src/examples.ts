@@ -429,6 +429,23 @@ print("Lines:", entries);
     files: { 'main.srp': "// Deterministic map projections remain paired after persistent updates.\nbind original = [map: \"z\": 9, \"a\": 1, \"m\": 5];\nbind inserted = map_set(original, \"b\", 2);\nbind replaced = map_set(inserted, \"m\", 50);\nbind removed = map_remove(replaced, \"z\");\n\nprint(map_keys(original));\nprint(map_values(original));\nprint(map_keys(inserted));\nprint(map_values(inserted));\nprint(map_keys(replaced));\nprint(map_values(replaced));\nprint(map_keys(removed));\nprint(map_values(removed));\nprint(map_keys(original));\nprint(map_values(original));\n" },
   },
   {
+    title: "Median and quantiles",
+    description: "Published finite vector statistics and windows (alpha.16)",
+    entry: 'main.srp',
+    files: {
+      "main.srp": "// Median and type-7 quantiles use a bounded, immutable sorted copy.\nbind samples = [4.0, 1.0, 7.0, 2.0];\nprint(median(samples));\nprint(quantile(samples, 0.25));\nprint(quantile(samples, 0.75));\nbind visible = window(samples, 1, 3);\nprint(median(visible));\nprint(samples);\n",
+    },
+  },
+  {
+    title: "Unicode and integer utilities",
+    description: "Published Unicode, 64-bit helpers and typed modules (alpha.16)",
+    entry: 'main.srp',
+    files: {
+      "main.srp": "import \"modules/collection_tools.srp\" as collections;\n\nbind labels = collections.labels();\nprint(labels[0], labels[1], labels[2]);\nprint(text_rfind(labels[2], \"न\"), text_count(labels[2], \"न\"));\nprint(integer_abs(-42), integer_sign(-42), integer_gcd(-42, 30), integer_lcm(-42, 30));\nprint(bits_count_ones(-1), bits_leading_zeros(1), bits_rotate_left(1, 63));\n",
+      "modules/collection_tools.srp": "pub pure funcra labels(text: string = \"नमवनA\") -> array<string, 3> {\n    bind globe = text_from_codepoint(0x1f30d);\n    return [array: text_upper(\"Straße\"), text_lower(\"İ\"), text_concat(text_reverse(text), globe)];\n}\n",
+    },
+  },
+  {
     title: 'Import a module',
     description: 'Two real .srp source files',
     entry: 'main.srp',
