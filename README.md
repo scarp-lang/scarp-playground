@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.16** (published prerelease) |
-| Pinned compiler revision | `244f713b4fa48f02a98b8e3e3c11025363f35260` |
+| Scarp compiler | **v0.0.6-alpha.18** (published prerelease) |
+| Pinned compiler revision | `84d8de05968a488773e7c5b6eda1376d8957553c` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -45,6 +45,14 @@ examples reproduce the official tagged source and exact stdout. These are
 bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
+
+Alpha.18 pins the approved published Scarp compiler source at `84d8de05968a488773e7c5b6eda1376d8957553c`.
+Three exact upstream examples exercise alpha.17 fixed-array traversal and fallback,
+alpha.18 immutable `array_set` snapshots, and observable empty Lifetime-window
+semantics. Rust, frontend and real-WebAssembly regressions cover output and atomic
+errors; native `scarp exec` file discovery and interactive terminal prompts are
+not Playground features. Lifetime is not a complete garbage collector. See
+[alpha.18 integration](docs/compiler-alpha18-integration.md).
 
 Alpha.16 pins the published Scarp compiler source at `244f713b4fa48f02a98b8e3e3c11025363f35260`. Two
 new browser examples reproduce the upstream compiler's exact source and stdout
