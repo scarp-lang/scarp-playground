@@ -19,6 +19,7 @@ import { initialReferenceIndex, stepReferenceIndex } from './navigation/referenc
 import { diagnosticNavigationPosition, sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
+import { consoleTranscript } from './runner/transcript';
 import { MAX_FILES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
@@ -1073,6 +1074,31 @@ export function App() {
     }
   }
 
+  async function copyConsoleResult() {
+    const transcript = consoleTranscript(result, operation);
+    if (transcript === null) return;
+    try {
+      await navigator.clipboard.writeText(transcript);
+      setNotice('Copied the displayed compiler result. No source files or stdin were attached.');
+    } catch {
+      setNotice('Clipboard access is unavailable. Use Download result instead.');
+    }
+  }
+
+  function downloadConsoleResult() {
+    const transcript = consoleTranscript(result, operation);
+    if (transcript === null) return;
+    const url = URL.createObjectURL(new Blob([transcript], { type: 'text/plain;charset=utf-8' }));
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'scarp-result.txt';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+    setNotice('Downloaded the displayed compiler result. No source files or stdin were attached.');
+  }
+
   async function share() {
     const url = makeWorkspaceShareUrl(window.location.origin, window.location.pathname, workspace, activeFile);
     if (!url) {
@@ -1090,6 +1116,7 @@ export function App() {
   const diagnostic = result?.diagnostic;
   const location = diagnostic?.primary;
   const errorText = diagnostic?.message || result?.error;
+  const transcriptAvailable = !running && consoleTranscript(result, operation) !== null;
 
   return (
     <div className="app-shell min-h-screen">
@@ -1693,6 +1720,12 @@ export function App() {
               <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">{operation === 'verify' ? 'Static compiler verification' : operation === 'check' ? 'Runtime validation' : 'Real compiler execution'}</span></div>
               <div className="console-right">
                 {result && <span className={'result-status ' + (result.ok ? 'success' : 'failure')}>{result.ok ? '● Success' : '● Error'}</span>}
+                <button type="button" onClick={() => void copyConsoleResult()}
+                  disabled={!transcriptAvailable}
+                  title="Copy the current output or diagnostic; no source files or stdin">Copy result</button>
+                <button type="button" onClick={downloadConsoleResult}
+                  disabled={!transcriptAvailable}
+                  title="Download the current output or diagnostic as UTF-8; no source files or stdin">Download result</button>
                 <button type="button" onClick={invalidateExecution}>Clear</button>
               </div>
             </div>

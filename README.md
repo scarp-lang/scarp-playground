@@ -55,6 +55,10 @@ locally and displayed only after a successful run. The option and input
 are session-only, are never stored/shared, and cannot grant a host terminal.
 See [buffered prompts](docs/buffered-prompts.md).
 
+Compiler output and diagnostics can be copied or downloaded locally without
+attaching source files or ephemeral stdin. Review output before sharing it.
+See [result export](docs/output-export.md).
+
 Alpha.19 pins the published Scarp compiler source at `e534e73a81c9500e3aef9f3d51cafa0bc7bbcf75`.
 The browser runs the exact upstream named-function boundary fixture alongside
 alpha.17 fixed-array traversal and alpha.18 immutable array/Lifetime examples.
