@@ -467,6 +467,12 @@ print("Lines:", entries);
     files: { 'main.srp': "// Lifetime preserves value snapshots without explicit memory management.\nbind data = [1.0, 2.0, 3.0];\nbind tail = window(data, 1, 2);\nbind empty = window(data, 2, 0);\nprint(len(empty), tail);\n\nbind numbers: integers = [integer: 7, 8, 9];\nbind empty_numbers = ints_window(numbers, 2, 0);\nprint(ints_len(empty_numbers), ints_window(numbers, 1, 2));\n" },
   },
   {
+    title: 'Named function boundaries',
+    description: 'Published alpha.19 named pure and effectful calls (no function values)',
+    entry: 'main.srp',
+    files: { 'main.srp': "// Named function calls are executable; first-class aliases remain unsupported.\npure funcra twice(n: integer) -> integer {\n    return n * 2;\n}\n\nfuncra report(n: integer) -> integer {\n    print(twice(n));\n    return n + 1;\n}\n\nprint(report(6));\n" },
+  },
+  {
     title: 'Typed Boolean prompts',
     description: 'Official alpha.17 typed console prompt with pre-supplied lines',
     entry: 'main.srp',

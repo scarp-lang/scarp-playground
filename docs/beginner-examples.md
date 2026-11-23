@@ -29,7 +29,7 @@ the five samples above. The language uses `funcra` for functions, `var`
 for mutable bindings, and both bounded `while` and counted `repeat`
 loops. Run each sample and change small inputs to see how the output changes.
 
-These examples run with the pinned Scarp `v0.0.6-alpha.15` compiler. The
+These examples run with the pinned Scarp `v0.0.6-alpha.19` compiler. The
 **Boolean assertions** example is based on the released
 [`examples/assertions.srp`](https://github.com/scarp-lang/scarp/blob/v0.0.6-alpha.8/examples/assertions.srp)
 fixture and prints `3` followed by a newline. Its conditions use the actual
