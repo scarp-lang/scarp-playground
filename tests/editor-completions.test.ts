@@ -108,6 +108,17 @@ describe('Scarp editor syntax hints', () => {
     expect(editorCompletionHints('print("array_len', 'main.srp', files)).toEqual([]);
   });
 
+  it('offers released typed prompt helpers but never proposes them inside comments or strings', () => {
+    expect(editorCompletionHints('input_', 'main.srp', files).map((item) => item.label))
+      .toEqual(['input_integer', 'input_boolean', 'input_float', 'input_bigint', 'input_decimal']);
+    expect(editorCompletionHints('input_boolean', 'main.srp', files)[0]?.insertText)
+      .toBe('input_boolean("${1:true/false? }")');
+    expect(editorCompletionHints('input', 'main.srp', files)[0]?.detail)
+      .toContain('opt-in');
+    expect(editorCompletionHints('// input_integer', 'main.srp', files)).toEqual([]);
+    expect(editorCompletionHints('print("input_boolean', 'main.srp', files)).toEqual([]);
+  });
+
   it('resolves module import suggestions relative to current file, not the project root', () => {
     expect(relativeImportPath('lib/main.srp', 'lib/math.srp')).toBe('math.srp');
     expect(relativeImportPath('lib/main.srp', 'science/stats.srp')).toBe('../science/stats.srp');

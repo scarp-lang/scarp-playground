@@ -28,3 +28,13 @@ For editing shortcuts, **Ctrl+/** (Cmd+/ on macOS) comments or uncomments the
 current/selected lines using Scarp's supported `//` syntax. The toolbar
 also offers a comment toggle and a visual word-wrap control. See
 [editor shortcuts](editor-shortcuts.md).
+
+## Buffered prompt snippets (alpha.17/18 browser)
+
+The static hint list includes `input`, `input_integer`, `input_boolean`,
+`input_float`, `input_bigint` and `input_decimal`. These are real
+published Scarp intrinsics; hints only insert source text and do not execute
+code. To run prompt calls in the browser, explicitly turn on **Enable prompt
+functions with supplied input** and enter all stdin lines beforehand.
+Without opt-in the compiler returns E0054, and Check/Verify never acquire
+an interactive reader. No host terminal or live dialog is available.
