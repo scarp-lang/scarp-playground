@@ -20,11 +20,12 @@ import { diagnosticNavigationPosition, sourceLocationToEditorRange } from './dia
 import { ExecutionScope } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
 import { consoleTranscript } from './runner/transcript';
-import { MAX_FILES, validPath, type Workspace } from './workspace';
+import { MAX_FILES, MAX_FILE_BYTES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
+import { previewSourceImport } from './source-import';
 import { QuickOpenFiles } from './QuickOpenFiles';
 import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
@@ -116,6 +117,9 @@ export function App() {
   } | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
+  const sourceFilesRef = useRef<HTMLInputElement>(null);
+  const sourceImportActive = useRef(false);
+  const [importingSources, setImportingSources] = useState(false);
   const executionScope = useRef(new ExecutionScope());
   const definitionScope = useRef(new ExecutionScope());
   const [navigationTrigger, setNavigationTrigger] = useState(0);
@@ -1018,6 +1022,62 @@ export function App() {
     setNotice('Downloaded ' + activeFile + ' as an exact UTF-8 source file. No source was uploaded.');
   }
 
+  async function addLocalSourceFiles(event: ChangeEvent<HTMLInputElement>) {
+    const selected = Array.from(event.currentTarget.files ?? []);
+    // Re-selecting the same files must retry even after a failed import.
+    event.currentTarget.value = '';
+    if (!selected.length || sourceImportActive.current) return;
+    sourceImportActive.current = true;
+    setImportingSources(true);
+    const snapshot = workspace;
+
+    try {
+      if (selected.length + Object.keys(snapshot.files).length > MAX_FILES) {
+        setNotice('Import would exceed the ' + MAX_FILES + '-file workspace limit.');
+        return;
+      }
+      for (const file of selected) {
+        if (!validPath(file.name)) {
+          setNotice('Choose a .srp filename with letters, numbers, hyphens or underscores.');
+          return;
+        }
+        if (file.size > MAX_FILE_BYTES) {
+          setNotice(file.name + ' exceeds the 64 KiB source limit.');
+          return;
+        }
+      }
+      const uploads = await Promise.all(selected.map(async file => ({
+        path: file.name, bytes: new Uint8Array(await file.arrayBuffer()),
+      })));
+      if (latestSession.current.workspace !== snapshot) {
+        setNotice('The workspace changed during file reading. Select the files again.');
+        return;
+      }
+      const plan = previewSourceImport(snapshot, uploads);
+      if (!plan.ok) {
+        setNotice(plan.error);
+        return;
+      }
+      const undo = createBulkEditUndo(snapshot, plan.workspace, 'source import');
+      if (!undo) {
+        setNotice('Could not safely prepare the import. No source files were changed.');
+        return;
+      }
+      invalidateExecution();
+      setWorkspace(plan.workspace);
+      setActiveFile(plan.addedPaths[0]);
+      setLastBulkEdit(undo);
+      setEditorSession(previous => previous + 1);
+      setNotice('Added ' + plan.addedPaths.length +
+        ' .srp file(s); existing source files unchanged. Undo bulk change can restore the project.');
+    } catch {
+      setNotice('Unable to read the selected local files. No source files were changed.');
+    } finally {
+      sourceImportActive.current = false;
+      setImportingSources(false);
+    }
+  }
+
   function exportWorkspace() {
     const json = serializePortableWorkspace(workspace, activeFile);
     if (!json) {
@@ -1205,8 +1265,22 @@ export function App() {
                 onChange={(event) => void importWorkspaceFile(event)}
               />
               <button type="button" className="button-secondary" onClick={() => importFileRef.current?.click()}>Import project</button>
+              <input
+                ref={sourceFilesRef}
+                type="file"
+                accept=".srp"
+                multiple
+                aria-label="Choose .srp files to add"
+                hidden
+                onChange={(event) => void addLocalSourceFiles(event)}
+              />
+              <button type="button" className="button-secondary" disabled={importingSources}
+                title="Add selected local UTF-8 .srp files; never overwrite existing project sources"
+                onClick={() => sourceFilesRef.current?.click()}>
+                {importingSources ? 'Reading .srp files…' : 'Add .srp files'}
+              </button>
               <button type="button" className="button-secondary"
-                title="Undo the latest complete symbol rename or project-wide replacement"
+                title="Undo the latest atomic project change, including imported source files"
                 onClick={undoLastBulkChange}
                 disabled={!lastBulkEdit || workspace !== lastBulkEdit.after}>
                 Undo bulk change

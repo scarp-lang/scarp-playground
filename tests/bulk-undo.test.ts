@@ -63,6 +63,34 @@ describe('ephemeral atomic multi-file undo', () => {
 });
 
 
+describe('atomic source import undo', () => {
+  it('restores the original graph after importing several distinct modules', () => {
+    const before = base();
+    const after = { entry: before.entry, files: {
+      ...before.files, 'other.srp': 'print(1);', 'nested.srp': '',
+    } };
+    const token = createBulkEditUndo(before, after, 'source import');
+    expect(token?.label).toBe('source import');
+    expect(token?.restoreActiveFile).toBe('main.srp');
+    expect(undoBulkEdit(after, token)).toBe(before);
+    expect(undoBulkEdit({ ...after }, token)).toBeNull();
+  });
+
+  it('rejects source overwrites, deletions, entry changes and no-op imports', () => {
+    const before = base();
+    const after = { entry: before.entry, files: { ...before.files, 'extra.srp': '' } };
+    expect(createBulkEditUndo(before, before, 'source import')).toBeNull();
+    expect(createBulkEditUndo(before, { ...before, entry: 'extra.srp', files: after.files },
+      'source import')).toBeNull();
+    expect(createBulkEditUndo(before, { ...after, files: {
+      ...after.files, 'main.srp': 'print(999);',
+    } }, 'source import')).toBeNull();
+    expect(createBulkEditUndo(before, { ...before, files: {
+      'main.srp': before.files['main.srp'],
+    } }, 'source import')).toBeNull();
+  });
+});
+
 describe('atomic file move undo', () => {
   it('restores original paths, entrypoint and imports from a validated snapshot', () => {
     const before = {

@@ -60,6 +60,15 @@ Scarp, an analytics service or a server. The downloaded JSON is plain text and
 - Import/export is a source portability feature, **not** a security sandbox
   or a promise that hostile programs are safe to execute.
 
+## Adding ordinary local source files
+
+**Add .srp files** is separate from importing a complete JSON workspace:
+it adds selected local UTF-8 modules to the current project without replacing
+existing files or changing the entrypoint. The batch rejects filename
+collisions atomically and supports **Undo bulk change**. See
+[adding local Scarp sources](import-scarp-sources.md). Browser file picking
+provides basenames; portable JSON is still the way to keep virtual directories.
+
 ## Shareable project URLs
 
 Click **Share** to copy a link that carries the complete project, including
