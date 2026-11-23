@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import { describe, expect, it } from 'vitest';
 import { examples } from '../src/examples';
 import { validateWorkspace } from '../src/workspace';
@@ -92,6 +93,24 @@ describe('shipped compiler-backed learning examples', () => {
     expect(utils?.files['main.srp']).toContain('collections.labels()');
     expect(utils?.files['modules/collection_tools.srp']).toContain('pub pure funcra labels(');
     expect(validateWorkspace({ entry: utils!.entry, files: utils!.files })).toBeNull();
+  });
+
+  it('ships byte-exact alpha.17 interactive fixture with explicit ephemeral opt-in', () => {
+    const sample = examples.find((item) => item.title === 'Typed Boolean prompts');
+    expect(sample).toBeDefined();
+    expect(sample?.description).toContain('alpha.17');
+    expect(sample?.allowPrompts).toBe(true);
+    expect(sample?.files['main.srp']).toBe(readFileSync(new URL(
+      '../bridge/tests/fixtures/alpha17/boolean_prompt.srp', import.meta.url,
+    ), 'utf8'));
+    expect(sample?.stdin).toBe(readFileSync(new URL(
+      '../bridge/tests/fixtures/alpha17/boolean_prompt.stdin', import.meta.url,
+    ), 'utf8'));
+    expect(readFileSync(new URL(
+      '../bridge/tests/fixtures/alpha17/boolean_prompt.stdout', import.meta.url,
+    ), 'utf8')).toBe("Continue (true/false)? Continue (true/false)? Continuing\nStopped\n");
+    expect(examples.filter((item) => item.allowPrompts === true))
+      .toEqual([sample]);
   });
 
   it('ships the released alpha.8 assertion fixture with no obsolete prerelease caveat', () => {
