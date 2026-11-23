@@ -13,6 +13,34 @@ const MAX_TOTAL_BYTES: usize = 128 * 1024;
 const MAX_REQUEST_JSON_BYTES: usize = 1024 * 1024;
 // In-memory stdin is neither terminal access nor an interactive prompt.
 const MAX_STDIN_BYTES: usize = 16 * 1024;
+const MAX_CAPTURE_BYTES: usize = 1024 * 1024;
+
+/// Prompt writes are immediate in the upstream interactive API and may
+/// otherwise bypass the interpreter's transactional output-event budget.
+/// Give both streams one independent, enforced 1 MiB memory ceiling.
+struct BrowserCapture {
+    bytes: Vec<u8>,
+    total: std::rc::Rc<std::cell::Cell<usize>>,
+}
+impl BrowserCapture {
+    fn new(total: std::rc::Rc<std::cell::Cell<usize>>) -> Self {
+        Self { bytes: Vec::new(), total }
+    }
+}
+impl std::io::Write for BrowserCapture {
+    fn write(&mut self, chunk: &[u8]) -> std::io::Result<usize> {
+        if chunk.len() > MAX_CAPTURE_BYTES.saturating_sub(self.total.get()) {
+            return Err(std::io::Error::new(
+                std::io::ErrorKind::Other, "Browser output exceeded its 1 MiB limit.",
+            ));
+        }
+        self.bytes.extend_from_slice(chunk);
+        self.total.set(self.total.get() + chunk.len());
+        Ok(chunk.len())
+    }
+    fn flush(&mut self) -> std::io::Result<()> { Ok(()) }
+}
+
 
 #[derive(Deserialize)]
 struct Request {
@@ -26,6 +54,8 @@ struct ExecutionRequest {
     workspace: Request,
     #[serde(default)]
     stdin: String,
+    #[serde(default, rename = "allowPrompts")]
+    allow_prompts: bool,
 }
 
 #[derive(Deserialize)]
@@ -484,8 +514,9 @@ fn process_request(json_source: &str, check_only: bool) -> String {
             }).to_string();
         }
     };
-    let mut stdout = Vec::new();
-    let mut stderr = Vec::new();
+    let captured = std::rc::Rc::new(std::cell::Cell::new(0));
+    let mut stdout = BrowserCapture::new(std::rc::Rc::clone(&captured));
+    let mut stderr = BrowserCapture::new(captured);
     let options = ExecutionOptions {
         limits: ExecutionLimits { max_steps: 200_000, max_prints: 1_000 },
         max_call_depth: 64,
@@ -511,20 +542,28 @@ fn process_request(json_source: &str, check_only: bool) -> String {
     let result = if check_only {
         program.check(options).map_err(ModuleRunError::Diagnostic)
     } else {
-        program.execute_with_input(
-            &mut stdin, &mut stdout, &mut stderr, options,
-            InputLimits {
-                max_line_bytes: MAX_STDIN_BYTES,
-                max_total_bytes: MAX_STDIN_BYTES,
-                max_reads: 128,
-            },
-        )
+        let input_limits = InputLimits {
+            max_line_bytes: MAX_STDIN_BYTES,
+            max_total_bytes: MAX_STDIN_BYTES,
+            max_reads: 128,
+        };
+        if request.allow_prompts {
+            // The only prompt writer is bounded in-memory stdout; no real
+            // terminal, process stdin, or browser callback is accessible.
+            program.execute_with_interactive_input(
+                &mut stdin, &mut stdout, &mut stderr, options, input_limits,
+            )
+        } else {
+            program.execute_with_input(
+                &mut stdin, &mut stdout, &mut stderr, options, input_limits,
+            )
+        }
     };
     match result {
         Ok(()) => json!({
             "ok": true,
-            "stdout": String::from_utf8_lossy(&stdout),
-            "stderr": String::from_utf8_lossy(&stderr)
+            "stdout": String::from_utf8_lossy(&stdout.bytes),
+            "stderr": String::from_utf8_lossy(&stderr.bytes)
         }).to_string(),
         Err(ModuleRunError::Diagnostic(problem)) => {
             let mut encoded = Vec::new();
@@ -601,6 +640,9 @@ mod alpha16;
 mod alpha17;
 #[cfg(test)]
 mod alpha18;
+
+#[cfg(test)]
+mod buffered_prompts;
 
 #[cfg(test)]
 mod tests {

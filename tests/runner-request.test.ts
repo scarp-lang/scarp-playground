@@ -17,6 +17,11 @@ describe('compiler Worker request boundary', () => {
     expect(validatedCompilerWorkerRequest({
       id: 1, workspace, mode: 'run', stdin: 'नमस्ते\n',
     })).not.toBeNull();
+    for (const allowPrompts of [false, true]) {
+      expect(validatedCompilerWorkerRequest({
+        id: 1, workspace, mode: 'run', stdin: 'true\n', allowPrompts,
+      })).not.toBeNull();
+    }
     for (const mode of ['definition', 'references']) {
       const data = { id: 1, workspace, mode, path: 'main.srp', offset: 4 };
       expect(validatedCompilerWorkerRequest(data)).toEqual(data);
@@ -45,6 +50,15 @@ describe('compiler Worker request boundary', () => {
       { id: 1, workspace: null, mode: 'run' },
       { id: 1, workspace: { entry: 'main.srp', files: { 'main.srp': 42 } }, mode: 'run' },
       { id: 1, workspace, mode: 'run', stdin: 42 },
+      { id: 1, workspace, mode: 'run', allowPrompts: null },
+      { id: 1, workspace, mode: 'run', allowPrompts: 'true' },
+      { id: 1, workspace, mode: 'run', allowPrompts: 1 },
+      { id: 1, workspace, mode: 'check', allowPrompts: true },
+      { id: 1, workspace, mode: 'verify', allowPrompts: false },
+      { id: 1, workspace, mode: 'definition', path: 'main.srp',
+        offset: 1, allowPrompts: true },
+      { id: 1, workspace, mode: 'references', path: 'main.srp',
+        offset: 1, allowPrompts: false },
       { id: 1, workspace, mode: 'run', stdin: '😀'.repeat(5000) },
       { id: 1, workspace, mode: 'check', stdin: '' },
       { id: 1, workspace, mode: 'verify', stdin: 'leak' },
@@ -54,6 +68,10 @@ describe('compiler Worker request boundary', () => {
       { id: 1, workspace, mode: 'references', path: 'main.srp', offset: 100000 },
       { id: 1, workspace, mode: 'definition', path: 'absent.srp', offset: 0 },
       { id: 1, workspace, mode: 'rename', path: 'main.srp', offset: 2, new_name: 'a.b' },
+      { id: 1, workspace, mode: 'rename', path: 'main.srp', offset: 2,
+        new_name: 'valid_name', allowPrompts: true },
+      { id: 1, workspace, mode: 'rename', path: 'main.srp', offset: 2,
+        new_name: 'valid_name', stdin: 'malicious' },
       { id: 1, workspace, mode: 'rename', path: 'main.srp', offset: 2, new_name: '' },
       { id: 1, workspace, mode: 'references', path: 'main.srp', offset: 2, stdin: 'unexpected' },
     ];

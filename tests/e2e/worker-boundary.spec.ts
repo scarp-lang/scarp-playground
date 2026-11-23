@@ -46,7 +46,22 @@ test('real bundled Worker rejects forged operation modes before compiler executi
     const badInput = await send({
       id: 1, workspace, mode: 'run', stdin: '😀'.repeat(5000),
     });
-    return { forgedMode, forgedDefinition, badInput };
+    const malformedPrompt = await send({
+      id: 1, workspace, mode: 'run', stdin: 'true', allowPrompts: 'yes',
+    });
+    const checkPrompt = await send({
+      id: 1, workspace, mode: 'check', allowPrompts: true,
+    });
+    const renameWithPrompt = await send({
+      id: 1, workspace, mode: 'rename', path: 'main.srp',
+      offset: 6, new_name: 'updated', allowPrompts: true,
+    });
+    const renameWithInput = await send({
+      id: 1, workspace, mode: 'rename', path: 'main.srp',
+      offset: 6, new_name: 'updated', stdin: 'bad',
+    });
+    return { forgedMode, forgedDefinition, badInput, malformedPrompt, checkPrompt,
+      renameWithPrompt, renameWithInput };
   }, compilerUrl!);
 
   expect(replies.forgedMode).toEqual({
@@ -58,12 +73,22 @@ test('real bundled Worker rejects forged operation modes before compiler executi
   expect(replies.forgedDefinition).toEqual({
     id: 1, definition: { ok: false, error: 'Invalid Scarp compiler worker request.' },
   });
-  expect(replies.badInput).toEqual({
-    id: 1, result: {
-      ok: false, stdout: '', stderr: '',
-      error: 'Invalid Scarp compiler worker request.',
-    },
-  });
+  for (const reply of [replies.badInput, replies.malformedPrompt, replies.checkPrompt]) {
+    expect(reply).toEqual({
+      id: 1, result: {
+        ok: false, stdout: '', stderr: '',
+        error: 'Invalid Scarp compiler worker request.',
+      },
+    });
+  }
+
+  for (const reply of [replies.renameWithPrompt, replies.renameWithInput]) {
+    expect(reply).toEqual({
+      id: 1, rename: {
+        ok: false, error: 'Invalid Scarp compiler worker request.',
+      },
+    });
+  }
 
   // Forged messages did not modify the page or poison a later actual Run.
   await page.getByRole('button', { name: 'Run code' }).click();
