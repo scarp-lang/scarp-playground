@@ -42,14 +42,16 @@ export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRe
       !Number.isSafeInteger(value.offset) || (value.offset as number) < 0) return null;
   const byteLength = new TextEncoder().encode(workspace.files[value.path]).byteLength;
   if ((value.offset as number) > byteLength) return null;
+  // Navigation and Rename are strictly input-free and never acquire prompt
+  // capabilities. Reject before the Rename early-return path as well.
+  if (Object.hasOwn(value, 'stdin') || Object.hasOwn(value, 'allowPrompts')) return null;
   if (value.mode === 'rename') {
     if ((value.offset as number) === byteLength || typeof value.new_name !== 'string' ||
         !validRenameName(value.new_name)) return null;
     return value as RenameRequest;
   }
-  // Navigation requests never carry buffered stdin or rename mutations.
-  if (Object.hasOwn(value, 'stdin') || Object.hasOwn(value, 'new_name') ||
-      Object.hasOwn(value, 'allowPrompts')) return null;
+  // Definition/References cannot carry Rename's mutation payload.
+  if (Object.hasOwn(value, 'new_name')) return null;
   return value as DefinitionRequest | ReferencesRequest;
 }
 

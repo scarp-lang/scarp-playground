@@ -68,6 +68,10 @@ describe('compiler Worker request boundary', () => {
       { id: 1, workspace, mode: 'references', path: 'main.srp', offset: 100000 },
       { id: 1, workspace, mode: 'definition', path: 'absent.srp', offset: 0 },
       { id: 1, workspace, mode: 'rename', path: 'main.srp', offset: 2, new_name: 'a.b' },
+      { id: 1, workspace, mode: 'rename', path: 'main.srp', offset: 2,
+        new_name: 'valid_name', allowPrompts: true },
+      { id: 1, workspace, mode: 'rename', path: 'main.srp', offset: 2,
+        new_name: 'valid_name', stdin: 'malicious' },
       { id: 1, workspace, mode: 'rename', path: 'main.srp', offset: 2, new_name: '' },
       { id: 1, workspace, mode: 'references', path: 'main.srp', offset: 2, stdin: 'unexpected' },
     ];

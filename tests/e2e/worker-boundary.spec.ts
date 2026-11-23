@@ -52,7 +52,16 @@ test('real bundled Worker rejects forged operation modes before compiler executi
     const checkPrompt = await send({
       id: 1, workspace, mode: 'check', allowPrompts: true,
     });
-    return { forgedMode, forgedDefinition, badInput, malformedPrompt, checkPrompt };
+    const renameWithPrompt = await send({
+      id: 1, workspace, mode: 'rename', path: 'main.srp',
+      offset: 6, new_name: 'updated', allowPrompts: true,
+    });
+    const renameWithInput = await send({
+      id: 1, workspace, mode: 'rename', path: 'main.srp',
+      offset: 6, new_name: 'updated', stdin: 'bad',
+    });
+    return { forgedMode, forgedDefinition, badInput, malformedPrompt, checkPrompt,
+      renameWithPrompt, renameWithInput };
   }, compilerUrl!);
 
   expect(replies.forgedMode).toEqual({
@@ -69,6 +78,14 @@ test('real bundled Worker rejects forged operation modes before compiler executi
       id: 1, result: {
         ok: false, stdout: '', stderr: '',
         error: 'Invalid Scarp compiler worker request.',
+      },
+    });
+  }
+
+  for (const reply of [replies.renameWithPrompt, replies.renameWithInput]) {
+    expect(reply).toEqual({
+      id: 1, rename: {
+        ok: false, error: 'Invalid Scarp compiler worker request.',
       },
     });
   }
