@@ -10,6 +10,7 @@ import { ExampleBrowser } from './ExampleBrowser';
 import { isUntouchedExampleSession } from './example-session';
 import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
+import { previewProgramInputEdit, programInputBytes } from './program-input';
 import { editorPositionToByteOffset } from './navigation/coordinates';
 import { findDefinition } from './navigation/client';
 import { findReferences, type SourceRange } from './navigation/references';
@@ -1766,15 +1767,22 @@ export function App() {
           <section className="stdin-panel" aria-label="Buffered program input">
             <div className="stdin-heading">
               <label htmlFor="scarp-program-input">Program input (stdin)</label>
-              <span>{new TextEncoder().encode(programInput).byteLength} / {MAX_PROGRAM_INPUT_BYTES} UTF-8 bytes</span>
+              <span>{programInputBytes(programInput)} / {MAX_PROGRAM_INPUT_BYTES} UTF-8 bytes</span>
             </div>
             <textarea id="scarp-program-input" rows={3} spellCheck={false}
               aria-label="Program input (stdin)"
-              value={programInput} maxLength={MAX_PROGRAM_INPUT_BYTES}
+              value={programInput}
               placeholder={'Text consumed by read_line(), one line per call…'}
               onChange={event => {
+                const edit = previewProgramInputEdit(programInput, event.currentTarget.value);
+                if (!edit.accepted) {
+                  // Rejected edits must not replace the buffer or invalidate a valid result.
+                  event.currentTarget.value = programInput;
+                  setNotice('Program input is limited to 16 KiB of UTF-8 text. Previous input was kept.');
+                  return;
+                }
                 invalidateExecution();
-                setProgramInput(event.target.value);
+                setProgramInput(edit.value);
               }} />
             <label htmlFor="scarp-allow-prompts" className="stdin-prompt-toggle">
               <input id="scarp-allow-prompts" type="checkbox"
@@ -1788,8 +1796,10 @@ export function App() {
             <p>Run always supplies text above to read_line(). With this option,
               input(), input_boolean(), input_integer(), and other typed prompts
               consume those pre-entered lines and capture prompt text. There is
-              no live terminal or dialog. Input and prompt mode are never saved
-              or shared. Verify and Check do not read program input.</p>
+              no live terminal or dialog. Input is limited by UTF-8 bytes, not
+              characters; edits beyond 16 KiB are rejected without changing the buffer.
+              Input and prompt mode are never saved or shared. Verify and Check do not
+              read program input.</p>
           </section>
 
           <section className="console-card" aria-label="Program output">

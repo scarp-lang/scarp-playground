@@ -44,10 +44,14 @@ test('alpha.6 executes tuple values and Unicode text conversions in WASM', async
   await expect(page.locator('.stdout')).toHaveText('42 125.0\n', { timeout: 30_000 });
 });
 
-test('alpha.6 bounded stdin rejects oversized UTF-8 content', async ({ page }) => {
+test('alpha.6 stdin editor rejects oversized UTF-8 before execution', async ({ page }) => {
   await page.goto('./#code=' + encodeURIComponent('print(read_line());'));
-  await page.getByRole('textbox', { name: 'Program input (stdin)' }).fill('😀'.repeat(5000));
-  await page.getByRole('button', { name: 'Run code' }).click();
-  await expect(page.locator('.error-panel')).toContainText('16 KiB', { timeout: 30_000 });
+  const input = page.getByRole('textbox', { name: 'Program input (stdin)' });
+  await input.fill('Ready\n');
+  await input.fill('😀'.repeat(5000));
+  await expect(input).toHaveValue('Ready\n');
+  await expect(page.locator('.notice')).toContainText('16 KiB');
   await expect(page.locator('.stdout')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Run code' }).click();
+  await expect(page.locator('.stdout')).toHaveText('Ready\n', { timeout: 30_000 });
 });

@@ -30,6 +30,10 @@ only when explicitly selected. All other examples use the default off mode.
 - The mode is disabled by default. Switching to shared/ported/saved projects
   resets it. Nothing can access browser dialogs, a process terminal, a host
   filesystem or network for input.
+- The input editor counts **UTF-8 bytes**, not JavaScript characters. It accepts
+  exactly 16 KiB, including Unicode, and rejects an over-budget typing or paste
+  event atomically without modifying previous input or clearing a valid result.
+  This editor guard complements (and does not replace) Rust/Worker validation.
 - Both the mode and input lines are ephemeral: they are not persisted to
   local storage, appended to a shared URL, or exported in project JSON.
 - Run is not a true interactive REPL. If the program needs another value
