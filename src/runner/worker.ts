@@ -64,7 +64,10 @@ self.addEventListener('message', async (event: MessageEvent<unknown>) => {
       const result = decodeCompilerReply(
         mode === 'verify' ? compiler.verify(JSON.stringify(workspace)) :
           mode === 'check' ? compiler.check(JSON.stringify(workspace)) :
-            compiler.execute(JSON.stringify({ ...workspace, stdin: request.stdin ?? '' })),
+            compiler.execute(JSON.stringify({
+              ...workspace, stdin: request.stdin ?? '',
+              allowPrompts: request.allowPrompts === true,
+            })),
       );
       self.postMessage({ id, result: mode === 'run' ? result : decodeSilentResult(result) } satisfies RunResponse);
     }

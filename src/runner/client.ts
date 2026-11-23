@@ -11,7 +11,10 @@ const cancelled: RunResult = {
 };
 
 /** Each mode uses a disposable Worker. Aborting prevents stale results or output. */
-function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check' | 'verify', signal?: AbortSignal, stdin = ''): Promise<RunResult> {
+function evaluateWorkspace(
+  workspace: Workspace, mode: 'run' | 'check' | 'verify',
+  signal?: AbortSignal, stdin = '', allowPrompts = false,
+): Promise<RunResult> {
   if (signal?.aborted) return Promise.resolve(cancelled);
   const problem = validateWorkspace(workspace);
   if (problem) {
@@ -86,7 +89,7 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check' | 'verify
     });
     try {
       activeWorker.postMessage(mode === 'run'
-        ? { id, workspace, mode, stdin }
+        ? { id, workspace, mode, stdin, ...(allowPrompts ? { allowPrompts: true } : {}) }
         : { id, workspace, mode });
     } catch {
       complete({
@@ -98,8 +101,10 @@ function evaluateWorkspace(workspace: Workspace, mode: 'run' | 'check' | 'verify
 }
 
 /** Execute real Scarp and return its captured stdout/stderr. */
-export function runWorkspace(workspace: Workspace, signal?: AbortSignal, stdin = ''): Promise<RunResult> {
-  return evaluateWorkspace(workspace, 'run', signal, stdin);
+export function runWorkspace(
+  workspace: Workspace, signal?: AbortSignal, stdin = '', allowPrompts = false,
+): Promise<RunResult> {
+  return evaluateWorkspace(workspace, 'run', signal, stdin, allowPrompts);
 }
 
 /** Validate Scarp with identical budgets, without emitting program output. */

@@ -88,6 +88,8 @@ export function App() {
   const [notice, setNotice] = useState<string | null>(null);
   // Runtime input is intentionally ephemeral: never saved or placed in shared links.
   const [programInput, setProgramInput] = useState('');
+  // Session-only opt-in; pre-supplied input never creates a live host terminal.
+  const [allowPrompts, setAllowPrompts] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
@@ -286,7 +288,7 @@ export function App() {
         ? await verifyWorkspace(workspace, execution.controller.signal)
         : mode === 'check'
           ? await checkWorkspace(workspace, execution.controller.signal)
-          : await runWorkspace(workspace, execution.controller.signal, programInput);
+          : await runWorkspace(workspace, execution.controller.signal, programInput, allowPrompts);
       if (!executionScope.current.isCurrent(execution)) return;
       setResult(response);
       // Navigate only to a valid source span from this exact execution snapshot.
@@ -310,7 +312,7 @@ export function App() {
     } finally {
       if (executionScope.current.finish(execution)) setRunning(false);
     }
-  }, [workspace, programInput]);
+  }, [workspace, programInput, allowPrompts]);
 
   function jumpToCompilerDiagnostic(location: DiagnosticLocation | null | undefined) {
     const target = diagnosticNavigationPosition(workspace.files, result?.diagnostic, location);
@@ -676,6 +678,7 @@ export function App() {
         setWorkspace(shared.workspace);
         setCheckpoint({ workspace: shared.workspace, stdin: '', recoverable: true });
         setProgramInput('');
+          setAllowPrompts(false);
         setEditorSession((number) => number + 1);
         setActiveFile(shared.activeFile);
         setResult(null);
@@ -690,6 +693,7 @@ export function App() {
           setSavedWorkspace(saved.workspace);
           setCheckpoint({ workspace: saved.workspace, stdin: '', recoverable: true });
           setProgramInput('');
+          setAllowPrompts(false);
           setEditorSession((number) => number + 1);
           setActiveFile(saved.activeFile);
           setSavingLocally(true);
@@ -807,6 +811,7 @@ export function App() {
       workspace: nextWorkspace, stdin: example.stdin ?? '', recoverable: true,
     });
     setProgramInput(example.stdin ?? '');
+    setAllowPrompts(example.allowPrompts === true);
     setEditorSession((number) => number + 1);
     setActiveFile(example.entry);
     setResult(null);
@@ -1055,6 +1060,7 @@ export function App() {
       setWorkspace(imported.workspace);
       setCheckpoint({ workspace: imported.workspace, stdin: '', recoverable: false });
       setProgramInput('');
+          setAllowPrompts(false);
       setEditorSession((number) => number + 1);
       setActiveFile(imported.activeFile);
       setResult(null);
@@ -1666,8 +1672,20 @@ export function App() {
                 invalidateExecution();
                 setProgramInput(event.target.value);
               }} />
-            <p>Buffered input is supplied only when you run the program. It is not
-              interactive, is not saved or shared, and is not read by Verify code or Check code.</p>
+            <label htmlFor="scarp-allow-prompts" className="stdin-prompt-toggle">
+              <input id="scarp-allow-prompts" type="checkbox"
+                checked={allowPrompts}
+                onChange={event => {
+                  invalidateExecution();
+                  setAllowPrompts(event.target.checked);
+                }} />
+              Enable prompt functions with supplied input
+            </label>
+            <p>Run always supplies text above to read_line(). With this option,
+              input(), input_boolean(), input_integer(), and other typed prompts
+              consume those pre-entered lines and capture prompt text. There is
+              no live terminal or dialog. Input and prompt mode are never saved
+              or shared. Verify and Check do not read program input.</p>
           </section>
 
           <section className="console-card" aria-label="Program output">

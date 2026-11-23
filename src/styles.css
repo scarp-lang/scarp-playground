@@ -311,6 +311,16 @@ a { color: inherit; text-decoration: none; }
 }
 .stdin-panel textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .stdin-panel p { margin: 8px 0 0; font-size: 11px; line-height: 1.5; color: var(--muted); }
+.stdin-prompt-toggle {
+  display: inline-flex; align-items: center; gap: 9px; cursor: pointer;
+  margin-top: 12px; font-size: 12px; font-weight: 650;
+}
+.stdin-prompt-toggle input[type="checkbox"] {
+  width: 16px; height: 16px; margin: 0; accent-color: var(--accent);
+}
+.stdin-prompt-toggle:has(input:focus-visible) {
+  outline: 2px solid var(--accent); outline-offset: 3px; border-radius: 3px;
+}
 
 
 /* Non-editing, compiler-owned reference decorations. Colors retain contrast

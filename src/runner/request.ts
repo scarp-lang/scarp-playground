@@ -24,6 +24,7 @@ export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRe
   if (!record(value) || value.id !== 1 || validateWorkspace(value.workspace)) return null;
   const workspace = value.workspace as Workspace;
   if (value.mode === 'run') {
+    if (value.allowPrompts !== undefined && typeof value.allowPrompts !== 'boolean') return null;
     if (value.stdin !== undefined && typeof value.stdin !== 'string') return null;
     if (typeof value.stdin === 'string' &&
         new TextEncoder().encode(value.stdin).byteLength > MAX_PROGRAM_INPUT_BYTES) return null;
@@ -31,7 +32,8 @@ export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRe
   }
   if (value.mode === 'check' || value.mode === 'verify') {
     // Input belongs to Run only, even when present with an empty value.
-    return Object.hasOwn(value, 'stdin') ? null : value as RunRequest;
+    return Object.hasOwn(value, 'stdin') || Object.hasOwn(value, 'allowPrompts')
+      ? null : value as RunRequest;
   }
 
   if (value.mode !== 'definition' && value.mode !== 'references' &&
@@ -46,7 +48,8 @@ export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRe
     return value as RenameRequest;
   }
   // Navigation requests never carry buffered stdin or rename mutations.
-  if (Object.hasOwn(value, 'stdin') || Object.hasOwn(value, 'new_name')) return null;
+  if (Object.hasOwn(value, 'stdin') || Object.hasOwn(value, 'new_name') ||
+      Object.hasOwn(value, 'allowPrompts')) return null;
   return value as DefinitionRequest | ReferencesRequest;
 }
 

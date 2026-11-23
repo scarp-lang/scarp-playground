@@ -46,11 +46,20 @@ bounded, deterministic numerical helpers; Top-P does **not** sample random
 results or run an AI model. The alpha.5 ELF64 improvement remains a narrow,
 Rust host-only relocatable-object API, not a browser compiler or executable linker.
 
+The Playground offers opt-in **buffered typed prompts**: enter input lines in
+the browser's Program input panel, then enable **prompt functions with
+supplied input**. The real compiler can run `input()`, `input_boolean()`,
+`input_integer()` and other typed prompts with the pre-supplied lines.
+This does **not** open a live terminal prompt: all prompt text is captured
+locally and displayed only after a successful run. The option and input
+are session-only, are never stored/shared, and cannot grant a host terminal.
+See [buffered prompts](docs/buffered-prompts.md).
+
 Alpha.18 pins the approved published Scarp compiler source at `84d8de05968a488773e7c5b6eda1376d8957553c`.
 Three exact upstream examples exercise alpha.17 fixed-array traversal and fallback,
 alpha.18 immutable `array_set` snapshots, and observable empty Lifetime-window
 semantics. Rust, frontend and real-WebAssembly regressions cover output and atomic
-errors; native `scarp exec` file discovery and interactive terminal prompts are
+errors; native `scarp exec` discovery and live terminal prompts are
 not Playground features. Lifetime is not a complete garbage collector. See
 [alpha.18 integration](docs/compiler-alpha18-integration.md).
 

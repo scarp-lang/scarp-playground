@@ -5,6 +5,8 @@ export type Example = {
   files: Record<string, string>;
   // Ephemeral fixture input: never becomes part of a shareable source workspace.
   stdin?: string;
+  // Ephemeral Run setting: never include in shared source or saved projects.
+  allowPrompts?: boolean;
 };
 
 export const examples: Example[] = [
@@ -463,6 +465,14 @@ print("Lines:", entries);
     description: "Immutable views and empty window semantics (alpha.18)",
     entry: 'main.srp',
     files: { 'main.srp': "// Lifetime preserves value snapshots without explicit memory management.\nbind data = [1.0, 2.0, 3.0];\nbind tail = window(data, 1, 2);\nbind empty = window(data, 2, 0);\nprint(len(empty), tail);\n\nbind numbers: integers = [integer: 7, 8, 9];\nbind empty_numbers = ints_window(numbers, 2, 0);\nprint(ints_len(empty_numbers), ints_window(numbers, 1, 2));\n" },
+  },
+  {
+    title: 'Typed Boolean prompts',
+    description: 'Official alpha.17 typed console prompt with pre-supplied lines',
+    entry: 'main.srp',
+    files: { 'main.srp': "// Run with scarp exec --interactive examples/interactive/boolean_prompt.srp.\nrepeat 2 as attempt {\n    bind confirmed: boolean = input_boolean(\"Continue (true/false)? \");\n    if confirmed {\n        print(\"Continuing\");\n    } else {\n        print(\"Stopped\");\n        break;\n    }\n}\n" },
+    stdin: "true\nfalse\n",
+    allowPrompts: true,
   },
   {
     title: 'Import a module',
