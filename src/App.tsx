@@ -19,7 +19,7 @@ import { initialReferenceIndex, stepReferenceIndex } from './navigation/referenc
 import { diagnosticNavigationPosition, sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
-import { consoleTranscript } from './runner/transcript';
+import { consoleTranscript, consoleOperationSubtitle, type ConsoleMode } from './runner/transcript';
 import { MAX_FILES, MAX_FILE_BYTES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
@@ -85,7 +85,7 @@ export function App() {
   const acceptedHash = useRef(window.location.hash);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
-  const [operation, setOperation] = useState<'run' | 'check' | 'verify'>('run');
+  const [operation, setOperation] = useState<ConsoleMode>('run');
   const [result, setResult] = useState<RunResult | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   // Runtime input is intentionally ephemeral: never saved or placed in shared links.
@@ -363,6 +363,7 @@ export function App() {
       if (!definitionScope.current.isCurrent(lookup)) return;
       if (!answer.ok) {
         if (answer.diagnostic) {
+          setOperation('references');
           setResult({ ok: false, stdout: '', stderr: '',
             error: answer.error, diagnostic: answer.diagnostic });
         }
@@ -431,6 +432,7 @@ export function App() {
       if (!definitionScope.current.isCurrent(lookup)) return;
       if (!answer.ok) {
         if (answer.diagnostic) {
+          setOperation('rename');
           setResult({ ok: false, stdout: '', stderr: '',
             error: answer.error, diagnostic: answer.diagnostic });
         }
@@ -535,6 +537,7 @@ export function App() {
       if (!definitionScope.current.isCurrent(lookup)) return;
       if (!response.ok) {
         if (response.diagnostic) {
+          setOperation('definition');
           setResult({ ok: false, stdout: '', stderr: '',
             error: response.error, diagnostic: response.diagnostic });
         }
@@ -1791,7 +1794,7 @@ export function App() {
 
           <section className="console-card" aria-label="Program output">
             <div className="console-toolbar">
-              <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">{operation === 'verify' ? 'Static compiler verification' : operation === 'check' ? 'Runtime validation' : 'Real compiler execution'}</span></div>
+              <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">{consoleOperationSubtitle(operation)}</span></div>
               <div className="console-right">
                 {result && <span className={'result-status ' + (result.ok ? 'success' : 'failure')}>{result.ok ? '● Success' : '● Error'}</span>}
                 <button type="button" onClick={() => void copyConsoleResult()}

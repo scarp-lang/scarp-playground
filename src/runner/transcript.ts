@@ -1,6 +1,20 @@
 import type { RunResult } from './types';
 
-export type ConsoleMode = 'run' | 'check' | 'verify';
+export type ConsoleMode = 'run' | 'check' | 'verify' | 'definition' | 'references' | 'rename';
+
+// Compiler-backed editor services are not source execution.
+const operationMetadata: Record<ConsoleMode, { subtitle: string; failure: string }> = {
+  run: { subtitle: 'Real compiler execution', failure: 'Execution' },
+  check: { subtitle: 'Runtime validation', failure: 'Check' },
+  verify: { subtitle: 'Static compiler verification', failure: 'Verification' },
+  definition: { subtitle: 'Go to Definition', failure: 'Go to Definition' },
+  references: { subtitle: 'Find References', failure: 'Find References' },
+  rename: { subtitle: 'Rename preview', failure: 'Rename preview' },
+};
+
+export function consoleOperationSubtitle(mode: ConsoleMode): string {
+  return operationMetadata[mode].subtitle;
+}
 
 /** Export only the visible result, never a workspace, source file, or stdin.
  * When both output streams exist, label them; their temporal order is unknown.
@@ -14,7 +28,7 @@ export function consoleTranscript(result: RunResult | null, mode: ConsoleMode): 
     return 'stdout:\n' + result.stdout +
       (result.stdout.endsWith('\n') ? '' : '\n') + 'stderr:\n' + result.stderr;
   }
-  const action = mode === 'verify' ? 'Verification' : mode === 'check' ? 'Check' : 'Execution';
+  const action = operationMetadata[mode].failure;
   const lines = [action + ' failed'];
   const diagnostic = result.diagnostic;
   if (diagnostic?.code) lines.push('Code: ' + diagnostic.code);
