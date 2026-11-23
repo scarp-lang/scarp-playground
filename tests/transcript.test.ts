@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { consoleTranscript } from '../src/runner/transcript';
+import { consoleTranscript, consoleOperationSubtitle, type ConsoleMode } from '../src/runner/transcript';
 import { decodeWorkerResult } from '../src/runner/protocol';
 import type { RunResult } from '../src/runner/types';
 
@@ -49,6 +49,26 @@ describe('browser-only compiler result export', () => {
       'Hint: Declare the symbol.\nRelated: Imported here (main.srp:1:1)\n' +
       'Related: Additional context\n',
     );
+  });
+
+  it('labels compiler-backed editor diagnostics by their true non-executing operation', () => {
+    const failure: RunResult = { ok: false, stdout: '', stderr: '', error: 'Unknown identifier' };
+    const cases: Array<[ConsoleMode, string, string]> = [
+      ['run', 'Real compiler execution', 'Execution'],
+      ['check', 'Runtime validation', 'Check'],
+      ['verify', 'Static compiler verification', 'Verification'],
+      ['definition', 'Go to Definition', 'Go to Definition'],
+      ['references', 'Find References', 'Find References'],
+      ['rename', 'Rename preview', 'Rename preview'],
+    ];
+    for (const [mode, subtitle, action] of cases) {
+      expect(consoleOperationSubtitle(mode)).toBe(subtitle);
+      expect(consoleTranscript(failure, mode)).toBe(action + ' failed\nUnknown identifier\n');
+    }
+    for (const mode of ['definition', 'references', 'rename'] as const) {
+      expect(consoleTranscript({ ...failure, ok: true, stdout: 'must not export' }, mode))
+        .toBeNull();
+    }
   });
 
   it('never exports forged partial stdout on a failed compiler response', () => {

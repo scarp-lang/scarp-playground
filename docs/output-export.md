@@ -7,7 +7,8 @@ text named scarp-result.txt; clipboard access requires an explicit click.
 - One output stream is preserved byte-for-byte, including Unicode and line
   endings. When both stdout and stderr exist, each stream is labelled, not
   presented as a single chronological event log.
-- Compiler failures export the diagnostic code, source location, message,
+- Compiler failures, including compiler-backed navigation and rename failures,
+  export the true operation name, diagnostic code, source location, message,
   hint, and any related diagnostic locations. The real compiler protocol
   atomically rejects failed results that contain partial stdout or stderr;
   the Playground does not promise partial output recovery after a failure.
