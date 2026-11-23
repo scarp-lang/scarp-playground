@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.18** (published prerelease) |
-| Pinned compiler revision | `84d8de05968a488773e7c5b6eda1376d8957553c` |
+| Scarp compiler | **v0.0.6-alpha.19** (published prerelease) |
+| Pinned compiler revision | `e534e73a81c9500e3aef9f3d51cafa0bc7bbcf75` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -55,13 +55,14 @@ locally and displayed only after a successful run. The option and input
 are session-only, are never stored/shared, and cannot grant a host terminal.
 See [buffered prompts](docs/buffered-prompts.md).
 
-Alpha.18 pins the approved published Scarp compiler source at `84d8de05968a488773e7c5b6eda1376d8957553c`.
-Three exact upstream examples exercise alpha.17 fixed-array traversal and fallback,
-alpha.18 immutable `array_set` snapshots, and observable empty Lifetime-window
-semantics. Rust, frontend and real-WebAssembly regressions cover output and atomic
-errors; native `scarp exec` discovery and live terminal prompts are
-not Playground features. Lifetime is not a complete garbage collector. See
-[alpha.18 integration](docs/compiler-alpha18-integration.md).
+Alpha.19 pins the published Scarp compiler source at `e534e73a81c9500e3aef9f3d51cafa0bc7bbcf75`.
+The browser runs the exact upstream named-function boundary fixture alongside
+alpha.17 fixed-array traversal and alpha.18 immutable array/Lifetime examples.
+Alpha.19 adds Rust host-callable APIs, **not** source-level function values:
+Playground cannot call those embedding APIs from Scarp source, and it does not
+provide a terminal or native compiler. Rust, frontend and three-browser tests
+cover the source-level execution contract. See
+[alpha.19 integration](docs/compiler-alpha19-integration.md).
 
 Alpha.16 pins the published Scarp compiler source at `244f713b4fa48f02a98b8e3e3c11025363f35260`. Two
 new browser examples reproduce the upstream compiler's exact source and stdout
