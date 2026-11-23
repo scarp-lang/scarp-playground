@@ -678,7 +678,7 @@ export function App() {
         setWorkspace(shared.workspace);
         setCheckpoint({ workspace: shared.workspace, stdin: '', recoverable: true });
         setProgramInput('');
-          setAllowPrompts(false);
+        setAllowPrompts(false);
         setEditorSession((number) => number + 1);
         setActiveFile(shared.activeFile);
         setResult(null);
@@ -1060,7 +1060,7 @@ export function App() {
       setWorkspace(imported.workspace);
       setCheckpoint({ workspace: imported.workspace, stdin: '', recoverable: false });
       setProgramInput('');
-          setAllowPrompts(false);
+      setAllowPrompts(false);
       setEditorSession((number) => number + 1);
       setActiveFile(imported.activeFile);
       setResult(null);

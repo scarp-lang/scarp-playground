@@ -83,13 +83,13 @@ describe('disposable compiler worker cancellation', () => {
   });
 
   it('forwards buffered prompt opt-in only for Run requests, without changing defaults', async () => {
-    const pending = runWorkspace(workspace, undefined, 'true\\n', true);
+    const pending = runWorkspace(workspace, undefined, 'true\n', true);
     const worker = FakeWorker.instances[0];
     expect(worker.posted[0]).toEqual({
-      id: 1, workspace, mode: 'run', stdin: 'true\\n', allowPrompts: true,
+      id: 1, workspace, mode: 'run', stdin: 'true\n', allowPrompts: true,
     });
-    worker.send({ id: 1, result: { ok: true, stdout: 'Confirm? true\\n', stderr: '' } });
-    expect((await pending).stdout).toBe('Confirm? true\\n');
+    worker.send({ id: 1, result: { ok: true, stdout: 'Confirm? true\n', stderr: '' } });
+    expect((await pending).stdout).toBe('Confirm? true\n');
     const verification = verifyWorkspace(workspace);
     const next = FakeWorker.instances[1];
     expect(next.posted[0]).toEqual({ id: 1, workspace, mode: 'verify' });
