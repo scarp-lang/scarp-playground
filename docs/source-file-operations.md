@@ -24,7 +24,9 @@ These actions do **not** compile, check, execute, upload or share your source.
 They work on the active file only; switching tabs changes the target.
 
 To preserve a complete multi-file project, relative virtual paths, and entry
-module selection, use **Export project** instead. That existing feature
+module selection, use **Export project** instead. To add ordinary local source
+files to the current workspace, use **Add .srp files**; see
+[local source import](import-scarp-sources.md). That existing feature
 produces a validated portable JSON project, not a standalone source file.
 
 Downloads preserve the source string exactly, even if a work-in-progress

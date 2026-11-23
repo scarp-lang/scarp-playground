@@ -7,7 +7,8 @@ import { validPath, validateWorkspace, type Workspace } from './workspace';
 export type BulkEditUndo = {
   before: Workspace;
   after: Workspace;
-  label: 'project-wide replacement' | 'symbol rename' | 'file move' | 'file removal' | 'file duplication';
+  label: 'project-wide replacement' | 'symbol rename' | 'file move' | 'file removal' |
+    'file duplication' | 'source import';
   restoreActiveFile?: string;
 };
 
@@ -23,6 +24,14 @@ export function createBulkEditUndo(
   if (before === after || validateWorkspace(before) || validateWorkspace(after)) return null;
   const oldPaths = Object.keys(before.files).sort();
   const newPaths = Object.keys(after.files).sort();
+  if (label === 'source import') {
+    // No existing path, entrypoint or source may change in an add-only batch.
+    if (moved || removed || duplicated || before.entry !== after.entry ||
+        newPaths.length <= oldPaths.length ||
+        oldPaths.some(path => before.files[path] !== after.files[path])) return null;
+    return { before, after, label, restoreActiveFile: before.entry };
+  }
+
   if (label === 'file duplication') {
     if (moved || removed || !duplicated ||
         !validPath(duplicated.from) || !validPath(duplicated.to) ||
