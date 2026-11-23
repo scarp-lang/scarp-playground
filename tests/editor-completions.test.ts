@@ -36,7 +36,7 @@ describe('Scarp editor syntax hints', () => {
     expect(editorCompletionHints('bigint_', 'main.srp', files).map((item) => item.label))
       .toEqual(expect.arrayContaining(['bigint_from_integer', 'bigint_to_integer', 'bigint_abs', 'bigint_pow', 'bigint_divmod']));
     expect(editorCompletionHints('arr', 'main.srp', files).map((item) => item.label))
-      .toEqual(['array literal', 'array type']);
+      .toEqual(['array literal', 'array type', 'array_len', 'array_get_or', 'array_set']);
     expect(editorCompletionHints('try_read', 'main.srp', files)[0]?.insertText)
       .toBe('try_read_line()');
     expect(editorCompletionHints('read_line_o', 'main.srp', files)[0]?.label)
@@ -95,6 +95,17 @@ describe('Scarp editor syntax hints', () => {
       .toEqual(expect.arrayContaining(['integer_abs', 'integer_sign', 'integer_gcd', 'integer_lcm']));
     expect(editorCompletionHints('// quantile', 'main.srp', files)).toEqual([]);
     expect(editorCompletionHints('print("bits_', 'main.srp', files)).toEqual([]);
+  });
+
+  it('adds released array helpers with safe Monaco snippet placeholders', () => {
+    expect(editorCompletionHints('array_len', 'main.srp', files)[0]?.insertText)
+      .toBe('array_len(${1:values})');
+    expect(editorCompletionHints('array_get_', 'main.srp', files)[0]?.label)
+      .toBe('array_get_or');
+    expect(editorCompletionHints('array_set', 'main.srp', files)[0]?.insertText)
+      .toBe('array_set(${1:values}, ${2:index}, ${3:replacement})');
+    expect(editorCompletionHints('// array_set', 'main.srp', files)).toEqual([]);
+    expect(editorCompletionHints('print("array_len', 'main.srp', files)).toEqual([]);
   });
 
   it('resolves module import suggestions relative to current file, not the project root', () => {

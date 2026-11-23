@@ -445,6 +445,25 @@ print("Lines:", entries);
       "modules/collection_tools.srp": "pub pure funcra labels(text: string = \"नमवनA\") -> array<string, 3> {\n    bind globe = text_from_codepoint(0x1f30d);\n    return [array: text_upper(\"Straße\"), text_lower(\"İ\"), text_concat(text_reverse(text), globe)];\n}\n",
     },
   },
+  // Exact published compiler fixtures. Keep these sources byte-identical.
+  {
+    title: "Fixed-array traversal",
+    description: "Loop over arrays and use bounds-safe fallbacks (alpha.17)",
+    entry: 'main.srp',
+    files: { 'main.srp': "bind readings = [array: 10, 20, 30];\nvar total = 0;\nrepeat array_len(readings) as index {\n    total += readings[index];\n}\nprint(\"Total:\", total);\nprint(\"Missing reading:\", array_get_or(readings, 3, 0));\nprint(\"Empty length:\", array_len([array: <integer>]));\n" },
+  },
+  {
+    title: "Immutable array updates",
+    description: "Copy-on-update fixed-array snapshots (alpha.18)",
+    entry: 'main.srp',
+    files: { 'main.srp': "pure funcra replace_last(values: array<integer, 3>) -> array<integer, 3> {\n    return array_set(values, 2, 100);\n}\n\nbind original = [array: 4, 8, 12];\nbind updated = array_set(original, 1, 99);\nprint(original[1], updated[1], array_len(updated));\n\nbind nested = [array: [array: \"one\"], [array: \"two\"]];\nbind localized = array_set(nested, 0, [array: \"नमस्ते\"]);\nprint(nested[0][0], localized[0][0]);\nprint(replace_last(updated)[2]);\n" },
+  },
+  {
+    title: "Lifetime windows",
+    description: "Immutable views and empty window semantics (alpha.18)",
+    entry: 'main.srp',
+    files: { 'main.srp': "// Lifetime preserves value snapshots without explicit memory management.\nbind data = [1.0, 2.0, 3.0];\nbind tail = window(data, 1, 2);\nbind empty = window(data, 2, 0);\nprint(len(empty), tail);\n\nbind numbers: integers = [integer: 7, 8, 9];\nbind empty_numbers = ints_window(numbers, 2, 0);\nprint(ints_len(empty_numbers), ints_window(numbers, 1, 2));\n" },
+  },
   {
     title: 'Import a module',
     description: 'Two real .srp source files',
