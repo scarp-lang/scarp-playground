@@ -59,8 +59,8 @@ Compiler output and diagnostics can be copied or downloaded locally without
 attaching source files or ephemeral stdin. Review output before sharing it.
 See [result export](docs/output-export.md).
 
-Alpha.20 pins the published compiler source at \`b1a9347f93540fdf95b0ddecba4adc55a3b4bb98\` and adds
-browser-executable exact base-ten \`d\` literals, persistent tuple element
+Alpha.20 pins the published compiler source at `b1a9347f93540fdf95b0ddecba4adc55a3b4bb98` and adds
+browser-executable exact base-ten `d` literals, persistent tuple element
 updates, and lexicographic numeric tuple comparisons. Official tuple examples
 and expected output are copied from the published tag. Decimals never coerce
 implicitly to binary64 floats; the Playground still executes with Rust/WASM,

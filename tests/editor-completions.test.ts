@@ -56,12 +56,12 @@ describe('Scarp editor syntax hints', () => {
 
 
   it('offers published alpha.20 exact-decimal syntax without inventing implicit conversions', () => {
-    const literal = editorCompletionHints('exact decimal', 'main.srp', files)
-      .find(item => item.label === 'exact decimal literal');
+    const literal = editorCompletionHints('decimal', 'main.srp', files)
+      .find(item => item.label === 'decimal literal');
     expect(literal?.insertText).toBe('${1:0.1}d');
     expect(literal?.detail).toContain('no implicit float mixing');
-    expect(editorCompletionHints('// exact decimal', 'main.srp', files)).toEqual([]);
-    expect(editorCompletionHints('print("exact decimal', 'main.srp', files)).toEqual([]);
+    expect(editorCompletionHints('// decimal', 'main.srp', files)).toEqual([]);
+    expect(editorCompletionHints('print("decimal', 'main.srp', files)).toEqual([]);
   });
 
   it('offers released alpha.12 typed records, lists, maps, and sum-type syntax', () => {
