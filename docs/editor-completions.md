@@ -1,7 +1,7 @@
 # Editor completions
 
 Scarp Playground offers lightweight, offline Monaco suggestions for the
-**published Scarp v0.0.6-alpha.8 syntax**. Press **Ctrl+Space** in the editor
+**published Scarp v0.0.6-alpha.20 syntax**. Press **Ctrl+Space** in the editor
 to open the suggestion list.
 
 - Starter snippets cover immutable/mutable declarations, conditional and
@@ -38,3 +38,11 @@ code. To run prompt calls in the browser, explicitly turn on **Enable prompt
 functions with supplied input** and enter all stdin lines beforehand.
 Without opt-in the compiler returns E0054, and Check/Verify never acquire
 an interactive reader. No host terminal or live dialog is available.
+
+## Exact decimal literals (alpha.20)
+
+The editor recognizes lowercase `d`-suffixed exact decimal number tokens such
+as `0.1d` and offers a `decimal literal` starter snippet. This is
+explicitly different from unsuffixed IEEE-754 floats: `0.1d + 0.2d` prints
+`0.3`, while `0.1 + 0.2` retains binary64 rounding. This is syntax-only
+highlighting; the compiler rejects invalid suffixes and implicit mixed types.
