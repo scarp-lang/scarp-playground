@@ -40,6 +40,7 @@ const SNIPPETS: ReadonlyArray<Omit<CompletionHint, 'replaceLength'>> = [
   { label: 'text_to_integer', insertText: 'text_to_integer(${1:text})', detail: 'Parse checked i64 decimal', kind: 'snippet' },
   { label: 'text_to_float', insertText: 'text_to_float(${1:text})', detail: 'Parse finite binary64 decimal', kind: 'snippet' },
   { label: 'integer_to_text', insertText: 'integer_to_text(${1:value})', detail: 'Format an integer as text', kind: 'snippet' },
+  { label: "exact decimal literal", insertText: "${1:0.1}d", detail: "Exact base-ten source literal (alpha.20; no implicit float mixing)", kind: 'snippet' },
   { label: "decimal", insertText: "decimal(\"${1:199.99}\")", detail: "Parse exact base-10 decimal (alpha.11)", kind: 'snippet' },
   { label: "decimal_from_integer", insertText: "decimal_from_integer(${1:value})", detail: "Exact integer to decimal", kind: 'snippet' },
   { label: "decimal_to_integer", insertText: "decimal_to_integer(${1:value})", detail: "Checked whole decimal to integer", kind: 'snippet' },

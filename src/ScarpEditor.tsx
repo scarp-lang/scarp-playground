@@ -5,6 +5,7 @@ import * as monaco from 'monaco-editor/esm/vs/editor/editor.api.js';
 import EditorWorker from 'monaco-editor/esm/vs/editor/editor.worker?worker';
 import { diagnosticLocations, sourceLocationToEditorRange } from './diagnostics';
 import { editorCompletionHints } from './editor-completions';
+import { SCARP_NUMBER_TOKEN } from './scarp-number-token';
 import { referenceDecorationsForFile } from './navigation/reference-view';
 import type { ReferenceSite } from './navigation/references';
 import type { CompilerDiagnostic } from './runner/types';
@@ -65,7 +66,7 @@ monaco.languages.setMonarchTokensProvider('scarp', {
     root: [
       [/\/\/.*$/, 'comment'],
       [/"([^"\\]|\\.)*"/, 'string'],
-      [/\b(?:0x[0-9a-fA-F]+|0b[01]+|\d+(?:\.\d+)?(?:[eE][+-]?\d+)?)\b/, 'number'],
+      [SCARP_NUMBER_TOKEN, 'number'],
       [/[a-zA-Z_][\w]*/, { cases: { '@keywords': 'keyword', '@default': 'identifier' } }],
       [/[{}()[\]]/, '@brackets'],
       [new RegExp('[+*/%=<>!&|:?-]+'), 'operator'],

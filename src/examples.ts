@@ -466,6 +466,25 @@ print("Lines:", entries);
     entry: 'main.srp',
     files: { 'main.srp': "// Lifetime preserves value snapshots without explicit memory management.\nbind data = [1.0, 2.0, 3.0];\nbind tail = window(data, 1, 2);\nbind empty = window(data, 2, 0);\nprint(len(empty), tail);\n\nbind numbers: integers = [integer: 7, 8, 9];\nbind empty_numbers = ints_window(numbers, 2, 0);\nprint(ints_len(empty_numbers), ints_window(numbers, 1, 2));\n" },
   },
+  // Alpha.20's tuple examples are byte-for-byte copies of the published compiler fixtures.
+  {
+    title: 'Tuple element updates',
+    description: 'Mutable tuple slots with persistent value snapshots (alpha.20)',
+    entry: 'main.srp',
+    files: { 'main.srp': "// Development-only example: persistent tuple indexed assignment.\n// Run with a compiler build containing the tuple assignment feature.\nvar position = (10, 20);\nbind old = position;\nposition[0] = 50;\nposition[1] = 100;\nprint(position); // (50, 100)\nprint(old);      // (10, 20)\n" },
+  },
+  {
+    title: 'Tuple ordering',
+    description: 'Lexicographic ordering of compatible numeric tuples (alpha.20)',
+    entry: 'main.srp',
+    files: { 'main.srp': "// Experimental lexicographic ordering of numeric tuples (development source).\nbind origin = (10, 20);\nbind target = (30, 40);\nprint(origin < target); // true\nprint(origin >= target); // false\nprint((1, (2, 3)) < (1, (2, 4))); // true\nprint((0.0,) <= (-0.0,)); // true\n" },
+  },
+  {
+    title: 'Exact decimal literals',
+    description: '0.1d + 0.2d is exact; unsuffixed floats keep binary64 behavior (alpha.20)',
+    entry: 'main.srp',
+    files: { 'main.srp': "// Alpha.20 exact base-ten literals are opt-in, unlike binary64 floats.\nprint(0.1d + 0.2d, 0.3d == 0.1d + 0.2d);\nprint(0.1 + 0.2);\n" },
+  },
   {
     title: 'Named function boundaries',
     description: 'Published alpha.19 named pure and effectful calls (no function values)',

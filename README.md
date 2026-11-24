@@ -20,8 +20,8 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.19** (published prerelease) |
-| Pinned compiler revision | `e534e73a81c9500e3aef9f3d51cafa0bc7bbcf75` |
+| Scarp compiler | **v0.0.6-alpha.20** (published prerelease) |
+| Pinned compiler revision | `b1a9347f93540fdf95b0ddecba4adc55a3b4bb98` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
@@ -58,6 +58,14 @@ See [buffered prompts](docs/buffered-prompts.md).
 Compiler output and diagnostics can be copied or downloaded locally without
 attaching source files or ephemeral stdin. Review output before sharing it.
 See [result export](docs/output-export.md).
+
+Alpha.20 pins the published compiler source at \`b1a9347f93540fdf95b0ddecba4adc55a3b4bb98\` and adds
+browser-executable exact base-ten \`d\` literals, persistent tuple element
+updates, and lexicographic numeric tuple comparisons. Official tuple examples
+and expected output are copied from the published tag. Decimals never coerce
+implicitly to binary64 floats; the Playground still executes with Rust/WASM,
+not the alpha.20 Linux ELF64 native host API. See
+[alpha.20 integration](docs/compiler-alpha20-integration.md).
 
 Alpha.19 pins the published Scarp compiler source at `e534e73a81c9500e3aef9f3d51cafa0bc7bbcf75`.
 The browser runs the exact upstream named-function boundary fixture alongside

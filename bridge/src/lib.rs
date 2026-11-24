@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.19.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.6-alpha.20.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions, InputLimits};
 use serde::Deserialize;
@@ -642,6 +642,8 @@ mod alpha17;
 mod alpha18;
 #[cfg(test)]
 mod alpha19;
+#[cfg(test)]
+mod alpha20;
 
 #[cfg(test)]
 mod buffered_prompts;
