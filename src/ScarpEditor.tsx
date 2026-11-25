@@ -60,7 +60,8 @@ monaco.languages.setMonarchTokensProvider('scarp', {
     'text_from_codepoint', 'text_rfind', 'text_count',
     'bits_count_ones', 'bits_leading_zeros', 'bits_trailing_zeros',
     'bits_reverse', 'bits_swap_bytes', 'bits_rotate_left', 'bits_rotate_right',
-    'integer_abs', 'integer_sign', 'integer_gcd', 'integer_lcm',
+    'integer_abs', 'integer_sign', 'integer_gcd', 'integer_hcf', 'integer_lcm',
+    'array', 'array_len', 'array_get_or', 'array_set', 'array_concat', 'softplus',
   ],
   tokenizer: {
     root: [

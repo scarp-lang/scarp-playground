@@ -1,0 +1,1 @@
+print(integer_hcf(12,18),integer_hcf(12,18,24),integer_gcd(24,36,48,60),integer_lcm(4,6,8,12));

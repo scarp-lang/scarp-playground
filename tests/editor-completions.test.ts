@@ -36,7 +36,7 @@ describe('Scarp editor syntax hints', () => {
     expect(editorCompletionHints('bigint_', 'main.srp', files).map((item) => item.label))
       .toEqual(expect.arrayContaining(['bigint_from_integer', 'bigint_to_integer', 'bigint_abs', 'bigint_pow', 'bigint_divmod']));
     expect(editorCompletionHints('arr', 'main.srp', files).map((item) => item.label))
-      .toEqual(['array literal', 'array type', 'array_len', 'array_get_or', 'array_set']);
+      .toEqual(['array literal', 'array type', 'array_len', 'array_get_or', 'array_set', 'array_concat']);
     expect(editorCompletionHints('try_read', 'main.srp', files)[0]?.insertText)
       .toBe('try_read_line()');
     expect(editorCompletionHints('read_line_o', 'main.srp', files)[0]?.label)
@@ -115,6 +115,17 @@ describe('Scarp editor syntax hints', () => {
       .toBe('array_set(${1:values}, ${2:index}, ${3:replacement})');
     expect(editorCompletionHints('// array_set', 'main.srp', files)).toEqual([]);
     expect(editorCompletionHints('print("array_len', 'main.srp', files)).toEqual([]);
+  });
+
+  it('offers v0.0.7-alpha.1 snippets with accurate signatures', () => {
+    expect(editorCompletionHints('array_con', 'main.srp', files)[0]?.insertText)
+      .toBe('array_concat(${1:left}, ${2:right})');
+    expect(editorCompletionHints('integer_hcf', 'main.srp', files)[0]?.detail)
+      .toContain('2–1024 integers');
+    expect(editorCompletionHints('softplus', 'main.srp', files)[0]?.insertText)
+      .toBe('softplus(${1:values})');
+    expect(editorCompletionHints('// array_concat', 'main.srp', files)).toEqual([]);
+    expect(editorCompletionHints('print("softplus', 'main.srp', files)).toEqual([]);
   });
 
   it('offers released typed prompt helpers but never proposes them inside comments or strings', () => {

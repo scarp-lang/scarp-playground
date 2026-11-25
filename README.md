@@ -20,12 +20,18 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.6-alpha.20** (published prerelease) |
-| Pinned compiler revision | `b1a9347f93540fdf95b0ddecba4adc55a3b4bb98` |
+| Scarp compiler | **v0.0.7-alpha.1** (published prerelease) |
+| Pinned compiler revision | `996bd5b83c8cb26e98637563729f67bdacc61cd4` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
 | Backend execution service | **None** |
+
+The v0.0.7-alpha.1 integration adds fixed-array concatenation, variadic integer
+GCD/HCF/LCM, and stable vector softplus. The browser continues to enforce
+its existing worker, source, input, output, and logical allocation limits.
+Native ELF64 and project CLI features remain host-only. See
+[v0.0.7-alpha.1 integration](docs/compiler-v007-alpha1.md).
 
 Scarp alpha.1 introduced numerical RMS and compiler-backed source
 navigation. Alpha.2 added opt-in Rust caching APIs; this disposable-Worker
