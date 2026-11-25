@@ -8,6 +8,10 @@ test('output statement pressure is bounded, atomic and recoverable in Chromium',
   ));
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.error-title')).toContainText('E0018', { timeout: 30_000 });
+  await expect(page.locator('.browser-diagnostic-help')).toContainText('1,000 selected output statements');
+  const original = page.getByText('Original compiler hint (may refer to native CLI options)', { exact: true });
+  await original.click();
+  await expect(page.locator('.compiler-diagnostic-help .error-help')).toContainText('--max-prints');
   await expect(page.locator('.stdout')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Run code' })).toBeEnabled();
 
@@ -30,6 +34,7 @@ test('recursive call pressure cannot poison later browser executions', async ({ 
   await page.goto('./#code=' + encodeURIComponent(program));
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.error-title')).toContainText('E0027', { timeout: 30_000 });
+  await expect(page.locator('.browser-diagnostic-help')).toContainText('call depth to 64');
   await expect(page.locator('.stdout')).toHaveCount(0);
   await page.goto('./#code=' + encodeURIComponent('print("recovered");'));
   await page.getByRole('button', { name: 'Run code' }).click();
@@ -42,6 +47,7 @@ test('large buffered stdout is rejected before partial output reaches the DOM', 
   ));
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.error-title')).toContainText('E0029', { timeout: 30_000 });
+  await expect(page.locator('.browser-diagnostic-help')).toContainText('1 MiB browser allowance');
   await expect(page.locator('.stdout')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Run code' })).toBeEnabled();
 });
