@@ -649,6 +649,9 @@ mod alpha20;
 mod v007_alpha1;
 
 #[cfg(test)]
+mod bigint_capacity;
+
+#[cfg(test)]
 mod buffered_prompts;
 
 #[cfg(test)]

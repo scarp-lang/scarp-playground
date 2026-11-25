@@ -67,6 +67,14 @@ jobs:
           path: test-results/**/chromium-memory-pressure.json
           retention-days: 14
           if-no-files-found: ignore
+      - name: Upload bounded BigInt browser observations
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bigint-capacity-observations
+          path: test-results/**/bigint-capacity.json
+          retention-days: 14
+          if-no-files-found: ignore
       - name: Upload browser failure artifacts
         if: failure()
         uses: actions/upload-artifact@v4
