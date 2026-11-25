@@ -20,6 +20,8 @@ import { initialReferenceIndex, stepReferenceIndex } from './navigation/referenc
 import { diagnosticNavigationPosition, sourceLocationToEditorRange } from './diagnostics';
 import { ExecutionScope } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
+import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
+import { BrowserRunDetails } from './BrowserRunDetails';
 import { consoleTranscript, consoleOperationSubtitle, type ConsoleMode } from './runner/transcript';
 import { MAX_FILES, MAX_FILE_BYTES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
@@ -87,7 +89,7 @@ export function App() {
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
   const [operation, setOperation] = useState<ConsoleMode>('run');
-  const [result, setResult] = useState<RunResult | null>(null);
+  const [result, setResult] = useState<(RunResult & { browserStats?: BrowserRunStats | null }) | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   // Runtime input is intentionally ephemeral: never saved or placed in shared links.
   const [programInput, setProgramInput] = useState('');
@@ -289,6 +291,7 @@ export function App() {
     setNotice(null);
     setReferenceResult(null);
     setSelectedReferenceIndex(-1);
+    const started = performance.now();
     try {
       const response = mode === 'verify'
         ? await verifyWorkspace(workspace, execution.controller.signal)
@@ -296,7 +299,7 @@ export function App() {
           ? await checkWorkspace(workspace, execution.controller.signal)
           : await runWorkspace(workspace, execution.controller.signal, programInput, allowPrompts);
       if (!executionScope.current.isCurrent(execution)) return;
-      setResult(response);
+      setResult({ ...response, browserStats: describeBrowserRun(mode, response, started, performance.now()) });
       // Navigate only to a valid source span from this exact execution snapshot.
       const target = !response.ok
         ? diagnosticNavigationPosition(workspace.files, response.diagnostic, response.diagnostic?.primary)
@@ -1861,10 +1864,11 @@ export function App() {
                       ))}
                     </div>
                   )}
-                  {result.ok && !result.stdout && !result.stderr && <p className="terminal-muted">Program completed without producing output.</p>}
+                  {result.ok && operation === 'run' && !result.stdout && !result.stderr && <p className="terminal-muted">Program completed without producing output.</p>}
                 </>
               )}
             </div>
+            <BrowserRunDetails stats={result?.browserStats ?? null} />
           </section>
           {notice && <div className="notice" role="status">{notice}<button type="button" onClick={() => setNotice(null)} aria-label="Dismiss notice">×</button></div>}
           <p className="disclaimer">Experimental preview · Browser execution has work and output limits. Do not use for untrusted high-risk code or sensitive secrets. {savingLocally && 'Opt-in local autosave is active: code is stored unencrypted in this browser profile.'}</p>

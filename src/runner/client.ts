@@ -2,10 +2,9 @@ import { validateWorkspace, type Workspace } from '../workspace';
 import type { RunResponse, RunResult } from './types';
 import { decodeWorkerResult, decodeSilentResult } from './protocol';
 import { claimCompilerWorker } from './worker-slot';
-import { MAX_PROGRAM_INPUT_BYTES } from './limits';
+import { MAX_PROGRAM_INPUT_BYTES, RUN_TIMEOUT_MS } from './limits';
 export { MAX_PROGRAM_INPUT_BYTES } from './limits';
 
-const RUN_TIMEOUT_MS = 12_000;
 const cancelled: RunResult = {
   ok: false, stdout: '', stderr: '', error: 'Execution cancelled.',
 };
