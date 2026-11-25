@@ -1,4 +1,5 @@
 import type { RunResult } from './types';
+import { browserDiagnosticHelp } from './browser-diagnostic-help';
 
 export type ConsoleMode = 'run' | 'check' | 'verify' | 'definition' | 'references' | 'rename';
 
@@ -37,7 +38,9 @@ export function consoleTranscript(result: RunResult | null, mode: ConsoleMode): 
     lines.push('Location: ' + at.path + ':' + at.start.line + ':' + at.start.column);
   }
   lines.push(diagnostic?.message || result.error || 'Unknown compiler error.');
-  if (diagnostic?.help) lines.push('Hint: ' + diagnostic.help);
+  const browserHelp = browserDiagnosticHelp(diagnostic?.code, mode);
+  if (browserHelp) lines.push('Playground guidance: ' + browserHelp);
+  if (diagnostic?.help) lines.push((browserHelp ? 'Original compiler hint: ' : 'Hint: ') + diagnostic.help);
   for (const note of diagnostic?.related ?? []) {
     const location = note.location;
     lines.push('Related: ' + note.message + (location ?
