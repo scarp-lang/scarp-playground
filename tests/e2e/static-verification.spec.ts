@@ -35,6 +35,8 @@ test('static Verify never consumes stdin and Run still gets real buffered input'
   await expect(page.locator('.stdout')).toHaveCount(0);
   await page.getByRole('button', { name: 'Check code' }).click();
   await expect(page.locator('.error-title')).toContainText('E0054', { timeout: 30_000 });
+  await expect(page.locator('.browser-diagnostic-help')).toContainText('Check evaluates reachable statements but cannot consume program input.');
+  await expect(page.locator('.browser-diagnostic-help')).toContainText('Use Verify for static validation');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('नमस्ते\n', { timeout: 30_000 });
 });

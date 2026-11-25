@@ -1,6 +1,6 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
-import compilerCompatibility from '../../compiler-compatibility.json';
+import { compilerCompatibility } from './support/compiler-compatibility';
 
 type Scenario = { label: string; source: string; stdout: string } |
   { label: string; source: string; error: string };

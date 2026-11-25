@@ -1,7 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { readChromiumProcessRss, readPageJsHeap } from './support/chromium-memory';
-import compilerCompatibility from '../../compiler-compatibility.json';
+import { compilerCompatibility } from './support/compiler-compatibility';
 
 // This test runs the real pinned Rust/WASM interpreter in Chromium. Measured
 // Linux RSS sums can count shared pages more than once; page JS heap excludes

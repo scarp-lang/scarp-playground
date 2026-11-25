@@ -23,6 +23,7 @@ import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
 import { consoleTranscript, consoleOperationSubtitle, type ConsoleMode } from './runner/transcript';
+import { browserDiagnosticHelp } from './runner/browser-diagnostic-help';
 import { MAX_FILES, MAX_FILE_BYTES, validPath, type Workspace } from './workspace';
 import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
@@ -1181,6 +1182,7 @@ export function App() {
   }
 
   const diagnostic = result?.diagnostic;
+  const browserHelp = result && !result.ok ? browserDiagnosticHelp(diagnostic?.code, operation) : null;
   const location = diagnostic?.primary;
   const errorText = diagnostic?.message || result?.error;
   const transcriptAvailable = !running && consoleTranscript(result, operation) !== null;
@@ -1849,7 +1851,13 @@ export function App() {
                         )}
                       </div>
                       <pre>{errorText || 'An unknown compiler error occurred.'}</pre>
-                      {diagnostic?.help && <p className="error-help">Hint: {diagnostic.help}</p>}
+                      {browserHelp && <p className="browser-diagnostic-help"><strong>Playground guidance:</strong> {browserHelp}</p>}
+                      {diagnostic?.help && (browserHelp ? (
+                        <details className="compiler-diagnostic-help">
+                          <summary>Original compiler hint (may refer to native CLI options)</summary>
+                          <p className="error-help">{diagnostic.help}</p>
+                        </details>
+                      ) : <p className="error-help">Hint: {diagnostic.help}</p>)}
                       {diagnostic?.related?.map((note, index) => note.location && (
                         <button
                           key={index}

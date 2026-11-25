@@ -56,6 +56,9 @@ test('alpha.9 enforces the 2048-digit browser quota and discards partial output'
   await page.keyboard.insertText(source);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.result-status.failure')).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator('.error-title')).toContainText('E0052');
+  await expect(page.locator('.browser-diagnostic-help')).toContainText('2,048 decimal digits');
+  await expect(page.locator('.browser-diagnostic-help')).toContainText('256 KiB');
   await expect(page.locator('.stdout')).toHaveCount(0);
   await replaceExampleAfterEdit(page, /Hello, Scarp/);
   await page.getByRole('button', { name: 'Run code' }).click();

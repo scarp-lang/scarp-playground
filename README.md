@@ -67,6 +67,8 @@ See [result export](docs/output-export.md).
 The output panel also reports local browser turnaround time and captured UTF-8
 output sizes, with an expandable explanation of execution limits. These are
 not compiler CPU or memory measurements; see [browser run details](docs/browser-run-details.md).
+Selected compiler limit and input diagnostics include browser-specific recovery
+advice, with original compiler hints preserved. See [diagnostic guidance](docs/browser-diagnostic-help.md).
 
 Alpha.20 pins the published compiler source at `b1a9347f93540fdf95b0ddecba4adc55a3b4bb98` and adds
 browser-executable exact base-ten `d` literals, persistent tuple element

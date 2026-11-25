@@ -51,6 +51,18 @@ describe('browser-only compiler result export', () => {
     );
   });
 
+  it('exports browser guidance separately from the unchanged native compiler hint', () => {
+    const result: RunResult = {
+      ok: false, stdout: '', stderr: '',
+      diagnostic: { schema_version: 1, severity: 'error', code: 'E0052',
+        message: 'BigInt limit exceeded', help: 'Raise --max-bigint-digits.' },
+    };
+    const report = consoleTranscript(result, 'run');
+    expect(report).toContain('Playground guidance: Try smaller BigInt inputs or exponents.');
+    expect(report).toContain('2,048 decimal digits');
+    expect(report).toContain('Original compiler hint: Raise --max-bigint-digits.');
+  });
+
   it('labels compiler-backed editor diagnostics by their true non-executing operation', () => {
     const failure: RunResult = { ok: false, stdout: '', stderr: '', error: 'Unknown identifier' };
     const cases: Array<[ConsoleMode, string, string]> = [
