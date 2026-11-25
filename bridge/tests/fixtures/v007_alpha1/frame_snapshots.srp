@@ -1,0 +1,10 @@
+pure funcra pair(n: integer) -> array<integer, 2> {
+    return [array: n, n + 1];
+}
+bind first = pair(7);
+repeat 20 as i {
+    bind next = pair(i);
+    assert(next[0] == i);
+}
+print(first);
+print(pair(42));

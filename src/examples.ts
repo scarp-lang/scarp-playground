@@ -466,6 +466,30 @@ print("Lines:", entries);
     entry: 'main.srp',
     files: { 'main.srp': "// Lifetime preserves value snapshots without explicit memory management.\nbind data = [1.0, 2.0, 3.0];\nbind tail = window(data, 1, 2);\nbind empty = window(data, 2, 0);\nprint(len(empty), tail);\n\nbind numbers: integers = [integer: 7, 8, 9];\nbind empty_numbers = ints_window(numbers, 2, 0);\nprint(ints_len(empty_numbers), ints_window(numbers, 1, 2));\n" },
   },
+  {
+    title: "Fixed-array concatenation",
+    description: "Join same-typed fixed arrays without mutating snapshots (v0.0.7-alpha.1)",
+    entry: 'main.srp',
+    files: { 'main.srp': "// Joining two snapshots determines the output length at compile time.\npure funcra readings(first: array<integer, 2>, last: array<integer, 1>) -> array<integer, 3> {\n    return array_concat(first, last);\n}\n\nbind morning = [array: 12, 18];\nbind full_day = readings(morning, [array: 24]);\nprint(morning);\nprint(full_day);\nprint(array_concat([array: <integer>], full_day));\n" },
+  },
+  {
+    title: "Variadic integer reductions",
+    description: "Compute GCD, HCF and LCM across several integers (v0.0.7-alpha.1)",
+    entry: 'main.srp',
+    files: { 'main.srp': "print(integer_hcf(12,18),integer_hcf(12,18,24),integer_gcd(24,36,48,60),integer_lcm(4,6,8,12));\n" },
+  },
+  {
+    title: "Stable vector softplus",
+    description: "Evaluate finite activation values and check extreme input behavior (v0.0.7-alpha.1)",
+    entry: 'main.srp',
+    files: { 'main.srp': "bind values = softplus([-1000.0, 0.0, 1000.0]);\nprint(len(values));\nprint(values[0] >= 0.0, values[0] < 0.001);\nprint(values[1] > 0.69, values[1] < 0.70);\nprint(values[2] == 1000.0);\n" },
+  },
+  {
+    title: "Call-frame snapshot reuse",
+    description: "Retain returned arrays across repeated function calls (v0.0.7-alpha.1)",
+    entry: 'main.srp',
+    files: { 'main.srp': "pure funcra pair(n: integer) -> array<integer, 2> {\n    return [array: n, n + 1];\n}\nbind first = pair(7);\nrepeat 20 as i {\n    bind next = pair(i);\n    assert(next[0] == i);\n}\nprint(first);\nprint(pair(42));\n" },
+  },
   // Alpha.20's tuple examples are byte-for-byte copies of the published compiler fixtures.
   {
     title: 'Tuple element updates',
