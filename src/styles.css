@@ -141,6 +141,15 @@ a { color: inherit; text-decoration: none; }
 .result-status.failure { color: #ef8c91; }
 .terminal-output { padding: 19px; background: var(--terminal); min-height: 125px; max-height: 350px; overflow: auto; font: 12px/1.6 ui-monospace, SFMono-Regular, Consolas, monospace; }
 .terminal-muted { color: var(--muted); margin: 0; }
+.browser-run-details { padding: 10px 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 11px; }
+.browser-run-stats { display: flex; flex-wrap: wrap; gap: 6px 18px; margin: 0 0 8px; }
+.browser-run-stats div { display: flex; gap: 5px; align-items: baseline; }
+.browser-run-stats dd { margin: 0; color: var(--text); font-variant-numeric: tabular-nums; }
+.browser-run-details summary { cursor: pointer; }
+.browser-run-limits { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 180px), 1fr)); gap: 6px 14px; margin: 10px 0; }
+.browser-run-limits div { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 4px; }
+.browser-run-limits dd { color: var(--text); margin: 0; }
+.browser-run-details p { margin: 6px 0 0; line-height: 1.5; }
 .stdout, .stderr, .error-panel pre { font: inherit; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
 .stdout { color: var(--text); }
 .stderr { color: #f1c178; }
