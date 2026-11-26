@@ -17,6 +17,44 @@ describe('bounded compiler-worker protocol', () => {
     expect(decodeWorkerResult(failure)).toEqual(failure);
   });
 
+
+  it('drops unknown fields at every diagnostic depth and never forwards cycles', () => {
+    const cycle: Record<string, unknown> = {};
+    cycle.self = cycle;
+    const richLocation = {
+      ...diagnostic.primary, extra: cycle,
+      start: { ...diagnostic.primary.start, extra: cycle },
+      end: { ...diagnostic.primary.end, extra: cycle },
+    };
+    const response = {
+      ok: false, stdout: '', stderr: '', error: 'unknown identifier', extra: cycle,
+      diagnostic: {
+        ...diagnostic, extra: cycle, primary: richLocation,
+        related: [{ message: 'Imported here', location: richLocation, extra: cycle }],
+      },
+    };
+    const expected = {
+      ok: false, stdout: '', stderr: '', error: 'unknown identifier',
+      diagnostic: {
+        ...diagnostic,
+        related: [{ message: 'Imported here', location: diagnostic.primary }],
+      },
+    };
+    const decoded = decodeWorkerResult(response);
+    expect(decoded).toEqual(expected);
+    expect(decoded.diagnostic?.primary?.span).not.toBe(response.diagnostic.primary.span);
+    expect(() => JSON.stringify(decoded)).not.toThrow();
+    expect(decodeSilentResult(response)).toEqual(expected);
+  });
+
+  it('projects JSON replies and successful structured-cloned results onto known fields', () => {
+    const response = { ...success, extra: { nested: 'unrecognized payload' } };
+    expect(decodeCompilerReply(JSON.stringify(response))).toEqual(success);
+    expect(decodeWorkerResult(response)).toEqual(success);
+    const silent = { ok: true, stdout: '', stderr: '', extra: response };
+    expect(decodeSilentResult(silent)).toEqual({ ok: true, stdout: '', stderr: '' });
+  });
+
   it('strictly suppresses forged stdout and stderr in static verification mode', () => {
     expect(decodeVerifyResult({ ok: true, stdout: '', stderr: '' })).toEqual({
       ok: true, stdout: '', stderr: '',

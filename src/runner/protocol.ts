@@ -62,6 +62,39 @@ function diagnostic(value: unknown): value is CompilerDiagnostic {
   return true;
 }
 
+// Strip unknown nested fields after validation. A structured-cloned reply can
+// contain cycles or large extra objects even when all known fields are valid.
+function projectLocation(value: DiagnosticLocation): DiagnosticLocation {
+  return {
+    path: value.path,
+    start: { line: value.start.line, column: value.start.column },
+    end: { line: value.end.line, column: value.end.column },
+    ...(value.span === undefined ? {} : { span: [value.span[0], value.span[1]] }),
+  };
+}
+
+function projectDiagnostic(value: CompilerDiagnostic): CompilerDiagnostic {
+  return {
+    schema_version: value.schema_version,
+    severity: value.severity,
+    code: value.code,
+    message: value.message,
+    span_encoding: value.span_encoding,
+    column_encoding: value.column_encoding,
+    position_base: value.position_base,
+    ...(value.help === undefined ? {} : { help: value.help }),
+    ...(value.primary === undefined ? {} : {
+      primary: value.primary === null ? null : projectLocation(value.primary),
+    }),
+    ...(value.related === undefined ? {} : {
+      related: value.related.map(note => ({
+        message: note.message,
+        location: note.location === null ? null : projectLocation(note.location),
+      })),
+    }),
+  };
+}
+
 /** Only validated, bounded responses may enter React/Monaco as compiler output. */
 export function validatedRunResult(value: unknown): RunResult | null {
   if (!record(value) || typeof value.ok !== 'boolean' ||
@@ -78,7 +111,16 @@ export function validatedRunResult(value: unknown): RunResult | null {
        !diagnostic(value.diagnostic))) {
     return null;
   }
-  return value as unknown as RunResult;
+  const result = value as unknown as RunResult;
+  return {
+    ok: result.ok,
+    stdout: result.stdout,
+    stderr: result.stderr,
+    ...(result.error === undefined ? {} : { error: result.error }),
+    ...(result.diagnostic === undefined ? {} : {
+      diagnostic: result.diagnostic === null ? null : projectDiagnostic(result.diagnostic),
+    }),
+  };
 }
 
 /** Reject oversized compiler text *before* JSON.parse allocates a response tree. */

@@ -33,6 +33,41 @@ describe('compiler Worker request boundary', () => {
     expect(validatedCompilerWorkerRequest(rename)).toEqual(rename);
   });
 
+
+  it('projects every mode onto a fresh source-only workspace before serialization', () => {
+    const pollutedWorkspace = {
+      ...workspace, stdin: 'hidden input', allowPrompts: true, new_name: 'hidden',
+      extra: { payload: 'not compiler data' },
+    };
+    const requests = [
+      { id: 1, mode: 'run', stdin: 'explicit input', allowPrompts: true },
+      { id: 1, mode: 'check' },
+      { id: 1, mode: 'verify' },
+      { id: 1, mode: 'definition', path: 'main.srp', offset: 0 },
+      { id: 1, mode: 'references', path: 'main.srp', offset: 0 },
+      { id: 1, mode: 'rename', path: 'main.srp', offset: 0, new_name: 'valid' },
+    ];
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    for (const fields of requests) {
+      const decoded = validatedCompilerWorkerRequest({
+        ...fields, workspace: { ...pollutedWorkspace, cyclic }, unrelated: cyclic,
+      });
+      expect(decoded).toEqual({ ...fields, workspace });
+      expect(decoded?.workspace).not.toBe(pollutedWorkspace);
+      expect(decoded?.workspace.files).not.toBe(workspace.files);
+      expect(() => JSON.stringify(decoded)).not.toThrow();
+    }
+  });
+
+  it('does not infer Run prompt capabilities or input from extra workspace keys', () => {
+    const decoded = validatedCompilerWorkerRequest({
+      id: 1, mode: 'run',
+      workspace: { ...workspace, stdin: 'hidden', allowPrompts: true },
+    });
+    expect(decoded).toEqual({ id: 1, mode: 'run', workspace });
+  });
+
   it('rejects unknown operation modes rather than falling back to program execution', () => {
     const malicious = { id: 1, workspace, mode: 'unknown', stdin: 'hello' };
     expect(validatedCompilerWorkerRequest(malicious)).toBeNull();
