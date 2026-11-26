@@ -22,18 +22,30 @@ function record(value: unknown): value is Record<string, unknown> {
  */
 export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRequest | null {
   if (!record(value) || value.id !== 1 || validateWorkspace(value.workspace)) return null;
-  const workspace = value.workspace as Workspace;
+  // Construct a fresh payload instead of forwarding the incoming object.
+  // A structurally valid workspace can still contain arbitrary extra keys,
+  // including stdin, allowPrompts or a cyclic object. Only source and entry
+  // belong in the JSON sent to the bridge.
+  const candidate = value.workspace as Workspace;
+  const workspace: Workspace = {
+    entry: candidate.entry,
+    files: Object.fromEntries(Object.entries(candidate.files)),
+  };
   if (value.mode === 'run') {
     if (value.allowPrompts !== undefined && typeof value.allowPrompts !== 'boolean') return null;
     if (value.stdin !== undefined && typeof value.stdin !== 'string') return null;
     if (typeof value.stdin === 'string' &&
         new TextEncoder().encode(value.stdin).byteLength > MAX_PROGRAM_INPUT_BYTES) return null;
-    return value as RunRequest;
+    return {
+      id: 1, workspace, mode: 'run',
+      ...(typeof value.stdin === 'string' ? { stdin: value.stdin } : {}),
+      ...(typeof value.allowPrompts === 'boolean' ? { allowPrompts: value.allowPrompts } : {}),
+    };
   }
   if (value.mode === 'check' || value.mode === 'verify') {
     // Input belongs to Run only, even when present with an empty value.
     return Object.hasOwn(value, 'stdin') || Object.hasOwn(value, 'allowPrompts')
-      ? null : value as RunRequest;
+      ? null : { id: 1, workspace, mode: value.mode };
   }
 
   if (value.mode !== 'definition' && value.mode !== 'references' &&
@@ -48,11 +60,16 @@ export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRe
   if (value.mode === 'rename') {
     if ((value.offset as number) === byteLength || typeof value.new_name !== 'string' ||
         !validRenameName(value.new_name)) return null;
-    return value as RenameRequest;
+    return {
+      id: 1, workspace, mode: 'rename', path: value.path,
+      offset: value.offset as number, new_name: value.new_name,
+    };
   }
   // Definition/References cannot carry Rename's mutation payload.
   if (Object.hasOwn(value, 'new_name')) return null;
-  return value as DefinitionRequest | ReferencesRequest;
+  return {
+    id: 1, workspace, mode: value.mode, path: value.path, offset: value.offset as number,
+  };
 }
 
 /** Give clients an immediate, shape-correct rejection instead of a timeout. */
