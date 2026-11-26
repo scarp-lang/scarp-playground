@@ -4,6 +4,7 @@ const baseURL = 'http://127.0.0.1:4173/scarp-playground/';
 const sharedBrowserTests = [
   '**/compatibility.spec.ts',
   '**/compiler-v007-alpha1.spec.ts',
+  '**/compiler-v007-alpha2.spec.ts',
   '**/browser-run-details.spec.ts',
   '**/bigint-capacity.spec.ts',
   '**/resource-limits.spec.ts',
