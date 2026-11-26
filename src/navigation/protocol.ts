@@ -47,7 +47,13 @@ export function validatedDefinitionResult(value: unknown): DefinitionResult {
   if (Number(target.end.line) < Number(target.start.line) ||
       (target.end.line === target.start.line &&
        Number(target.end.column) < Number(target.start.column))) return errorResult();
-  return { ok: true, target: { path: target.path, start: target.start, end: target.end } };
+  return {
+    ok: true, target: {
+      path: target.path,
+      start: { line: target.start.line, column: target.start.column },
+      end: { line: target.end.line, column: target.end.column },
+    },
+  };
 }
 
 export function decodeDefinitionReply(raw: unknown): DefinitionResult {
