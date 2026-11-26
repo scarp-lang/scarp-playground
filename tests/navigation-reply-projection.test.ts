@@ -74,8 +74,8 @@ describe('successful navigation response projection', () => {
     expect(validatedRenameResult({
       ...decoded, changed_files: Array(1),
     }).ok).toBe(false);
-    expect(validatedRenameResult({
-      ...decoded, changed_files: ['main.srp', ,],
-    }).ok).toBe(false);
+    const sparse = Array<string>(2);
+    sparse[0] = 'main.srp';
+    expect(validatedRenameResult({ ...decoded, changed_files: sparse }).ok).toBe(false);
   });
 });
