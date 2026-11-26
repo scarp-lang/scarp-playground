@@ -1,6 +1,7 @@
 import { writeFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { readChromiumProcessRss, readPageJsHeap } from './support/chromium-memory';
+import { compilerCompatibility } from './support/compiler-compatibility';
 
 // This test runs the real pinned Rust/WASM interpreter in Chromium. Measured
 // Linux RSS sums can count shared pages more than once; page JS heap excludes
@@ -22,7 +23,8 @@ test('records browser memory while bounded failures recover with no retained com
     Worker.prototype.postMessage = function (payload: unknown, ...additional: unknown[]) {
       const message = payload as { mode?: unknown; workspace?: unknown } | null;
       if (message && (message.mode === 'run' || message.mode === 'check' ||
-          message.mode === 'definition') && message.workspace &&
+          message.mode === 'verify' || message.mode === 'definition' ||
+          message.mode === 'references' || message.mode === 'rename') && message.workspace &&
           typeof message.workspace === 'object' && !marked.has(this)) {
         marked.add(this);
         active.add(this);
@@ -117,6 +119,21 @@ test('records browser memory while bounded failures recover with no retained com
       source: 'print("frames recovered");',
       stdout: 'frames recovered\n',
     },
+    {
+      label: 'bigint-digit-pressure',
+      source: 'print("before"); print(bigint(text_repeat("9", 2049)));',
+      error: 'E0052',
+    },
+    {
+      label: 'bigint-division-work-pressure',
+      source: 'bind a=bigint(text_repeat("9", 2048)); bind b=bigint(text_repeat("7", 1024)); print(a / b);',
+      error: 'E0017',
+    },
+    {
+      label: 'recover-after-bigint-pressure',
+      source: 'print(bigint("9223372036854775808") + bigint("1"));',
+      stdout: '9223372036854775809\n',
+    },
   ];
 
   for (const scenario of cases) {
@@ -157,7 +174,7 @@ test('records browser memory while bounded failures recover with no retained com
   // process-memory maximum. CI variance and cross-process RSS double counting
   // make a fixed RSS threshold misleading.
   const evidence = {
-    compilerPin: 'v0.0.6-alpha.2 (immutable bridge/Cargo.lock)',
+    compilerPin: { version: compilerCompatibility.version, commit: compilerCompatibility.commit },
     browser: 'Chromium',
     scope: {
       pageJsHeap: 'Chromium page process JS heap only; excludes Worker and WASM allocations',

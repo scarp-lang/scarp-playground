@@ -1,6 +1,13 @@
 import { defineConfig, devices } from '@playwright/test';
 
 const baseURL = 'http://127.0.0.1:4173/scarp-playground/';
+const sharedBrowserTests = [
+  '**/compatibility.spec.ts',
+  '**/compiler-v007-alpha1.spec.ts',
+  '**/browser-run-details.spec.ts',
+  '**/bigint-capacity.spec.ts',
+  '**/resource-limits.spec.ts',
+];
 
 export default defineConfig({
   testDir: './tests/e2e',
@@ -18,9 +25,9 @@ export default defineConfig({
     // Keep the comprehensive suite on Chromium. The other browser engines
     // run a small shared suite against the exact same real Rust/WASM build.
     { name: 'chromium', use: { ...devices['Desktop Chrome'] } },
-    { name: 'firefox', testMatch: '**/compatibility.spec.ts',
+    { name: 'firefox', testMatch: sharedBrowserTests,
       use: { ...devices['Desktop Firefox'] } },
-    { name: 'webkit', testMatch: '**/compatibility.spec.ts',
+    { name: 'webkit', testMatch: sharedBrowserTests,
       use: { ...devices['Desktop Safari'] } },
   ],
   webServer: {
