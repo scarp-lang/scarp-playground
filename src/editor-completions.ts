@@ -143,9 +143,8 @@ export function editorCompletionHints(
 ): CompletionHint[] {
   // Import hints are the sole string-context exception, and only when this
   // line begins outside a preceding multiline literal.
-  if (completionContext(precedingSource) !== 'code') return [];
   const importString = /^\s*import\s+"([^"\r\n]*)$/.exec(linePrefix);
-  if (importString && validPath(currentFile)) {
+  if (importString && completionContext(precedingSource) === 'code' && validPath(currentFile)) {
     const typed = importString[1];
     return Object.keys(files)
       .filter((file) => file !== currentFile && validPath(file))
@@ -160,8 +159,14 @@ export function editorCompletionHints(
         replaceLength: typed.length,
       }));
   }
-  if (completionContext(linePrefix) !== 'code') return [];
+  if (completionContext(precedingSource + linePrefix) !== 'code') return [];
   const word = /[A-Za-z_][A-Za-z0-9_]*$/.exec(linePrefix)?.[0] ?? '';
   return SNIPPETS.filter((hint) => hint.label.startsWith(word))
-    .map((hint) => ({ ...hint, replaceLength: word.length }));
+    .map((hint) => ({
+      ...hint,
+      // If the user already typed the purity modifier, do not insert it twice.
+      insertText: /\bpure\s+funcra$/.test(linePrefix) && hint.insertText.startsWith('pure funcra ')
+        ? hint.insertText.slice('pure '.length) : hint.insertText,
+      replaceLength: word.length,
+    }));
 }

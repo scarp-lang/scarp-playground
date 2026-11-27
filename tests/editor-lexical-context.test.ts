@@ -39,6 +39,18 @@ describe('alpha.3 completion lexical context', () => {
       .toEqual(['lib.srp']);
   });
 
+  it('restores snippets after closing a multiline literal on the cursor line', () => {
+    expect(editorCompletionHints('last"""; pri', 'main.srp', files, 'bind text = """\n').map(x => x.label))
+      .toContain('print');
+  });
+
+  it('does not duplicate the purity modifier in generic snippets', () => {
+    const hint = editorCompletionHints('pure funcra', 'main.srp', files)
+      .find(x => x.label === 'funcra generic');
+    expect(hint?.insertText).toMatch(/^funcra /);
+    expect(hint?.replaceLength).toBe(6);
+  });
+
   it('handles raw literals without interpreting backslash as an escape', () => {
     expect(editorCompletionHints('r"pri', 'main.srp', files)).toEqual([]);
     expect(editorCompletionHints('r"x\\"; pri', 'main.srp', files).map(x => x.label))
