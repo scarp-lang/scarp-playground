@@ -19,3 +19,17 @@ for (const fixture of ['string_operators', 'generic_functions', 'generic_variant
     await expect(page.locator('.stderr')).toHaveCount(0);
   });
 }
+
+for (const [fixture, title] of [["generic_functions","Generic functions and inference"],["generic_variants","Generic Option and Result"],["string_operators","String operators and literals"]] as const) {
+  test('alpha.3 example browser: ' + title, async ({ page }) => {
+    await page.goto('./');
+    await page.getByRole('searchbox', { name: 'Find an example' }).fill('v0.0.7-alpha.3');
+    await expect(page.locator('.example-button')).toHaveCount(3);
+    await page.locator('.example-button').filter({ has: page.getByText(title, { exact: true }) }).click();
+    await page.getByRole('button', { name: 'Run code' }).click();
+    const output = readFileSync('bridge/tests/fixtures/v007_alpha3/' + fixture + '.stdout', 'utf8');
+    await expect(page.locator('.stdout')).toHaveText(output, { timeout: 30_000 });
+    await expect(page.locator('.result-status.success')).toBeVisible();
+    await expect(page.locator('.stderr')).toHaveCount(0);
+  });
+}

@@ -1,4 +1,5 @@
 import { validPath } from './workspace';
+import { completionContext } from './editor-lexical-context';
 
 export type CompletionHint = {
   label: string;
@@ -19,6 +20,10 @@ const SNIPPETS: ReadonlyArray<Omit<CompletionHint, 'replaceLength'>> = [
   { label: 'repeat', insertText: 'repeat ${1:5} as ${2:index} {\n  $0\n}', detail: 'Counted loop', kind: 'snippet' },
   { label: 'funcra', insertText: 'funcra ${1:identity}(${2:value}: integer) -> integer {\n  return ${2:value};\n}', detail: 'Typed function declaration', kind: 'snippet' },
   { label: 'pure funcra', insertText: 'pure funcra ${1:identity}(${2:value}: integer) -> integer {\n  return ${2:value};\n}', detail: 'Pure typed function declaration', kind: 'snippet' },
+  {"label":"funcra generic","insertText":"pure funcra ${1:identity}<${2:T}>(${3:value}: ${2:T}) -> ${2:T} {\n  return ${3:value};\n}","detail":"Generic identity function (v0.0.7-alpha.3)","kind":"snippet"},
+  {"label":"funcra numeric","insertText":"pure funcra ${1:square}<${2:T}: Numeric>(${3:value}: ${2:T}) -> ${2:T} {\n  return ${3:value} * ${3:value};\n}","detail":"Numeric-constrained generic function (v0.0.7-alpha.3)","kind":"snippet"},
+  {"label":"raw string","insertText":"r\"${1:text}\"","detail":"Raw literal without escape decoding (v0.0.7-alpha.3)","kind":"snippet"},
+  {"label":"multiline string","insertText":"\"\"\"${1:first}\n${2:second}\"\"\"","detail":"Verbatim multiline literal (v0.0.7-alpha.3)","kind":"snippet"},
   { label: 'import', insertText: 'import "${1:lib/math.srp}" as ${2:math};', detail: 'Import another local .srp source', kind: 'snippet' },
   { label: 'input', insertText: 'input("${1:Name? }")', detail: 'Typed prompt from pre-supplied stdin (opt-in)', kind: 'snippet' },
   { label: 'input_integer', insertText: 'input_integer("${1:Integer? }")', detail: 'Prompt for a signed integer (opt-in)', kind: 'snippet' },
@@ -129,30 +134,16 @@ export function relativeImportPath(importer: string, target: string): string {
   return [...from.slice(common).map(() => '..'), ...to.slice(common)].join('/');
 }
 
-function insideCommentOrString(prefix: string): boolean {
-  let quoted = false;
-  let escape = false;
-  for (let index = 0; index < prefix.length; index++) {
-    const char = prefix[index];
-    if (quoted) {
-      if (escape) escape = false;
-      else if (char === '\\') escape = true;
-      else if (char === '"') quoted = false;
-    } else if (char === '"') {
-      quoted = true;
-    } else if (char === '/' && prefix[index + 1] === '/') {
-      return true;
-    }
-  }
-  return quoted;
-}
-
 /** Pure editor hints: never execute source or synthesize unknown identifiers. */
 export function editorCompletionHints(
   linePrefix: string,
   currentFile: string,
   files: Record<string, string>,
+  precedingSource = '',
 ): CompletionHint[] {
+  // Import hints are the sole string-context exception, and only when this
+  // line begins outside a preceding multiline literal.
+  if (completionContext(precedingSource) !== 'code') return [];
   const importString = /^\s*import\s+"([^"\r\n]*)$/.exec(linePrefix);
   if (importString && validPath(currentFile)) {
     const typed = importString[1];
@@ -169,7 +160,7 @@ export function editorCompletionHints(
         replaceLength: typed.length,
       }));
   }
-  if (insideCommentOrString(linePrefix)) return [];
+  if (completionContext(linePrefix) !== 'code') return [];
   const word = /[A-Za-z_][A-Za-z0-9_]*$/.exec(linePrefix)?.[0] ?? '';
   return SNIPPETS.filter((hint) => hint.label.startsWith(word))
     .map((hint) => ({ ...hint, replaceLength: word.length }));

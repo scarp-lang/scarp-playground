@@ -66,11 +66,20 @@ monaco.languages.setMonarchTokensProvider('scarp', {
   tokenizer: {
     root: [
       [/\/\/.*$/, 'comment'],
+      [/"""/, 'string', '@multiline'],
+      [/r"[^"]*"/, 'string'],
+      [/r"[^"]*$/, 'string'],
       [/"([^"\\]|\\.)*"/, 'string'],
+      [/"([^"\\]|\\.)*\\?$/, 'string'],
       [SCARP_NUMBER_TOKEN, 'number'],
       [/[a-zA-Z_][\w]*/, { cases: { '@keywords': 'keyword', '@default': 'identifier' } }],
       [/[{}()[\]]/, '@brackets'],
       [new RegExp('[+*/%=<>!&|:?-]+'), 'operator'],
+    ],
+    multiline: [
+      [/"""/, 'string', '@pop'],
+      [/[^"]+/, 'string'],
+      [/"/, 'string'],
     ],
   },
 });
@@ -178,7 +187,11 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
           return { suggestions: [] };
         }
         const prefix = model.getLineContent(position.lineNumber).slice(0, position.column - 1);
-        const hints = editorCompletionHints(prefix, activePath.current, filesRef.current);
+        const precedingSource = model.getValueInRange({
+          startLineNumber: 1, startColumn: 1,
+          endLineNumber: position.lineNumber, endColumn: 1,
+        });
+        const hints = editorCompletionHints(prefix, activePath.current, filesRef.current, precedingSource);
         return {
           suggestions: hints.map((hint) => ({
             label: hint.label,
