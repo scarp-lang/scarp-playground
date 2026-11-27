@@ -1,0 +1,9 @@
+pure funcra identity<T>(value: T) -> T { return value; }
+pure funcra pair<A, B>(a: A, b: B) -> tuple<A, B> { return (a, b); }
+pure funcra vacant<T>() -> list<T> { return [list: <T>]; }
+pure funcra square<T: Numeric>(value: T) -> T { return value * value; }
+
+bind names: list<string> = vacant();
+print(identity(100), identity("Scarp"), identity(true));
+print(pair(b: "Scarp", a: identity::<integer>(7)));
+print(list_len(names), square(5), square(0.1d));
