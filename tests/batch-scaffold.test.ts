@@ -4,7 +4,7 @@ import {
   previewBatchScaffold, verifiedScaffoldUndo,
   type ScaffoldRequest,
 } from '../src/batch-scaffold';
-import { MAX_FILES, MAX_FILE_BYTES, MAX_TOTAL_BYTES, type Workspace } from '../src/workspace';
+import { MAX_FILES, MAX_FILE_BYTES, type Workspace } from '../src/workspace';
 import { undoBulkEdit } from '../src/bulk-undo';
 
 function workspace(): Workspace {

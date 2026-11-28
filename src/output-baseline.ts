@@ -44,7 +44,12 @@ function validStreams(value: unknown): value is { stdout: string; stderr: string
 function validLabel(value: unknown): value is string {
   return typeof value === 'string' && value.trim().length > 0 &&
     value === value.trim() && isUtf8Text(value, MAX_BASELINE_LABEL) &&
-    !/[\u0000-\u001f\u007f\u202a-\u202e\u2066-\u2069]/.test(value);
+    ![...value].some(character => {
+      const code = character.codePointAt(0)!;
+      return code < 32 || code === 127 ||
+        (code >= 0x202a && code <= 0x202e) ||
+        (code >= 0x2066 && code <= 0x2069);
+    });
 }
 
 /**
