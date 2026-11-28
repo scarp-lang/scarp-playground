@@ -12,6 +12,7 @@ const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ d
 const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
 const WorkspaceIntegrityPanel = lazy(() => import('./WorkspaceIntegrityPanel').then(module => ({ default: module.WorkspaceIntegrityPanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
+import type { WorkspaceIntegrityManifest } from './workspace-integrity';
 import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
 const ProjectLibraryPanel = lazy(() => import('./ProjectLibraryPanel').then(module => ({ default: module.ProjectLibraryPanel })));
@@ -143,6 +144,7 @@ export function App() {
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
   const [integrityOpen, setIntegrityOpen] = useState(false);
+  const [integrityBaseline, setIntegrityBaseline] = useState<WorkspaceIntegrityManifest | null>(null);
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -1890,7 +1892,8 @@ export function App() {
           </div>
 
           {integrityOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source integrity…</p>}>
-            <WorkspaceIntegrityPanel workspace={workspace} onClose={() => setIntegrityOpen(false)} />
+            <WorkspaceIntegrityPanel workspace={workspace} baseline={integrityBaseline}
+              onBaselineChange={setIntegrityBaseline} onClose={() => setIntegrityOpen(false)} />
           </Suspense>}
 
           {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>

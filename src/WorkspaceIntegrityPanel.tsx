@@ -9,7 +9,12 @@ import {
 import type { Workspace } from './workspace';
 import './workspace-integrity.css';
 
-type Props = { workspace: Workspace; onClose: () => void };
+type Props = {
+  workspace: Workspace;
+  baseline: WorkspaceIntegrityManifest | null;
+  onBaselineChange: (value: WorkspaceIntegrityManifest | null) => void;
+  onClose: () => void;
+};
 
 function downloadManifest(value: WorkspaceIntegrityManifest) {
   const content = serializeWorkspaceIntegrityManifest(value);
@@ -28,8 +33,7 @@ function downloadManifest(value: WorkspaceIntegrityManifest) {
   }
 }
 
-export function WorkspaceIntegrityPanel({ workspace, onClose }: Props) {
-  const [baseline, setBaseline] = useState<WorkspaceIntegrityManifest | null>(null);
+export function WorkspaceIntegrityPanel({ workspace, baseline, onBaselineChange, onClose }: Props) {
   const [comparison, setComparison] = useState<IntegrityComparison | null>(null);
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -55,7 +59,7 @@ export function WorkspaceIntegrityPanel({ workspace, onClose }: Props) {
       const result = await buildWorkspaceIntegrityManifest(snapshot);
       if (request !== token.current || currentWorkspace.current !== snapshot) return;
       if (!result.ok) { setMessage(result.error); return; }
-      setBaseline(result.value);
+      onBaselineChange(result.value);
       setComparison(null);
       setMessage('Captured a local SHA-256 manifest from the current source bytes.');
     } finally {
@@ -101,7 +105,7 @@ export function WorkspaceIntegrityPanel({ workspace, onClose }: Props) {
       const validated = await validateIntegrityManifest(decoded.value);
       if (request !== token.current) return;
       if (!validated.ok) { setMessage(validated.error); return; }
-      setBaseline(validated.value);
+      onBaselineChange(validated.value);
       setComparison(null);
       setMessage('Loaded a source-free integrity manifest. Compare the current workspace to inspect changes.');
     } catch {
@@ -113,7 +117,7 @@ export function WorkspaceIntegrityPanel({ workspace, onClose }: Props) {
 
   function forget() {
     token.current++;
-    setBaseline(null);
+    onBaselineChange(null);
     setComparison(null);
     setBusy(false);
     setMessage('Manifest discarded from this tab.');
