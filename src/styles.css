@@ -483,3 +483,12 @@ a { color: inherit; text-decoration: none; }
   .quick-open-hit { align-items: flex-start; flex-direction: column; gap: 4px; }
   .quick-open-path { max-width: 100%; text-align: left; }
 }
+
+/* Source-folder preview is local, bounded and scrollable on narrow displays. */
+.source-folder-heading { justify-content: space-between; }
+.source-folder-heading h2 { font-size: 13px; font-weight: 750; margin: 0; }
+.source-folder-entry { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 12px; margin: 10px 0; }
+.source-folder-entry select { min-width: 0; max-width: 100%; color: var(--text); background: var(--panel-2); border: 1px solid var(--border); border-radius: 7px; padding: 7px; }
+.source-folder-files { list-style: none; display: grid; gap: 6px; max-height: 220px; overflow: auto; padding: 0; margin: 10px 0; }
+.source-folder-files li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; overflow-wrap: anywhere; font-size: 12px; border-bottom: 1px solid var(--border); padding: 6px 0; }
+.source-folder-files li > span:last-child { color: var(--muted); font-size: 11px; }

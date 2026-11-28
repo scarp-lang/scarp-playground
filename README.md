@@ -223,6 +223,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Import source folder** previews nested local .srp files, ignores non-source files without reading them, lets you choose an entrypoint and confirms replacement without overwriting an existing saved browser copy. See [folder import](docs/import-source-folder.md).
+
 - React + Vite with TypeScript and Tailwind CSS, adaptive dark/light interface.
 - Monaco editor with a Scarp-specific tokenizer, separate text models per
   source file (preserving per-file undo/view history), and selectable entrypoint.
