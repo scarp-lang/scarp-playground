@@ -75,7 +75,7 @@ function validPointRecord(value: unknown): value is SourceNotePoint {
 function copyPoint(point: SourceNotePoint): SourceNotePoint {
   return { path: point.path, line: point.line, column: point.column };
 }
-function validChange(change: unknown): change is SourceNoteChange {
+function validChange(change: unknown): change is SourceNoteChange & Record<string, unknown> {
   return object(change) && validTitle(change.title) && validBody(change.body) &&
     validCategory(change.category) && validPointRecord(change.point);
 }
