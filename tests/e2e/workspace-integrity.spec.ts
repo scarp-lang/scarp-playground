@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 import { readFile } from 'node:fs/promises';
-import { loadExample } from './support/example-switch';
+import { replaceExampleAfterEdit } from './support/example-switch';
 
 test('SHA-256 source integrity manifest matches exact current files', async ({ page }) => {
   await page.goto('./');
@@ -35,7 +35,8 @@ test('integrity manifest detects source replacement and supports exact local dow
   expect(content).not.toContain('print(');
 
   await panel.getByRole('button', { name: 'Close source integrity' }).click();
-  await loadExample(page, /Import a module/);
+  await replaceExampleAfterEdit(page, /Import a module/);
+  await expect(page.getByRole('tab', { name: /math.srp/ })).toBeVisible();
   await page.getByRole('button', { name: 'Source integrity' }).click();
   await panel.getByRole('button', { name: 'Compare current sources' }).click();
   await expect(panel.getByLabel('Source integrity comparison')).toContainText('Differences found');
