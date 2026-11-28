@@ -44,3 +44,6 @@ export type RenameResponse = { id: number; rename: import('../navigation/rename'
 
 export type OutlineRequest = { id: number; workspace: Workspace; mode: 'outline'; path: string };
 export type OutlineResponse = { id: number; outline: import('../navigation/outline-protocol').OutlineResult };
+
+export type InspectionRequest = { id: number; workspace: Workspace; mode: 'inspect' };
+export type InspectionResponse = { id: number; inspection: import('../navigation/inspection-protocol').InspectionResult };

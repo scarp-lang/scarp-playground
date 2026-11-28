@@ -1,11 +1,12 @@
 /// <reference lib="webworker" />
-import type { RunResponse, DefinitionResponse, ReferencesResponse, RenameResponse, OutlineResponse } from './types';
+import type { RunResponse, DefinitionResponse, ReferencesResponse, RenameResponse, OutlineResponse, InspectionResponse } from './types';
 import { decodeCompilerReply, decodeSilentResult } from './protocol';
 import { validatedCompilerWorkerRequest, rejectedCompilerWorkerRequest } from './request';
 import { decodeDefinitionReply } from '../navigation/protocol';
 import { decodeReferencesReply } from '../navigation/references';
 import { decodeRenameReply } from '../navigation/rename';
 import { decodeOutlineReply } from '../navigation/outline-protocol';
+import { decodeInspectionReply } from '../navigation/inspection-protocol';
 
 type CompilerBridge = {
   default: () => Promise<unknown>;
@@ -16,6 +17,7 @@ type CompilerBridge = {
   references: (payload: string) => string;
   rename: (payload: string) => string;
   source_outline: (payload: string) => string;
+  inspect_modules: (payload: string) => string;
 };
 
 let loadPromise: Promise<CompilerBridge> | undefined;
@@ -46,7 +48,10 @@ self.addEventListener('message', async (event: MessageEvent<unknown>) => {
   const { id, workspace, mode } = request;
   try {
     const compiler = await loadCompiler();
-    if (mode === 'outline') {
+    if (mode === 'inspect') {
+      const inspection = decodeInspectionReply(compiler.inspect_modules(JSON.stringify(workspace)));
+      self.postMessage({ id, inspection } satisfies InspectionResponse);
+    } else if (mode === 'outline') {
       const outline = decodeOutlineReply(compiler.source_outline(JSON.stringify({
         path: request.path, source: workspace.files[request.path],
       })));
@@ -80,7 +85,9 @@ self.addEventListener('message', async (event: MessageEvent<unknown>) => {
     }
   } catch {
     const error = 'Unable to load or execute the Scarp WebAssembly compiler.';
-    if (mode === 'outline') {
+    if (mode === 'inspect') {
+      self.postMessage({ id, inspection: { ok: false, error } } satisfies InspectionResponse);
+    } else if (mode === 'outline') {
       self.postMessage({ id, outline: { ok: false, error } } satisfies OutlineResponse);
     } else if (mode === 'definition') {
       self.postMessage({ id, definition: { ok: false, error } } satisfies DefinitionResponse);

@@ -7,6 +7,7 @@ use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
 mod outline;
+mod inspection;
 
 const MAX_FILES: usize = 12;
 const MAX_FILE_BYTES: usize = 64 * 1024;
@@ -619,6 +620,12 @@ pub fn definition(request_json: &str) -> String {
 #[wasm_bindgen]
 pub fn references(request_json: &str) -> String {
     references_request(request_json)
+}
+
+/// Inspect a resolved virtual module graph without running its statements.
+#[wasm_bindgen]
+pub fn inspect_modules(request_json: &str) -> String {
+    inspection::request(request_json)
 }
 
 /// Parse the selected source file for actual declaration token spans.
