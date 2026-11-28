@@ -1,0 +1,9 @@
+// Exact sequence and combinatorial operations, adapted from upstream tests.
+print(bigint_fibonacci(0), bigint_fibonacci(100));
+print(bigint_factorial(20));
+print(bigint_binomial(10, 3), bigint_permutation(10, 3));
+print(bigint_next_prime(bigint("100")));
+print(bigint_is_perfect_square(bigint("144")), bigint_is_power_of_two(bigint("128")));
+print(bigint_reverse(bigint("-1200")), bigint_is_palindrome(bigint("12321")));
+print(bigint_min(bigint("-7"), bigint("2")), bigint_max(bigint("-7"), bigint("2")));
+print(bigint_mod_inverse(bigint("3"), bigint("11")), bigint_is_prime(bigint("97")));

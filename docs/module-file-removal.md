@@ -30,3 +30,7 @@ compiler analysis of all possible source syntax. It does not execute source,
 read your operating-system files, upload source, or certify successful
 compilation. Use **Check code** after changing the source graph. Export a
 portable JSON project before important changes if you need permanent backup.
+
+## Verbatim string compatibility (v0.0.7-alpha.3 and later)
+
+The conservative import scanner understands ordinary quoted, raw `r"..."` and triple-quoted string literals. Valid simple import paths retain their original delimiters. Import-shaped text in verbatim literals and comments is ignored. Unterminated literals and import paths that cannot be safely normalized block file operations rather than guessing. This is not a replacement for compiler Verify.

@@ -40,19 +40,29 @@ export function importPaths(source: string): ImportPath[] | null {
       while (offset < source.length && source[offset] !== '\r' && source[offset] !== '\n') offset++;
       continue;
     }
-    if (char === '"') {
-      offset++;
+    // All three lexer forms become a Scarp String token, including import
+    // paths. Preserve the delimiters and rewrite only the interior span.
+    const multiline = source.startsWith('"""', offset);
+    const raw = source.startsWith('r"', offset);
+    if (multiline || raw || char === '"') {
+      const delimiter = multiline ? '"""' : '"';
+      offset += multiline ? 3 : raw ? 2 : 1;
       const innerStart = offset;
-      let closed = false;
-      while (offset < source.length) {
-        if (source[offset] === '\\') { offset += 2; continue; }
-        if (source[offset] === '"') { closed = true; break; }
-        offset++;
+      while (offset < source.length && !source.startsWith(delimiter, offset)) {
+        const current = source[offset];
+        if (!multiline && (current === '\r' || current === '\n')) return null;
+        if (!multiline && !raw && current === '\\') {
+          if (offset + 1 >= source.length ||
+              source[offset + 1] === '\r' || source[offset + 1] === '\n') return null;
+          offset += 2;
+        } else offset++;
       }
-      if (!closed) return null;
-      const raw = source.slice(innerStart, offset);
-      offset++;
-      tokens.push({ kind: 'string', text: raw, start: innerStart, end: offset - 1, depth });
+      if (offset >= source.length) return null;
+      tokens.push({
+        kind: 'string', text: source.slice(innerStart, offset),
+        start: innerStart, end: offset, depth,
+      });
+      offset += delimiter.length;
       continue;
     }
     if (letter(char)) {

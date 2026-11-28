@@ -65,3 +65,7 @@ it does not redirect consumers of the original.
 - The import scanner is a conservative editing aid, **not a complete compiler
   validation**. Use **Check code** or **Run code** after duplication and
   select **Export project** to save the full virtual source graph as JSON.
+
+## Verbatim string compatibility (v0.0.7-alpha.3 and later)
+
+The conservative import scanner understands ordinary quoted, raw `r"..."` and triple-quoted string literals. Valid simple import paths retain their original delimiters. Import-shaped text in verbatim literals and comments is ignored. Unterminated literals and import paths that cannot be safely normalized block file operations rather than guessing. This is not a replacement for compiler Verify.

@@ -1,7 +1,7 @@
 # Editor completions
 
 Scarp Playground offers lightweight, offline Monaco suggestions for the
-**published Scarp v0.0.7-alpha.3 syntax**. Press **Ctrl+Space** in the editor
+**published Scarp v0.0.7-alpha.4 syntax**. Press **Ctrl+Space** in the editor
 to open the suggestion list.
 
 - Starter snippets cover immutable/mutable declarations, conditional and
@@ -55,3 +55,7 @@ multiline string state across lines. Completion context is derived from the
 source preceding the cursor, so import paths and code snippets are not offered
 inside multiline literals. Raw strings do not treat a backslash as an escape.
 These remain syntax-only hints; the compiler is responsible for validity.
+
+## Exact BigInt operations (v0.0.7-alpha.4)
+
+The editor highlights and suggests exact BigInt sequence, number theory and wide exponent helpers. The snippets are static: they do not evaluate source, infer types or raise the browser's existing budgets. Modular exponentiation and modular inverse are variable-time arithmetic, not cryptographic primitives. Verify checks source types; Run may report a resource diagnostic for large operands.
