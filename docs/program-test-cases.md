@@ -22,5 +22,17 @@ expected diagnostic. Tests do not claim to verify host-native code.
 
 Use Stop tests, Stop test cases, or edit source to cancel a running
 suite and discard stale results. Editing case configuration clears
-the report. The suite and results are session-only, never included
-in source ZIP, JSON, sharing or local workspace persistence.
+the report. The suite and results are session-only by default, never included
+in source ZIP, project JSON, sharing or local workspace persistence.
+
+## Separate case files
+
+Use **Export test cases** to explicitly download a versioned, unencrypted
+JSON file with the case definitions, including their input and expected
+output. Do not share files containing private text. Source files,
+ordinary editor stdin and execution results are not included.
+
+Use **Import test cases** to review a local case file and replace the
+current case list. A changed editor makes a pending preview stale.
+Unknown versions, malformed UTF-8 and excessive data are rejected.
+Nothing is executed automatically; Run test cases remains explicit.
