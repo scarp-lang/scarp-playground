@@ -35,6 +35,8 @@ import { ExecutionScope, type ActiveExecution } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
+import { appendRunHistory, type RunHistoryEntry } from './run-history';
+const RunHistoryPanel = lazy(() => import('./RunHistoryPanel').then(module => ({ default: module.RunHistoryPanel })));
 const TestCasePanel = lazy(() => import('./TestCasePanel').then(module => ({ default: module.TestCasePanel })));
 import type { Challenge } from './challenges/model';
 const ChallengePanel = lazy(() => import('./ChallengePanel').then(module => ({ default: module.ChallengePanel })));
@@ -113,6 +115,8 @@ export function App() {
   const acceptedHash = useRef(window.location.hash);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
+  const [runHistoryOpen, setRunHistoryOpen] = useState(false);
+  const [runHistory, setRunHistory] = useState<RunHistoryEntry[]>([]);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
   const [suiteKind, setSuiteKind] = useState<'manual' | 'challenge'>('manual');
@@ -469,7 +473,9 @@ export function App() {
           ? await checkWorkspace(workspace, execution.controller.signal)
           : await runWorkspace(workspace, execution.controller.signal, programInput, allowPrompts);
       if (!executionScope.current.isCurrent(execution)) return;
-      setResult({ ...response, browserStats: describeBrowserRun(mode, response, started, performance.now()) });
+      const stats = describeBrowserRun(mode, response, started, performance.now());
+      setResult({ ...response, browserStats: stats });
+      setRunHistory(previous => appendRunHistory(previous, mode, response, stats));
       // Navigate only to a valid source span from this exact execution snapshot.
       const target = !response.ok
         ? diagnosticNavigationPosition(workspace.files, response.diagnostic, response.diagnostic?.primary)
@@ -1648,6 +1654,7 @@ export function App() {
     { id: 'outline', label: 'Source outline', group: 'Navigation', description: 'Inspect declarations with the Scarp parser', invoke: () => setOutlineOpen(true) },
     { id: 'inspection', label: 'Compiler module inspection', group: 'Navigation', description: 'Inspect resolved modules and signatures', invoke: () => setInspectionOpen(true) },
     { id: 'tests', label: 'Open test cases', group: 'Execution', description: 'Configure and run independent input/output cases', invoke: () => setTestCasesOpen(true) },
+    { id: 'run-history', label: 'Browser run history', group: 'Execution', description: 'View source-free Run, Check and Verify timing metadata', invoke: () => setRunHistoryOpen(true) },
     { id: 'quick-open', label: 'Quick open file', group: 'Navigation', description: 'Search workspace source paths', shortcut: 'Ctrl+P', invoke: () => { setQuickOpenPrefill(''); setQuickOpen(true); } },
     { id: 'go-line', label: 'Go to line', group: 'Navigation', description: 'Jump to a line and column in the active file', shortcut: 'Ctrl+G', invoke: () => { setQuickOpenPrefill(':'); setQuickOpen(true); } },
     { id: 'search', label: 'Find in project', group: 'Navigation', description: 'Search or replace text across all source files', shortcut: 'Ctrl+Shift+F', invoke: () => { setReplacePreview(null); setSearchOpen(true); } },
@@ -1829,6 +1836,10 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={runHistoryOpen}
+                aria-controls="run-history-panel" onClick={() => setRunHistoryOpen(open => !open)}>
+                Run history
+              </button>
               <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
                 aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
                 Source checkpoint
@@ -1881,6 +1892,11 @@ export function App() {
               )}
             </div>
           </div>
+
+          {runHistoryOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading run history…</p>}>
+            <RunHistoryPanel entries={runHistory} onClear={() => setRunHistory([])}
+              onClose={() => setRunHistoryOpen(false)} />
+          </Suspense>}
 
           {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
