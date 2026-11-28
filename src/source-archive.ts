@@ -15,7 +15,7 @@ const crcTable = Uint32Array.from({ length: 256 }, (_, index) => {
 });
 
 /** Standard IEEE CRC-32 used by ZIP. Not an authenticity or security hash. */
-function crc32(bytes: Uint8Array): number {
+export function sourceCrc32(bytes: Uint8Array): number {
   let crc = 0xffffffff;
   for (const byte of bytes) crc = (crc >>> 8) ^ crcTable[(crc ^ byte) & 0xff];
   return (crc ^ 0xffffffff) >>> 0;
@@ -72,7 +72,7 @@ export function createSourceArchive(workspace: Workspace): Uint8Array<ArrayBuffe
   for (const path of Object.keys(workspace.files).sort()) {
     const name = encoder.encode(path);
     const source = encoder.encode(workspace.files[path]);
-    entries.push({ name, source, crc: crc32(source), offset: centralStart });
+    entries.push({ name, source, crc: sourceCrc32(source), offset: centralStart });
     centralStart += LOCAL_HEADER + name.length + source.length;
     centralSize += CENTRAL_HEADER + name.length;
   }
@@ -204,7 +204,7 @@ export function parseSourceArchive(bytes: Uint8Array): SourceArchiveResult {
     if (!validPath(path) || Object.hasOwn(files, path)) {
       return badArchive('ZIP contains an invalid or duplicate relative .srp path.');
     }
-    if (crc32(payload) !== checksum) return badArchive('ZIP source checksum mismatch in ' + path + '.');
+    if (sourceCrc32(payload) !== checksum) return badArchive('ZIP source checksum mismatch in ' + path + '.');
     files[path] = source;
     offset = sourceStart + size;
   }

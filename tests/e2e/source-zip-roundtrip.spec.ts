@@ -44,7 +44,7 @@ test('rejects corrupt and oversized archives without changing active source', as
   await picker.setInputFiles({ name: 'broken.zip', mimeType: 'application/zip', buffer: Buffer.from('invalid') });
   await expect(page.locator('.notice')).toContainText('ZIP is empty, invalid');
   await expect(page.getByRole('region', { name: 'Source ZIP preview' })).toHaveCount(0);
-  await picker.setInputFiles({ name: 'large.zip', mimeType: 'application/zip', buffer: Buffer.alloc(160 * 1024) });
+  await picker.setInputFiles({ name: 'large.zip', mimeType: 'application/zip', buffer: Buffer.alloc(513 * 1024) });
   await expect(page.locator('.notice')).toContainText('exceeds the source archive size limit');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Hello from Scarp!\n', { timeout: 30_000 });

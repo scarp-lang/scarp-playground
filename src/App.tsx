@@ -46,8 +46,9 @@ import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
-import { createSourceArchive, sourceArchiveProblem, parseSourceArchive, MAX_SOURCE_ARCHIVE_BYTES } from './source-archive';
+import { createSourceArchive, sourceArchiveProblem } from './source-archive';
 import { previewSourceImport } from './source-import';
+import { MAX_IMPORT_ZIP_BYTES } from './zip-directory';
 import { decodeSourceFolder, MAX_FOLDER_SELECTION_ENTRIES, planFolderSelection } from './source-folder';
 const SourceFolderPreview = lazy(() => import('./SourceFolderPreview').then(module => ({ default: module.SourceFolderPreview })));
 import { QuickOpenFiles } from './QuickOpenFiles';
@@ -1455,7 +1456,7 @@ export function App() {
     event.currentTarget.value = '';
     if (!file || sourceImportActive.current) return;
     setFolderPreview(null);
-    if (file.size > MAX_SOURCE_ARCHIVE_BYTES) {
+    if (file.size > MAX_IMPORT_ZIP_BYTES) {
       setNotice('The ZIP exceeds the source archive size limit.');
       return;
     }
@@ -1470,9 +1471,16 @@ export function App() {
         setNotice('The editor session changed while reading the ZIP. Select it again.');
         return;
       }
-      const plan = parseSourceArchive(bytes);
+      const { importSourceZip } = await import('./zip-import');
+      const plan = await importSourceZip(bytes);
+      const afterDecode = latestSession.current;
+      if (afterDecode.workspace !== snapshot.workspace || afterDecode.programInput !== snapshot.programInput ||
+          afterDecode.savingLocally !== snapshot.savingLocally || afterDecode.activeFile !== snapshot.activeFile) {
+        setNotice('The editor session changed while decoding the ZIP. Select it again.');
+        return;
+      }
       if (!plan.ok) { setNotice(plan.error); return; }
-      setFolderPreview({ snapshot: snapshot.workspace, workspace: plan.workspace, ignored: 0,
+      setFolderPreview({ snapshot: snapshot.workspace, workspace: plan.workspace, ignored: plan.ignored,
         kind: 'archive', key: ++folderPreviewSequence.current });
       setNotice('Review the ZIP sources and choose an entrypoint before replacement.');
     } catch {
@@ -1675,7 +1683,7 @@ export function App() {
     { id: 'import', label: 'Import project JSON', group: 'Project', description: 'Review and open a local workspace file', disabled: importingSources, invoke: () => importFileRef.current?.click() },
     { id: 'source-import', label: 'Add source files', group: 'Project', description: 'Import local .srp files without overwriting sources', disabled: importingSources, invoke: () => sourceFilesRef.current?.click() },
     { id: 'folder-import', label: 'Import source folder', group: 'Project', description: 'Review nested source files from a folder', disabled: importingSources || !folderPickerSupported, invoke: () => sourceFolderRef.current?.click() },
-    { id: 'zip-import', label: 'Import sources ZIP', group: 'Project', description: 'Review a canonical Playground source archive', disabled: importingSources, invoke: () => sourceArchiveRef.current?.click() },
+    { id: 'zip-import', label: 'Import sources ZIP', group: 'Project', description: 'Review a local ZIP archive containing Scarp sources', disabled: importingSources, invoke: () => sourceArchiveRef.current?.click() },
     { id: 'share', label: 'Copy project share link', group: 'Project', description: 'Copy an unencrypted source-only URL', invoke: () => void share() },
     { id: 'undo', label: 'Undo bulk change', group: 'Project', description: 'Reverse the latest atomic workspace edit', disabled: !lastBulkEdit || workspace !== lastBulkEdit.after, invoke: undoLastBulkChange },
     { id: 'folder-move', label: 'Move source folder', group: 'Project', description: 'Preview an import-aware folder relocation', invoke: () => { invalidateExecution(); setFolderMoveOpen(true); } },
@@ -1831,7 +1839,7 @@ export function App() {
               <input ref={sourceArchiveRef} type="file" accept=".zip,application/zip" hidden
                 aria-label="Choose source ZIP to import" onChange={event => void previewLocalSourceArchive(event)} />
               <button type="button" className="button-secondary" disabled={importingSources}
-                onClick={() => sourceArchiveRef.current?.click()} title="Import a source ZIP previously exported by Playground">Import sources ZIP</button>
+                onClick={() => sourceArchiveRef.current?.click()} title="Import .srp sources from an ordinary or Playground ZIP">Import sources ZIP</button>
               <button type="button" className="button-secondary" onClick={exportSourceArchive}
                 title="Download all .srp sources as a ZIP with relative paths, without program input">Download sources ZIP</button>
               <button type="button" className="button-secondary"
