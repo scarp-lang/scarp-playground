@@ -63,7 +63,7 @@ export function planFolderSelection(entries: readonly FolderSelectionEntry[]): F
     root = selectedRoot;
     const path = segments.join('/');
     if (!validPath(path)) {
-      return fail('Invalid relative .srp path: ' + path.slice(0, 128));
+      return fail('Invalid relative .srp path: ' + String(path).slice(0, 128));
     }
     if (paths.has(path)) return fail('Duplicate source path: ' + path);
     if (!Number.isSafeInteger(entry.size) || entry.size < 0 || entry.size > MAX_FILE_BYTES) {
