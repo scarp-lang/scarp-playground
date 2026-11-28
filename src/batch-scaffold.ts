@@ -56,7 +56,7 @@ function contentFor(
           !Object.hasOwn(workspace.files, request.from)) return null;
       return {
         text: workspace.files[request.from],
-        caution: 'Copied source may contain local imports that resolve differently at this path.',
+        caution: 'Copied source may contain relative imports that resolve differently at this path.',
       };
     case 'custom':
       if (typeof request.content !== 'string' ||
