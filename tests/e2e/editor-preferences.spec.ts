@@ -13,7 +13,7 @@ test('applies editor preferences without replacing source or persisting input', 
   await dialog.getByLabel('Font size').selectOption('20');
   await dialog.getByLabel('Tab size').selectOption('4');
   await dialog.getByLabel('Editor height').selectOption('tall');
-  await dialog.getByLabel('Word wrap', { exact: true }).check();
+  await dialog.getByRole('checkbox', { name: /^Word wrap/ }).check();
   await dialog.getByRole('button', { name: 'Apply preferences' }).click();
   await expect(dialog).toHaveCount(0);
   await expect(page.locator('.editor-body')).toHaveAttribute('data-editor-height', 'tall');
