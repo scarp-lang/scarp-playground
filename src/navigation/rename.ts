@@ -1,7 +1,7 @@
 import { validPath, validateWorkspace, type Workspace } from '../workspace';
 import type { CompilerDiagnostic } from '../runner/types';
 import { MAX_COMPILER_JSON_CHARS, decodeWorkerResult } from '../runner/protocol';
-import { claimCompilerWorker } from '../runner/worker-slot';
+import { invokeCompilerWorker, type WorkerSessionErrors } from '../runner/worker-session';
 
 export const MAX_RENAME_SITES = 120;
 export const MAX_RENAME_NAME_LENGTH = 64;
@@ -153,14 +153,21 @@ export function decodeRenameReply(raw: unknown): RenameResult {
   catch { return invalid(); }
 }
 
-const TIMEOUT_MS = 12_000;
+const messages: WorkerSessionErrors = {
+  cancelled: 'Rename cancelled.',
+  startup: 'Unable to start the Scarp rename worker.',
+  timeout: 'Rename exceeded the 12-second browser limit.',
+  crashed: 'The Scarp rename worker failed or crashed.',
+  unreadable: 'Unreadable Scarp rename worker reply.',
+  send: 'Unable to send source to the rename worker.',
+};
 
-/** A one-shot compile-only rename preview; the user must explicitly apply it. */
+/** One-shot compile-only rename preview. The caller must explicitly apply it. */
 export function previewSymbolRename(
   workspace: Workspace, path: string, offset: number, newName: string,
   signal?: AbortSignal,
 ): Promise<RenameResult> {
-  if (signal?.aborted) return Promise.resolve(failed('Rename cancelled.'));
+  if (signal?.aborted) return Promise.resolve(failed(messages.cancelled));
   const problem = validateWorkspace(workspace);
   if (problem) return Promise.resolve(failed(problem));
   if (!validRenameName(newName)) {
@@ -171,49 +178,9 @@ export function previewSymbolRename(
       offset >= new TextEncoder().encode(workspace.files[path]).byteLength) {
     return Promise.resolve(failed('Invalid rename source or position.'));
   }
-  return new Promise(resolve => {
-    let worker: Worker | undefined;
-    let done = false;
-    const timer: { deadline?: ReturnType<typeof setTimeout> } = {};
-    let release = () => {};
-    const complete = (answer: RenameResult) => {
-      if (done) return;
-      done = true;
-      if (timer.deadline !== undefined) clearTimeout(timer.deadline);
-      signal?.removeEventListener('abort', onAbort);
-      worker?.terminate();
-      release();
-      resolve(verifyRenameSnapshot(workspace, newName, answer));
-    };
-    const onAbort = () => complete(failed('Rename cancelled.'));
-    release = claimCompilerWorker(onAbort);
-    try {
-      worker = new Worker(new URL('../runner/worker.ts', import.meta.url), { type: 'module' });
-    } catch {
-      complete(failed('Unable to start the Scarp rename worker.'));
-      return;
-    }
-    signal?.addEventListener('abort', onAbort, { once: true });
-    if (signal?.aborted) {
-      complete(failed('Rename cancelled.'));
-      return;
-    }
-    timer.deadline = setTimeout(() =>
-      complete(failed('Rename exceeded the 12-second browser limit.')), TIMEOUT_MS);
-    worker.onerror = event => {
-      event.preventDefault();
-      complete(failed('The Scarp rename worker failed or crashed.'));
-    };
-    worker.onmessageerror = () => complete(failed('Unreadable Scarp rename worker reply.'));
-    worker.onmessage = (event: MessageEvent<{ id: number; rename: RenameResult }>) => {
-      if (event.data?.id === 1) complete(validatedRenameResult(event.data.rename));
-    };
-    try {
-      worker.postMessage({
-        id: 1, workspace, mode: 'rename', path, offset, new_name: newName,
-      });
-    } catch {
-      complete(failed('Unable to send source to the rename worker.'));
-    }
+  return invokeCompilerWorker({
+    request: { id: 1, workspace, mode: 'rename' as const, path, offset, new_name: newName },
+    signal, errors: messages, failure: failed,
+    decode: reply => verifyRenameSnapshot(workspace, newName, validatedRenameResult(reply.rename)),
   });
 }

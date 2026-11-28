@@ -141,3 +141,95 @@ describe('compiler Worker request boundary', () => {
     })).not.toBeNull();
   });
 });
+
+
+describe('UTF-8 scalar boundary enforcement for forged navigation requests', () => {
+  const source = 'bind alpha = "😀";\nprint("हिंदी");\n';
+  const unicodeWorkspace = {
+    entry: 'main.srp',
+    files: { 'main.srp': source },
+  };
+  const bytes = new TextEncoder().encode(source);
+  const request = (mode: 'definition' | 'references' | 'rename', offset: number) => ({
+    id: 1, workspace: unicodeWorkspace, mode, path: 'main.srp', offset,
+    ...(mode === 'rename' ? { new_name: 'safe_name' } : {}),
+  });
+
+  it('rejects every continuation byte for each navigation operation', () => {
+    const forbidden: number[] = [];
+    for (let index = 0; index < bytes.length; index++) {
+      if ((bytes[index] & 0xc0) === 0x80) forbidden.push(index);
+    }
+    expect(forbidden.length).toBeGreaterThan(6);
+    for (const offset of forbidden) {
+      for (const mode of ['definition', 'references', 'rename'] as const) {
+        expect(validatedCompilerWorkerRequest(request(mode, offset))).toBeNull();
+      }
+    }
+  });
+
+  it('accepts valid byte boundaries on both sides of an emoji', () => {
+    const start = bytes.indexOf(0xf0);
+    expect(start).toBeGreaterThan(0);
+    for (const mode of ['definition', 'references', 'rename'] as const) {
+      expect(validatedCompilerWorkerRequest(request(mode, start))).not.toBeNull();
+      expect(validatedCompilerWorkerRequest(request(mode, start + 4))).not.toBeNull();
+    }
+  });
+
+  it('accepts boundaries for Devanagari multibyte characters', () => {
+    const firstHindi = source.indexOf('ह');
+    const offset = new TextEncoder().encode(source.slice(0, firstHindi)).byteLength;
+    const afterHindi = offset + new TextEncoder().encode('ह').byteLength;
+    expect(bytes[afterHindi - 1] & 0xc0).toBe(0x80);
+    for (const mode of ['definition', 'references', 'rename'] as const) {
+      expect(validatedCompilerWorkerRequest(request(mode, offset))).not.toBeNull();
+      expect(validatedCompilerWorkerRequest(request(mode, afterHindi))).not.toBeNull();
+    }
+  });
+
+  it('keeps Definition and References allowed at EOF but never Rename', () => {
+    for (const mode of ['definition', 'references'] as const) {
+      expect(validatedCompilerWorkerRequest(request(mode, bytes.length))).not.toBeNull();
+    }
+    expect(validatedCompilerWorkerRequest(request('rename', bytes.length))).toBeNull();
+  });
+
+  it('rejects nonintegers and offsets beyond the source byte range', () => {
+    for (const offset of [-1, 1.1, Number.NaN, Number.POSITIVE_INFINITY, bytes.length + 1]) {
+      for (const mode of ['definition', 'references', 'rename'] as const) {
+        expect(validatedCompilerWorkerRequest(request(mode, offset))).toBeNull();
+      }
+    }
+  });
+
+  it('does not block ordinary ASCII navigation around multibyte expressions', () => {
+    const suffix = 'print(';
+    const index = source.indexOf(suffix);
+    const offset = new TextEncoder().encode(source.slice(0, index)).byteLength;
+    expect(validatedCompilerWorkerRequest(request('definition', offset))).not.toBeNull();
+    expect(validatedCompilerWorkerRequest(request('references', offset))).not.toBeNull();
+  });
+
+  it('returns operation-specific rejection envelopes without any source contents', () => {
+    const invalidOffset = bytes.indexOf(0xf0) + 1;
+    for (const mode of ['definition', 'references', 'rename'] as const) {
+      const decoded = validatedCompilerWorkerRequest(request(mode, invalidOffset));
+      expect(decoded).toBeNull();
+      const rejected = rejectedCompilerWorkerRequest(request(mode, invalidOffset));
+      const field = mode;
+      expect(rejected).toEqual({
+        id: 1, [field]: { ok: false, error: 'Invalid Scarp compiler worker request.' },
+      });
+      expect(JSON.stringify(rejected)).not.toContain('हिंदी');
+    }
+  });
+
+  it('never mutates a caller-provided workspace or source buffer', () => {
+    const snapshot = JSON.stringify(unicodeWorkspace);
+    for (const mode of ['definition', 'references', 'rename'] as const) {
+      expect(validatedCompilerWorkerRequest(request(mode, bytes.indexOf(0xf0) + 2))).toBeNull();
+    }
+    expect(JSON.stringify(unicodeWorkspace)).toBe(snapshot);
+  });
+});

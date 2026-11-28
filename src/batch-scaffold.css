@@ -1,0 +1,57 @@
+.batch-scaffold-panel { padding: 15px; }
+.batch-scaffold-heading { flex: 1 1 190px; }
+.batch-scaffold-heading h2 { font-size: 16px; margin: 0 0 5px; }
+.batch-scaffold-heading p { margin: 0; font-size: 12px; color: var(--muted); }
+.batch-scaffold-summary {
+  display: flex; flex-wrap: wrap; gap: 8px; margin: 13px 0;
+}
+.batch-scaffold-summary span {
+  padding: 7px 9px; border: 1px solid var(--border);
+  background: var(--panel-2); border-radius: 7px; font-size: 11px;
+}
+.batch-scaffold-requests {
+  display: grid; gap: 10px; max-height: 440px; overflow-y: auto;
+}
+.batch-scaffold-requests fieldset {
+  display: grid; gap: 8px; padding: 11px; border: 1px solid var(--border);
+  border-radius: 8px; min-width: 0;
+}
+.batch-scaffold-requests legend { font-size: 12px; font-weight: 700; padding: 0 7px; }
+.batch-scaffold-requests label { font-size: 11px; color: var(--muted); font-weight: 650; }
+.batch-scaffold-requests input, .batch-scaffold-requests select,
+.batch-scaffold-requests textarea {
+  min-width: 0; color: var(--text); background: var(--panel-2);
+  border-radius: 7px; border: 1px solid var(--border); padding: 8px 9px;
+  font-size: 11px;
+}
+.batch-scaffold-requests textarea { resize: vertical; }
+.batch-scaffold-requests button, .batch-scaffold-actions button,
+.batch-scaffold-review > button {
+  padding: 8px 10px; font-size: 11px; background: var(--panel-2);
+  color: var(--text); border: 1px solid var(--border); border-radius: 7px;
+}
+.batch-scaffold-requests button { justify-self: start; }
+.batch-scaffold-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 14px 0; }
+.batch-scaffold-actions button:disabled, .batch-scaffold-requests button:disabled { opacity: .55; }
+.batch-scaffold-review { border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+.batch-scaffold-review h3 { font-size: 13px; margin: 0; }
+.batch-scaffold-review > p, .batch-scaffold-review small {
+  color: var(--muted); font-size: 11px;
+}
+.batch-scaffold-review ol {
+  list-style: none; padding: 0; margin: 0; max-height: 310px; overflow-y: auto;
+}
+.batch-scaffold-review li { border-bottom: 1px solid var(--border); padding: 9px 0; }
+.batch-scaffold-review li:last-child { border-bottom: 0; }
+.batch-scaffold-review strong { display: block; font-size: 12px; overflow-wrap: anywhere; }
+.batch-scaffold-review li span, .batch-scaffold-review li p {
+  font-size: 11px; color: var(--muted);
+}
+.batch-scaffold-review pre {
+  white-space: pre-wrap; overflow-wrap: anywhere;
+  background: var(--panel-2); border-radius: 6px; padding: 8px;
+  font-size: 11px; max-width: 100%; overflow-x: auto;
+}
+@media(max-width: 540px) {
+  .batch-scaffold-actions button { flex: 1 1 150px; }
+}

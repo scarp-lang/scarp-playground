@@ -1,0 +1,67 @@
+.source-notes-panel { padding: 15px; }
+.source-note-intro { flex: 1 1 220px; }
+.source-note-intro h2 { font-size: 16px; margin: 0 0 5px; }
+.source-note-intro p { color: var(--muted); font-size: 12px; line-height: 1.55; margin: 0; }
+.source-note-summary { display: flex; flex-wrap: wrap; gap: 8px; margin: 13px 0; }
+.source-note-summary span {
+  border: 1px solid var(--border); border-radius: 7px;
+  background: var(--panel-2); padding: 6px 9px; font-size: 11px;
+}
+.source-note-editor {
+  padding: 12px; margin: 13px 0; border: 1px solid var(--border);
+  border-radius: 8px; background: var(--panel-2);
+}
+.source-note-editor h3 { margin: 0 0 10px; font-size: 13px; }
+.source-note-position { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.source-note-position label, .source-note-inputs label, .source-note-filters label {
+  font-size: 11px; font-weight: 650; color: var(--muted);
+}
+.source-note-position input, .source-note-position select, .source-note-inputs input,
+.source-note-inputs textarea, .source-note-inputs select,
+.source-note-filters input, .source-note-filters select {
+  min-width: 0; background: var(--panel); color: var(--text);
+  border: 1px solid var(--border); border-radius: 7px; padding: 8px 9px;
+  font-size: 11px;
+}
+.source-note-position select { flex: 1 1 180px; }
+.source-note-position input { flex: 0 1 95px; }
+.source-note-inputs {
+  display: grid; grid-template-columns: minmax(80px, auto) minmax(0, 1fr);
+  align-items: baseline; gap: 9px; margin: 13px 0;
+}
+.source-note-inputs textarea { min-height: 80px; resize: vertical; }
+.source-note-actions, .source-note-item-actions {
+  display: flex; flex-wrap: wrap; gap: 9px; margin: 9px 0;
+}
+.source-note-actions button, .source-note-item-actions button, .source-note-footer button {
+  border: 1px solid var(--border); border-radius: 7px;
+  background: var(--panel); color: var(--text); padding: 8px 10px; font-size: 11px;
+}
+.source-note-actions button:disabled, .source-note-item-actions button:disabled,
+.source-note-footer button:disabled { opacity: .55; }
+.source-note-filters { display: flex; flex-wrap: wrap; align-items: center; gap: 9px; margin: 14px 0; }
+.source-note-filters input { flex: 1 1 170px; }
+.source-note-filters select { flex: 1 1 130px; }
+.source-note-list {
+  max-height: 350px; overflow: auto; border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.source-note-item { padding: 12px; border-bottom: 1px solid var(--border); }
+.source-note-item:last-child { border-bottom: none; }
+.source-note-head { display: flex; flex-wrap: wrap; gap: 7px 11px; align-items: baseline; }
+.source-note-head h3 { margin: 0 auto 0 0; font-size: 12px; overflow-wrap: anywhere; }
+.source-note-head span, .source-note-head strong { font-size: 11px; color: var(--muted); }
+.source-note-head strong { color: #dca46d; }
+.source-note-content {
+  font-size: 12px; line-height: 1.55; white-space: pre-wrap; overflow-wrap: anywhere;
+}
+.source-note-item-actions button:first-child { color: var(--accent); }
+.source-note-footer {
+  display: flex; flex-wrap: wrap; gap: 10px; align-items: center;
+  margin-top: 13px; padding-top: 12px; border-top: 1px solid var(--border);
+}
+.source-note-footer span { font-size: 11px; color: var(--muted); }
+@media (max-width: 530px) {
+  .source-note-inputs { grid-template-columns: minmax(0, 1fr); }
+  .source-note-position label { flex: 1 0 100%; }
+}

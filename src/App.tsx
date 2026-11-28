@@ -10,11 +10,25 @@ import { defaultExample } from './default-example';
 const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
 const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
 const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
+const SourceHygienePanel = lazy(() => import('./SourceHygienePanel').then(module => ({ default: module.SourceHygienePanel })));
+const SourceBookmarksPanel = lazy(() => import('./SourceBookmarksPanel').then(module => ({ default: module.SourceBookmarksPanel })));
+const SourceTimelinePanel = lazy(() => import('./SourceTimelinePanel').then(module => ({ default: module.SourceTimelinePanel })));
+const WorkspaceIntegrityPanel = lazy(() => import('./WorkspaceIntegrityPanel').then(module => ({ default: module.WorkspaceIntegrityPanel })));
+const SourceTasksPanel = lazy(() => import('./SourceTasksPanel').then(module => ({ default: module.SourceTasksPanel })));
+const AdvancedSourceSearchPanel = lazy(() => import('./AdvancedSourceSearchPanel').then(module => ({ default: module.AdvancedSourceSearchPanel })));
+const SourceNotesPanel = lazy(() => import('./SourceNotesPanel').then(module => ({ default: module.SourceNotesPanel })));
+const OutputSearchPanel = lazy(() => import('./OutputSearchPanel').then(module => ({ default: module.OutputSearchPanel })));
+const OutputTablePanel = lazy(() => import('./OutputTablePanel').then(module => ({ default: module.OutputTablePanel })));
+const OutputBaselinePanel = lazy(() => import('./OutputBaselinePanel').then(module => ({ default: module.OutputBaselinePanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
+import type { SourceTimeline } from './source-timeline';
+import type { WorkspaceIntegrityManifest } from './workspace-integrity';
+import type { SourceNotes } from './source-notes';
 import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
 const ProjectLibraryPanel = lazy(() => import('./ProjectLibraryPanel').then(module => ({ default: module.ProjectLibraryPanel })));
 const ModuleGraphPanel = lazy(() => import('./ModuleGraphPanel').then(module => ({ default: module.ModuleGraphPanel })));
+const ModuleImpactPanel = lazy(() => import('./ModuleImpactPanel').then(module => ({ default: module.ModuleImpactPanel })));
 const SourceOutlinePanel = lazy(() => import('./SourceOutlinePanel').then(module => ({ default: module.SourceOutlinePanel })));
 import { inspectSourceOutline } from './navigation/outline-client';
 import type { LocatedOutline } from './navigation/outline-protocol';
@@ -35,10 +49,17 @@ import { ExecutionScope, type ActiveExecution } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
+import type { RunHistoryEntry } from './run-history';
+import type { CapturedRun } from './run-to-test-case';
+import type { OutputBaseline } from './output-baseline';
+import type { PreflightSnapshot } from './project-preflight';
+const RunHistoryPanel = lazy(() => import('./RunHistoryPanel').then(module => ({ default: module.RunHistoryPanel })));
 const TestCasePanel = lazy(() => import('./TestCasePanel').then(module => ({ default: module.TestCasePanel })));
+const InputPresetsPanel = lazy(() => import('./InputPresetsPanel').then(module => ({ default: module.InputPresetsPanel })));
 import type { Challenge } from './challenges/model';
 const ChallengePanel = lazy(() => import('./ChallengePanel').then(module => ({ default: module.ChallengePanel })));
 import { newTestCase, runTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
+import type { InputPresetLibrary } from './input-presets';
 import { consoleTranscript, consoleOperationSubtitle, type ConsoleMode } from './runner/transcript';
 import { browserDiagnosticHelp } from './runner/browser-diagnostic-help';
 import { MAX_FILES, MAX_FILE_BYTES, validPath, type Workspace } from './workspace';
@@ -54,9 +75,25 @@ import { QuickOpenFiles } from './QuickOpenFiles';
 import type { WorkspaceCommand } from './command-palette';
 const CommandPalette = lazy(() => import('./CommandPalette').then(module => ({ default: module.CommandPalette })));
 import { quickOpenPosition } from './quick-open';
+import {
+  emptySourceTrail, visitSourcePoint, stepSourceTrail,
+  pruneSourceBookmarks, pruneSourceTrail, validSourcePoint,
+  type SourceBookmark, type SourcePoint, type SourceTrail,
+} from './source-navigation';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
 const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({ default: module.FolderMovePanel })));
+const BatchModuleMovePanel = lazy(() => import('./BatchModuleMovePanel').then(module => ({ default: module.BatchModuleMovePanel })));
+const BatchScaffoldPanel = lazy(() => import('./BatchScaffoldPanel').then(module => ({ default: module.BatchScaffoldPanel })));
+const ImportRepairPanel = lazy(() => import('./ImportRepairPanel').then(module => ({ default: module.ImportRepairPanel })));
+const SelectiveReplacePanel = lazy(() => import('./SelectiveReplacePanel').then(module => ({ default: module.SelectiveReplacePanel })));
+const SourceFileComparePanel = lazy(() => import('./SourceFileComparePanel').then(module => ({ default: module.SourceFileComparePanel })));
+const WorkspaceBudgetPanel = lazy(() => import('./WorkspaceBudgetPanel').then(module => ({ default: module.WorkspaceBudgetPanel })));
+const ProjectPreflightPanel = lazy(() => import('./ProjectPreflightPanel').then(module => ({ default: module.ProjectPreflightPanel })));
 import type { FolderMovePlan } from './folder-move';
+import type { BatchMovePlan } from './batch-module-move';
+import type { ScaffoldPlan, ScaffoldRequest } from './batch-scaffold';
+import type { ImportRepairPlan } from './import-repair';
+import type { SelectivePlan, SelectiveSearch } from './selective-replace';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
@@ -100,6 +137,12 @@ export function App() {
   const [initial] = useState(startingSession);
   const [workspace, setWorkspace] = useState<Workspace>(initial.workspace);
   const [activeFile, setActiveFile] = useState(initial.activeFile);
+  // Late-loaded edit validation must compare against the current render,
+  // not a stale closure captured before a module finished loading.
+  const currentWorkspace = useRef(workspace);
+  currentWorkspace.current = workspace;
+  const currentActiveFile = useRef(activeFile);
+  currentActiveFile.current = activeFile;
   const [editorSession, setEditorSession] = useState(0);
   const [savingLocally, setSavingLocally] = useState(initial.savingLocally);
   const [savedWorkspace, setSavedWorkspace] = useState<Workspace | null>(
@@ -113,16 +156,25 @@ export function App() {
   const acceptedHash = useRef(window.location.hash);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
+  const [runHistoryOpen, setRunHistoryOpen] = useState(false);
+  const [runHistory, setRunHistory] = useState<RunHistoryEntry[]>([]);
+  const [capturedRun, setCapturedRun] = useState<CapturedRun | null>(null);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
   const [suiteKind, setSuiteKind] = useState<'manual' | 'challenge'>('manual');
   const [testCasesOpen, setTestCasesOpen] = useState(false);
+  const [inputPresetsOpen, setInputPresetsOpen] = useState(false);
+  const [inputPresets, setInputPresets] = useState<InputPresetLibrary>(() => ({ items: [], nextId: 1 }));
   const [testCases, setTestCases] = useState<TestCase[]>(() => [newTestCase()]);
   const [suiteRunning, setSuiteRunning] = useState(false);
   const [suiteProgress, setSuiteProgress] = useState(0);
   const [suiteReport, setSuiteReport] = useState<SuiteReport | null>(null);
   const [operation, setOperation] = useState<ConsoleMode>('run');
   const [result, setResult] = useState<(RunResult & { browserStats?: BrowserRunStats | null }) | null>(null);
+  const [outputSearchOpen, setOutputSearchOpen] = useState(false);
+  const [outputTableOpen, setOutputTableOpen] = useState(false);
+  const [outputBaselineOpen, setOutputBaselineOpen] = useState(false);
+  const [outputBaseline, setOutputBaseline] = useState<OutputBaseline | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   // Runtime input is intentionally ephemeral: never saved or placed in shared links.
   const [programInput, setProgramInput] = useState('');
@@ -130,6 +182,7 @@ export function App() {
   const [allowPrompts, setAllowPrompts] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
+  const [moduleImpactOpen, setModuleImpactOpen] = useState(false);
   const [outlineOpen, setOutlineOpen] = useState(false);
   const [outlineBusy, setOutlineBusy] = useState(false);
   const [outlineResult, setOutlineResult] = useState<{ workspace: Workspace; path: string; result: LocatedOutline } | null>(null);
@@ -139,8 +192,30 @@ export function App() {
   const [inspectionResult, setInspectionResult] = useState<{ workspace: Workspace; result: LocatedInspection } | null>(null);
   const inspectionTask = useRef<ActiveExecution | null>(null);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
+  const [batchMoveOpen, setBatchMoveOpen] = useState(false);
+  const [batchScaffoldOpen, setBatchScaffoldOpen] = useState(false);
+  const [importRepairOpen, setImportRepairOpen] = useState(false);
+  const [selectiveReplaceOpen, setSelectiveReplaceOpen] = useState(false);
+  const [sourceFileCompareOpen, setSourceFileCompareOpen] = useState(false);
+  const [workspaceBudgetOpen, setWorkspaceBudgetOpen] = useState(false);
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [preflightBaseline, setPreflightBaseline] = useState<PreflightSnapshot | null>(null);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
+  const [hygieneOpen, setHygieneOpen] = useState(false);
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
+  const [sourceBookmarks, setSourceBookmarks] = useState<SourceBookmark[]>([]);
+  const [sourceTrail, setSourceTrail] = useState<SourceTrail>(emptySourceTrail);
+  const cursorPosition = useRef<SourcePoint>({ path: initial.activeFile, line: 1, column: 1 });
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [sourceTimeline, setSourceTimeline] = useState<SourceTimeline>(() => ({ items: [], nextId: 1 }));
+  const [integrityOpen, setIntegrityOpen] = useState(false);
+  const [integrityBaseline, setIntegrityBaseline] = useState<WorkspaceIntegrityManifest | null>(null);
+  const [sourceTasksOpen, setSourceTasksOpen] = useState(false);
+  const [sourceTaskReviews, setSourceTaskReviews] = useState<string[]>([]);
+  const [advancedSourceSearchOpen, setAdvancedSourceSearchOpen] = useState(false);
+  const [sourceNotesOpen, setSourceNotesOpen] = useState(false);
+  const [sourceNotes, setSourceNotes] = useState<SourceNotes>(() => ({ items: [], nextId: 1 }));
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -312,17 +387,47 @@ export function App() {
     setOutlineResult(null);
   }
 
+  useEffect(() => {
+    setSourceBookmarks(previous => {
+      const next = pruneSourceBookmarks(workspace, previous);
+      return JSON.stringify(next) === JSON.stringify(previous) ? previous : next;
+    });
+    setSourceTrail(previous => {
+      const next = pruneSourceTrail(workspace, previous);
+      return JSON.stringify(next) === JSON.stringify(previous) ? previous : next;
+    });
+  }, [workspace]);
+
+  const navigateSource = useCallback((point: SourcePoint) => {
+    if (!validSourcePoint(workspace, point)) return;
+    const from = { ...cursorPosition.current };
+    setSourceTrail(previous => visitSourcePoint(workspace, previous, from, point));
+    setActiveFile(point.path);
+    setNavigationTarget(previous => ({
+      ...point, sequence: (previous?.sequence ?? 0) + 1,
+    }));
+  }, [workspace]);
+
+  function stepNavigation(direction: -1 | 1) {
+    const moved = stepSourceTrail(workspace, sourceTrail, cursorPosition.current, direction);
+    if (!moved) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setSourceTrail(moved.trail);
+    setActiveFile(moved.point.path);
+    setNavigationTarget(previous => ({
+      ...moved.point, sequence: (previous?.sequence ?? 0) + 1,
+    }));
+  }
+
   function jumpToSearchHit(hit: ProjectSearchHit) {
     if (!Object.hasOwn(workspace.files, hit.path)) return;
     // Any delayed definition result must not replace explicit text navigation.
     definitionScope.current.invalidate();
     setRenameTarget(null);
     setRenamePreview(null);
-    setActiveFile(hit.path);
-    setNavigationTarget(previous => ({
-      path: hit.path, line: hit.line, column: hit.column,
-      sequence: (previous?.sequence ?? 0) + 1,
-    }));
+    navigateSource({ path: hit.path, line: hit.line, column: hit.column });
   }
 
   function planProjectReplacement() {
@@ -357,6 +462,62 @@ export function App() {
     setEditorSession(previous => previous + 1);
     setNotice('Replaced ' + plan.changes + ' literal text occurrence(s) in ' +
       plan.changedFiles.length + ' .srp file(s). Check the program before running.');
+  }
+
+  function applySourceHygiene(snapshot: Workspace, cleaned: Workspace) {
+    // An asynchronous import, editor edit, or workspace switch invalidates
+    // any cleanup computed from a previous source snapshot.
+    if (workspace !== snapshot) {
+      setNotice('The source hygiene preview is stale. Review the current workspace again.');
+      return;
+    }
+    const undo = createBulkEditUndo(workspace, cleaned, 'source cleanup');
+    if (!undo) {
+      setNotice('Source cleanup could not be safely applied. No files were changed.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(cleaned);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setHygieneOpen(false);
+    setNotice('Applied reviewed source cleanup to the workspace. Undo bulk change can reverse it.');
+  }
+
+  function navigateToSourceHygiene(path: string, line: number, column: number) {
+    if (!Object.hasOwn(workspace.files, path) || !Number.isSafeInteger(line) ||
+        !Number.isSafeInteger(column) || line < 1 || column < 1) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setActiveFile(path);
+    setNavigationTarget(previous => ({
+      path, line, column, sequence: (previous?.sequence ?? 0) + 1,
+    }));
+  }
+
+  async function restoreTimelineItem(snapshot: Workspace, id: number) {
+    if (workspace !== snapshot) {
+      setNotice('The source timeline restore became stale. Review the current snapshot again.');
+      return;
+    }
+    const { previewTimelineRestore } = await import('./source-timeline');
+    if (currentWorkspace.current !== snapshot || currentActiveFile.current !== activeFile) {
+      setNotice('The timeline source changed before verification completed. Review the snapshot again.');
+      return;
+    }
+    const plan = previewTimelineRestore(sourceTimeline, id, snapshot, activeFile);
+    if (!plan) {
+      setNotice('The selected timeline snapshot could not be safely restored.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(plan.activeFile);
+    setLastBulkEdit(plan.undo);
+    setEditorSession(previous => previous + 1);
+    setTimelineOpen(false);
+    setNotice('Restored a named source timeline snapshot. Undo bulk change can reverse it.');
   }
 
   function captureCheckpoint() {
@@ -413,6 +574,7 @@ export function App() {
     setInspectionResult(null);
     setFolderPreview(null);
     setFolderMoveOpen(false);
+    setBatchMoveOpen(false);
     setQuickOpen(false);
     setFileDuplicate(null);
     setFileDuplicatePlan(null);
@@ -434,6 +596,7 @@ export function App() {
     setSuiteProgress(0);
     setSuiteReport(null);
     setResult(null);
+    setCapturedRun(null);
   }
 
   // Component teardown must also stop an in-flight browser worker.
@@ -456,6 +619,7 @@ export function App() {
     setRunning(true);
     setOperation(mode);
     setResult(null);
+    setCapturedRun(null);
     // A new compiler result must not inherit a previous cursor target.
     setNavigationTarget(null);
     setNotice(null);
@@ -469,17 +633,35 @@ export function App() {
           ? await checkWorkspace(workspace, execution.controller.signal)
           : await runWorkspace(workspace, execution.controller.signal, programInput, allowPrompts);
       if (!executionScope.current.isCurrent(execution)) return;
-      setResult({ ...response, browserStats: describeBrowserRun(mode, response, started, performance.now()) });
+      const stats = describeBrowserRun(mode, response, started, performance.now());
+      setResult({ ...response, browserStats: stats });
+      if (mode === 'run') {
+        try {
+          const { makeCapturedRun } = await import('./run-to-test-case');
+          if (executionScope.current.isCurrent(execution)) {
+            setCapturedRun(makeCapturedRun(workspace, programInput, allowPrompts, response));
+          }
+        } catch {
+          // Regression capture is optional; never turn a valid compiler result
+          // into a failure because its UI helper chunk is unavailable.
+        }
+      }
+      // History is optional UI data. Keep its bounded snapshot model out of
+      // startup JS and never allow an optional chunk to invalidate a Run.
+      try {
+        const { appendRunHistory } = await import('./run-history');
+        if (executionScope.current.isCurrent(execution)) {
+          setRunHistory(previous => appendRunHistory(previous, mode, response, stats));
+        }
+      } catch {
+        // A failed optional history chunk must not replace a successful
+        // compiler result with an execution error.
+      }
       // Navigate only to a valid source span from this exact execution snapshot.
       const target = !response.ok
         ? diagnosticNavigationPosition(workspace.files, response.diagnostic, response.diagnostic?.primary)
         : null;
-      if (target) {
-        setActiveFile(target.path);
-        setNavigationTarget(previous => ({
-          ...target, sequence: (previous?.sequence ?? 0) + 1,
-        }));
-      }
+      if (target) navigateSource(target);
     } catch (problem) {
       if (!executionScope.current.isCurrent(execution)) return;
       setResult({
@@ -491,7 +673,7 @@ export function App() {
     } finally {
       if (executionScope.current.finish(execution)) setRunning(false);
     }
-  }, [workspace, programInput, allowPrompts]);
+  }, [workspace, programInput, allowPrompts, navigateSource]);
 
   async function runSuite(kind: 'manual' | 'challenge' = 'manual') {
     const cases = kind === 'challenge' ? activeChallenge?.cases : testCases;
@@ -547,10 +729,7 @@ export function App() {
     }
     // Repeated clicks on the same link must still move the cursor after editing
     // or manual navigation. Incrementing sequence retriggers the Monaco effect.
-    setActiveFile(target.path);
-    setNavigationTarget(previous => ({
-      ...target, sequence: (previous?.sequence ?? 0) + 1,
-    }));
+    navigateSource(target);
     setNotice('Opened compiler location ' + target.path + ':' +
       location!.start.line + ':' + location!.start.column + '.');
   }
@@ -714,11 +893,7 @@ export function App() {
     setRenameTarget(null);
     setRenamePreview(null);
     setSelectedReferenceIndex(index);
-    setActiveFile(site.path);
-    setNavigationTarget(previous => ({
-      path: site.path, line: range.startLineNumber, column: range.startColumn,
-      sequence: (previous?.sequence ?? 0) + 1,
-    }));
+    navigateSource({ path: site.path, line: range.startLineNumber, column: range.startColumn });
   }
 
   function moveReference(direction: -1 | 1) {
@@ -784,16 +959,12 @@ export function App() {
         setNotice('Compiler returned an invalid source position.');
         return;
       }
-      setActiveFile(target.path);
-      setNavigationTarget(previous => ({
-        path: target.path, line: range.startLineNumber, column: range.startColumn,
-        sequence: (previous?.sequence ?? 0) + 1,
-      }));
+      navigateSource({ path: target.path, line: range.startLineNumber, column: range.startColumn });
       setNotice('Navigated to definition in ' + target.path + '.');
     } finally {
       definitionScope.current.finish(lookup);
     }
-  }, [workspace]);
+  }, [workspace, navigateSource]);
 
   useEffect(() => {
     const onQuickOpen = (event: KeyboardEvent) => {
@@ -1205,6 +1376,109 @@ export function App() {
     setEditorSession(previous => previous + 1);
     setNotice('Duplicated ' + from + ' into ' + to + ', rebasing ' +
       rewrittenImports + ' import path(s). Use Check code to validate the copy.');
+  }
+
+  async function applyBatchScaffold(
+    snapshot: Workspace, requests: ScaffoldRequest[],
+    plan: Extract<ScaffoldPlan, { ok: true }>,
+  ) {
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('Scaffold preview is stale. Review the current workspace again.');
+      return;
+    }
+    const { verifiedScaffoldUndo } = await import('./batch-scaffold');
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('Source changed while verifying the scaffold. Nothing was added.');
+      return;
+    }
+    const undo = verifiedScaffoldUndo(snapshot, requests, plan);
+    if (!undo) {
+      setNotice('Unable to verify the complete scaffold. No source files were added.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setBatchScaffoldOpen(false);
+    setNotice('Added ' + plan.added.length + ' reviewed Scarp source files. ' +
+      'Undo bulk change restores the original project.');
+  }
+
+  async function applyBatchMove(snapshot: Workspace, plan: Extract<BatchMovePlan, { ok: true }>) {
+    if (workspace !== snapshot) {
+      setNotice('The batch move preview is stale. Review the current source again.');
+      return;
+    }
+    const { prepareBatchMoveUndo } = await import('./batch-module-move');
+    if (currentWorkspace.current !== snapshot || currentActiveFile.current !== activeFile) {
+      setNotice('The batch move source changed during validation. Review the current project again.');
+      return;
+    }
+    const undo = prepareBatchMoveUndo(snapshot, activeFile, plan);
+    if (!undo) {
+      setNotice('The batch module move cannot be safely verified. No changes were applied.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(plan.nextActiveFile);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setBatchMoveOpen(false);
+    setNotice('Moved ' + plan.moves.length + ' file(s) together, preserving ' +
+      plan.verifiedReferences.length + ' local imports. Undo bulk change can restore the original sources.');
+  }
+
+  async function applySelectiveReplace(
+    snapshot: Workspace, options: SelectiveSearch,
+    plan: Extract<SelectivePlan, { ok: true }>,
+  ) {
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('The selective replacement preview is stale. Review the workspace again.');
+      return;
+    }
+    const { verifySelectiveUndo } = await import('./selective-replace');
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('Source changed while verifying selective replacement. No changes were applied.');
+      return;
+    }
+    const undo = verifySelectiveUndo(snapshot, options, plan);
+    if (!undo) {
+      setNotice('The selected replacements could not be reverified. No files changed.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setSelectiveReplaceOpen(false);
+    setNotice('Changed ' + plan.replacementCount +
+      ' explicitly selected literal match(es). Undo bulk change restores the old text.');
+  }
+
+  async function applyImportRepair(snapshot: Workspace, plan: Extract<ImportRepairPlan, { ok: true }>) {
+    if (workspace !== snapshot) {
+      setNotice('The import repair preview is stale. Review the current source again.');
+      return;
+    }
+    const { createImportRepairUndo } = await import('./import-repair');
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('Source changed while validating the import repair. Preview the current project again.');
+      return;
+    }
+    const undo = createImportRepairUndo(snapshot, plan);
+    if (!undo) {
+      setNotice('The import repair could not be reverified. No source files were changed.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setImportRepairOpen(false);
+    setNotice('Repaired ' + plan.edits.length + ' selected local imports. ' +
+      'Undo bulk change can restore the original sources.');
   }
 
   function applyFolderMove(snapshot: Workspace, plan: Extract<FolderMovePlan, { ok: true }>) {
@@ -1644,15 +1918,34 @@ export function App() {
     { id: 'stop', label: 'Stop execution', group: 'Execution', description: 'Cancel the active compiler operation', disabled: !running, invoke: invalidateExecution },
     { id: 'challenges', label: 'Learning challenges', group: 'Execution', description: 'Practice with public cases and reference solutions', invoke: () => setChallengeOpen(true) },
     { id: 'checkpoint', label: 'Source checkpoint', group: 'Project', description: 'Review temporary source changes and restore a checkpoint', invoke: () => setSourceCheckpointOpen(true) },
+    { id: 'hygiene', label: 'Source hygiene and Unicode safety', group: 'Editor', description: 'Inspect Unicode controls and preview safe whitespace cleanup', invoke: () => setHygieneOpen(true) },
+    { id: 'bookmarks', label: 'Source bookmarks', group: 'Navigation', description: 'Save source positions and navigate Back/Forward', invoke: () => setBookmarksOpen(true) },
+    { id: 'back', label: 'Navigate backward', group: 'Navigation', description: 'Return to the previous source location', disabled: sourceTrail.back.length === 0, invoke: () => stepNavigation(-1) },
+    { id: 'forward', label: 'Navigate forward', group: 'Navigation', description: 'Move forward in the source trail', disabled: sourceTrail.forward.length === 0, invoke: () => stepNavigation(1) },
+    { id: 'timeline', label: 'Source snapshot timeline', group: 'Project', description: 'Compare named source-only snapshots and restore a reviewed version', invoke: () => setTimelineOpen(true) },
+    { id: 'integrity', label: 'Source integrity manifest', group: 'Project', description: 'Generate and compare exact local SHA-256 workspace fingerprints', invoke: () => setIntegrityOpen(true) },
+    { id: 'source-tasks', label: 'Source tasks and review', group: 'Project', description: 'Inspect tagged TODO/FIXME comments and review them in this tab', invoke: () => setSourceTasksOpen(true) },
+    { id: 'advanced-source-search', label: 'Advanced source search', group: 'Navigation', description: 'Find literal phrases, included/excluded words, and OR expressions', invoke: () => setAdvancedSourceSearchOpen(true) },
+    { id: 'source-notes', label: 'Session source notes', group: 'Project', description: 'Write private notes at source locations, including orphan detection', invoke: () => setSourceNotesOpen(true) },
     { id: 'library', label: 'Project library', group: 'Project', description: 'Open named local source snapshots', invoke: () => setLibraryOpen(true) },
     { id: 'outline', label: 'Source outline', group: 'Navigation', description: 'Inspect declarations with the Scarp parser', invoke: () => setOutlineOpen(true) },
     { id: 'inspection', label: 'Compiler module inspection', group: 'Navigation', description: 'Inspect resolved modules and signatures', invoke: () => setInspectionOpen(true) },
     { id: 'tests', label: 'Open test cases', group: 'Execution', description: 'Configure and run independent input/output cases', invoke: () => setTestCasesOpen(true) },
+    { id: 'run-history', label: 'Browser run history', group: 'Execution', description: 'View source-free Run, Check and Verify timing metadata', invoke: () => setRunHistoryOpen(true) },
+    { id: 'input-presets', label: 'Buffered input presets', group: 'Execution', description: 'Capture or load source-independent Run input configurations', invoke: () => setInputPresetsOpen(true) },
     { id: 'quick-open', label: 'Quick open file', group: 'Navigation', description: 'Search workspace source paths', shortcut: 'Ctrl+P', invoke: () => { setQuickOpenPrefill(''); setQuickOpen(true); } },
     { id: 'go-line', label: 'Go to line', group: 'Navigation', description: 'Jump to a line and column in the active file', shortcut: 'Ctrl+G', invoke: () => { setQuickOpenPrefill(':'); setQuickOpen(true); } },
     { id: 'search', label: 'Find in project', group: 'Navigation', description: 'Search or replace text across all source files', shortcut: 'Ctrl+Shift+F', invoke: () => { setReplacePreview(null); setSearchOpen(true); } },
     { id: 'explorer', label: 'Source explorer', group: 'Navigation', description: 'Browse the nested virtual folder tree', invoke: () => setExplorerOpen(true) },
     { id: 'modules', label: 'Module dependencies', group: 'Navigation', description: 'Inspect local import relationships', invoke: () => setModuleGraphOpen(true) },
+    { id: 'impact', label: 'Module change impact', group: 'Navigation', description: 'Inspect possible downstream changes without compiler execution', invoke: () => setModuleImpactOpen(true) },
+    { id: 'batch-move', label: 'Batch source file rename', group: 'Project', description: 'Simultaneously relocate Scarp files and rebase local imports', invoke: () => setBatchMoveOpen(true) },
+    { id: 'repair-imports', label: 'Repair missing imports', group: 'Project', description: 'Preview explicit replacements for missing local .srp import paths', invoke: () => setImportRepairOpen(true) },
+    { id: 'batch-scaffold', label: 'Batch source scaffold', group: 'Project', description: 'Preview creation of several new local Scarp files with atomic undo', invoke: () => setBatchScaffoldOpen(true) },
+    { id: 'selective-replace', label: 'Selective replace', group: 'Project', description: 'Choose and preview exact literal occurrences across source files', invoke: () => setSelectiveReplaceOpen(true) },
+    { id: 'source-file-compare', label: 'Compare Scarp files', group: 'Navigation', description: 'Read-only bounded line comparison of two local source files', invoke: () => setSourceFileCompareOpen(true) },
+    { id: 'workspace-budget', label: 'Workspace source budget', group: 'Project', description: 'Measure exact source bytes, import edges, line counts, and browser file quotas', invoke: () => setWorkspaceBudgetOpen(true) },
+    { id: 'project-preflight', label: 'Project preflight', group: 'Project', description: 'Review local import, security and workspace readiness findings', invoke: () => setPreflightOpen(true) },
     { id: 'save', label: 'Save locally', group: 'Project', description: 'Opt into source-only browser storage', shortcut: 'Ctrl+S', invoke: enableLocalSaving },
     { id: 'forget', label: 'Forget saved copy', group: 'Project', description: 'Remove the saved browser copy after confirmation', disabled: !savingLocally, invoke: forgetLocalSaving },
     { id: 'export', label: 'Export project JSON', group: 'Project', description: 'Download a portable source workspace', invoke: exportWorkspace },
@@ -1672,6 +1965,9 @@ export function App() {
     { id: 'rename', label: 'Rename active file', group: 'Editor', description: 'Preview moving a module and updating imports', invoke: beginFileMove },
     { id: 'remove', label: 'Remove active file', group: 'Editor', description: 'Review source removal and import impact', disabled: files.length < 2, invoke: reviewFileRemoval },
     { id: 'copy-result', label: 'Copy result', group: 'Output', description: 'Copy captured output or diagnostics', disabled: !transcriptAvailable, invoke: () => void copyConsoleResult() },
+    { id: 'find-output', label: 'Find in output', group: 'Output', description: 'Search captured stdout and stderr without rerunning source', disabled: !result || (!result.stdout && !result.stderr), invoke: () => setOutputSearchOpen(true) },
+    { id: 'inspect-output-table', label: 'Inspect output table', group: 'Output', description: 'Inspect captured JSON, CSV, TSV or JSON lines locally', disabled: !result || (!result.stdout && !result.stderr), invoke: () => setOutputTableOpen(true) },
+    { id: 'compare-run-output', label: 'Compare Run output', group: 'Output', description: 'Pin output and compare later compiler Run results in tab memory', invoke: () => setOutputBaselineOpen(true) },
     { id: 'download-result', label: 'Download result', group: 'Output', description: 'Download a local output transcript', disabled: !transcriptAvailable, invoke: downloadConsoleResult },
     { id: 'clear-result', label: 'Clear output', group: 'Output', description: 'Clear result and cancel any active operation', invoke: invalidateExecution },
     { id: 'theme', label: dark ? 'Switch to light theme' : 'Switch to dark theme', group: 'View', description: 'Toggle the workspace appearance', invoke: () => setDark(value => !value) },
@@ -1698,15 +1994,12 @@ export function App() {
             definitionScope.current.invalidate();
             setRenameTarget(null);
             setRenamePreview(null);
-            setActiveFile(path);
             if (line !== null) {
               const position = quickOpenPosition(workspace.files[path], line, column);
-              setNavigationTarget(previous => ({
-                path, line: position.line, column: position.column,
-                sequence: (previous?.sequence ?? 0) + 1,
-              }));
+              navigateSource({ path, line: position.line, column: position.column });
               setNotice('Opened ' + path + ':' + position.line + ':' + position.column + '.');
             } else {
+              setActiveFile(path);
               setNavigationTarget(null);
             }
             setQuickOpen(false);
@@ -1829,6 +2122,42 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={hygieneOpen}
+                aria-controls="source-hygiene-panel" onClick={() => setHygieneOpen(open => !open)}>
+                Source hygiene
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={runHistoryOpen}
+                aria-controls="run-history-panel" onClick={() => setRunHistoryOpen(open => !open)}>
+                Run history
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={bookmarksOpen}
+                aria-controls="source-bookmarks-panel" onClick={() => setBookmarksOpen(open => !open)}>
+                Bookmarks
+              </button>
+              <button type="button" className="button-secondary" disabled={sourceTrail.back.length === 0}
+                aria-label="Navigate backward" onClick={() => stepNavigation(-1)}>← Back</button>
+              <button type="button" className="button-secondary" disabled={sourceTrail.forward.length === 0}
+                aria-label="Navigate forward" onClick={() => stepNavigation(1)}>Forward →</button>
+              <button type="button" className="button-secondary" aria-expanded={timelineOpen}
+                aria-controls="source-timeline-panel" onClick={() => setTimelineOpen(open => !open)}>
+                Source timeline
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={integrityOpen}
+                aria-controls="workspace-integrity-panel" onClick={() => setIntegrityOpen(open => !open)}>
+                Source integrity
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={sourceTasksOpen}
+                aria-controls="source-tasks-panel" onClick={() => setSourceTasksOpen(open => !open)}>
+                Source tasks
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={advancedSourceSearchOpen}
+                aria-controls="advanced-source-search-panel" onClick={() => setAdvancedSourceSearchOpen(open => !open)}>
+                Advanced search
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={sourceNotesOpen}
+                aria-controls="source-notes-panel" onClick={() => setSourceNotesOpen(open => !open)}>
+                Source notes
+              </button>
               <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
                 aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
                 Source checkpoint
@@ -1840,6 +2169,10 @@ export function App() {
               <button type="button" className="button-secondary" aria-expanded={explorerOpen}
                 aria-controls="source-explorer-panel" onClick={() => setExplorerOpen(open => !open)}>
                 Source explorer
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={batchMoveOpen}
+                aria-controls="batch-module-move-panel" onClick={() => setBatchMoveOpen(open => !open)}>
+                Batch rename
               </button>
               <button type="button" className="button-secondary" aria-expanded={folderMoveOpen}
                 aria-controls="folder-move-panel" onClick={() => {
@@ -1857,6 +2190,14 @@ export function App() {
                   if (inspectionOpen) closeInspection();
                   else setInspectionOpen(true);
                 }}>Compiler inspection</button>
+              <button type="button" className="button-secondary" aria-expanded={moduleImpactOpen}
+                aria-controls="module-impact-panel" onClick={() => setModuleImpactOpen(open => !open)}>
+                Module impact
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={importRepairOpen}
+                aria-controls="import-repair-panel" onClick={() => setImportRepairOpen(open => !open)}>
+                Repair imports
+              </button>
               <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
                 aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
                 Module dependencies
@@ -1882,6 +2223,53 @@ export function App() {
             </div>
           </div>
 
+          {hygieneOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source hygiene inspector…</p>}>
+            <SourceHygienePanel workspace={workspace} onApply={applySourceHygiene}
+              onNavigate={navigateToSourceHygiene} onClose={() => setHygieneOpen(false)} />
+          </Suspense>}
+
+          {runHistoryOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading run history…</p>}>
+            <RunHistoryPanel entries={runHistory} onClear={() => setRunHistory([])}
+              onClose={() => setRunHistoryOpen(false)} />
+          </Suspense>}
+
+          {bookmarksOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source bookmarks…</p>}>
+            <SourceBookmarksPanel workspace={workspace} bookmarks={sourceBookmarks}
+              trail={sourceTrail} getCursorPosition={() => cursorPosition.current}
+              onChange={setSourceBookmarks} onJump={navigateSource}
+              onBack={() => stepNavigation(-1)} onForward={() => stepNavigation(1)}
+              onClose={() => setBookmarksOpen(false)} />
+          </Suspense>}
+
+          {timelineOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source timeline…</p>}>
+            <SourceTimelinePanel workspace={workspace} activeFile={activeFile}
+              timeline={sourceTimeline} onChange={setSourceTimeline}
+              onRestore={restoreTimelineItem} onClose={() => setTimelineOpen(false)} />
+          </Suspense>}
+
+          {integrityOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source integrity…</p>}>
+            <WorkspaceIntegrityPanel workspace={workspace} baseline={integrityBaseline}
+              onBaselineChange={setIntegrityBaseline} onClose={() => setIntegrityOpen(false)} />
+          </Suspense>}
+
+          {sourceTasksOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source tasks…</p>}>
+            <SourceTasksPanel workspace={workspace} reviewed={sourceTaskReviews}
+              onReviewChange={setSourceTaskReviews} onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setSourceTasksOpen(false)} />
+          </Suspense>}
+          {advancedSourceSearchOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading advanced search…</p>}>
+            <AdvancedSourceSearchPanel workspace={workspace}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setAdvancedSourceSearchOpen(false)} />
+          </Suspense>}
+
+          {sourceNotesOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source notes…</p>}>
+            <SourceNotesPanel workspace={workspace} activeFile={activeFile}
+              notes={sourceNotes} onChange={setSourceNotes}
+              onNavigate={point => jumpToSearchHit({ ...point, preview: '' })}
+              onClose={() => setSourceNotesOpen(false)} />
+          </Suspense>}
+
           {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
             onCapture={captureCheckpoint} onRestore={restoreCheckpoint}
@@ -1897,6 +2285,16 @@ export function App() {
           {explorerOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceExplorer workspace={workspace} activeFile={activeFile}
             onOpen={openExplorerSource} onCreate={createSource} onClose={() => setExplorerOpen(false)} />
+          </Suspense>}
+
+          {batchScaffoldOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source scaffolds…</p>}>
+            <BatchScaffoldPanel workspace={workspace} onApply={applyBatchScaffold}
+              onClose={() => setBatchScaffoldOpen(false)} />
+          </Suspense>}
+
+          {batchMoveOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading batch file rename…</p>}>
+            <BatchModuleMovePanel workspace={workspace} activeFile={activeFile}
+              onApply={applyBatchMove} onClose={() => setBatchMoveOpen(false)} />
           </Suspense>}
 
           {folderMoveOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
@@ -1922,6 +2320,43 @@ export function App() {
               onClose={closeInspection} onNavigate={site => {
                 if (inspectionResult?.workspace === workspace) jumpToSearchHit({ ...site, preview: '' });
               }} />
+          </Suspense>}
+
+          {moduleImpactOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading module impact…</p>}>
+            <ModuleImpactPanel workspace={workspace} activeFile={activeFile}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setModuleImpactOpen(false)} />
+          </Suspense>}
+
+          {preflightOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading project preflight…</p>}>
+            <ProjectPreflightPanel workspace={workspace}
+              baseline={preflightBaseline} onBaselineChange={setPreflightBaseline}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setPreflightOpen(false)} />
+          </Suspense>}
+
+          {workspaceBudgetOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source budget…</p>}>
+            <WorkspaceBudgetPanel workspace={workspace}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setWorkspaceBudgetOpen(false)} />
+          </Suspense>}
+
+          {sourceFileCompareOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source comparison…</p>}>
+            <SourceFileComparePanel workspace={workspace} activeFile={activeFile}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setSourceFileCompareOpen(false)} />
+          </Suspense>}
+
+          {selectiveReplaceOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading selective replacements…</p>}>
+            <SelectiveReplacePanel workspace={workspace} onApply={applySelectiveReplace}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setSelectiveReplaceOpen(false)} />
+          </Suspense>}
+
+          {importRepairOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading import repair…</p>}>
+            <ImportRepairPanel workspace={workspace} onApply={applyImportRepair}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setImportRepairOpen(false)} />
           </Suspense>}
 
           {moduleGraphOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
@@ -2311,7 +2746,7 @@ export function App() {
                   </div>
                 }
               >
-                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} onFindReferences={locateReferences} onRename={beginRename} navigationTarget={navigationTarget}
+                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onCursorMove={(path, line, column) => { cursorPosition.current = { path, line, column }; }} onNavigate={navigateToDefinition} onFindReferences={locateReferences} onRename={beginRename} navigationTarget={navigationTarget}
                   navigationTrigger={navigationTrigger} referenceTrigger={referenceTrigger} renameTrigger={renameTrigger}
                   commentTrigger={commentTrigger} wordWrap={wordWrap}
                   referenceSites={referenceResult?.sites ?? null}
@@ -2415,6 +2850,8 @@ export function App() {
                 if (challengeOpen && suiteRunning && suiteKind === 'challenge') invalidateExecution();
                 setChallengeOpen(open => !open);
               }}>Learning challenges</button>
+            <button type="button" className="button-secondary" aria-expanded={inputPresetsOpen}
+              aria-controls="input-presets-panel" onClick={() => setInputPresetsOpen(open => !open)}>Input presets</button>
             <button type="button" className="button-secondary" aria-expanded={testCasesOpen}
               aria-controls="test-case-panel" onClick={() => {
                 if (testCasesOpen && suiteRunning && suiteKind === 'manual') invalidateExecution();
@@ -2427,9 +2864,21 @@ export function App() {
               onLoad={loadChallenge} onRun={() => void runSuite('challenge')} onStop={invalidateExecution}
               onClose={() => { if (suiteRunning && suiteKind === 'challenge') invalidateExecution(); setChallengeOpen(false); }} />
           </Suspense>}
+          {inputPresetsOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading input presets…</p>}>
+            <InputPresetsPanel workspace={workspace} currentInput={programInput}
+              currentAllowPrompts={allowPrompts} library={inputPresets}
+              onChange={setInputPresets} onLoad={(input, prompts) => {
+                setProgramInput(input);
+                setAllowPrompts(prompts);
+                setInputPresetsOpen(false);
+                setNotice('Loaded a buffered input preset. Run code explicitly to execute.');
+              }} onClose={() => setInputPresetsOpen(false)} />
+          </Suspense>}
+
           {testCasesOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <TestCasePanel cases={testCases} running={suiteRunning && suiteKind === 'manual'} busy={running}
             report={suiteKind === 'manual' ? suiteReport : null} progress={suiteProgress} stdin={programInput} allowPrompts={allowPrompts}
+            workspace={workspace} capturedRun={capturedRun}
             onChange={changeTestCases} onRun={() => void runSuite()} onStop={invalidateExecution}
             onClose={() => { if (suiteRunning && suiteKind === 'manual') invalidateExecution(); setTestCasesOpen(false); }} />
           </Suspense>}
@@ -2439,6 +2888,20 @@ export function App() {
               <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">{consoleOperationSubtitle(operation)}</span></div>
               <div className="console-right">
                 {result && <span className={'result-status ' + (result.ok ? 'success' : 'failure')}>{result.ok ? '● Success' : '● Error'}</span>}
+                <button type="button" onClick={() => setOutputSearchOpen(open => !open)}
+                  aria-expanded={outputSearchOpen} aria-controls="output-search-panel"
+                  disabled={!result || (!result.stdout && !result.stderr)}>
+                  Find in output
+                </button>
+                <button type="button" onClick={() => setOutputTableOpen(open => !open)}
+                  aria-expanded={outputTableOpen} aria-controls="output-table-panel"
+                  disabled={!result || (!result.stdout && !result.stderr)}>
+                  Inspect table
+                </button>
+                <button type="button" onClick={() => setOutputBaselineOpen(open => !open)}
+                  aria-expanded={outputBaselineOpen} aria-controls="output-baseline-panel">
+                  Compare output
+                </button>
                 <button type="button" onClick={() => void copyConsoleResult()}
                   disabled={!transcriptAvailable}
                   title="Copy the current output or diagnostic; no source files or stdin">Copy result</button>
@@ -2448,6 +2911,23 @@ export function App() {
                 <button type="button" onClick={invalidateExecution}>Clear</button>
               </div>
             </div>
+            {outputBaselineOpen && <Suspense fallback={
+              <p className="project-search-status" role="status">Loading output comparison…</p>
+            }>
+              <OutputBaselinePanel latest={operation === 'run' ? result : null}
+                baseline={outputBaseline} onBaselineChange={setOutputBaseline}
+                onClose={() => setOutputBaselineOpen(false)} />
+            </Suspense>}
+            {result && outputTableOpen && <Suspense fallback={
+              <p className="project-search-status" role="status">Loading structured output…</p>
+            }>
+              <OutputTablePanel result={result} onClose={() => setOutputTableOpen(false)} />
+            </Suspense>}
+            {result && outputSearchOpen && <Suspense fallback={
+              <p className="project-search-status" role="status">Loading output search…</p>
+            }>
+              <OutputSearchPanel result={result} onClose={() => setOutputSearchOpen(false)} />
+            </Suspense>}
             <div className="terminal-output" aria-live="polite">
               {running && <p className="terminal-muted">{suiteRunning ? 'Running sequential program test cases…' : operation === 'verify' ? 'Verifying source without running program statements…' : operation === 'check' ? 'Checking Scarp with the real interpreter…' : 'Loading compiler and executing program…'}</p>}
               {!running && !result && <p className="terminal-muted">$ Select an example or write code, then click Run code.</p>}

@@ -1,7 +1,7 @@
 import { validPath, validateWorkspace, type Workspace } from '../workspace';
 import type { CompilerDiagnostic } from '../runner/types';
 import { MAX_COMPILER_JSON_CHARS, decodeWorkerResult } from '../runner/protocol';
-import { claimCompilerWorker } from '../runner/worker-slot';
+import { invokeCompilerWorker, type WorkerSessionErrors } from '../runner/worker-session';
 
 export const MAX_REFERENCE_RESULTS = 120;
 
@@ -88,12 +88,20 @@ export function decodeReferencesReply(raw: unknown): ReferenceResult {
   catch { return invalid(); }
 }
 
-const TIMEOUT_MS = 12_000;
-/** Queries the compiled Rust index in an isolated cancellable browser worker. */
+const messages: WorkerSessionErrors = {
+  cancelled: 'Reference lookup cancelled.',
+  startup: 'Unable to start Scarp reference lookup worker.',
+  timeout: 'Reference lookup exceeded the 12-second browser limit.',
+  crashed: 'Scarp reference lookup worker failed or crashed.',
+  unreadable: 'Unreadable reference lookup worker reply.',
+  send: 'Unable to send source to the Scarp reference lookup worker.',
+};
+
+/** Queries the compiler index in an exclusive, cancellable browser Worker. */
 export function findReferences(
   workspace: Workspace, path: string, offset: number, signal?: AbortSignal,
 ): Promise<ReferenceResult> {
-  if (signal?.aborted) return Promise.resolve(failure('Reference lookup cancelled.'));
+  if (signal?.aborted) return Promise.resolve(failure(messages.cancelled));
   const problem = validateWorkspace(workspace);
   if (problem) return Promise.resolve(failure(problem));
   if (!validPath(path) || !Object.hasOwn(workspace.files, path) ||
@@ -101,48 +109,9 @@ export function findReferences(
       offset > new TextEncoder().encode(workspace.files[path]).byteLength) {
     return Promise.resolve(failure('Invalid reference source or position.'));
   }
-  return new Promise(resolve => {
-    let worker: Worker | undefined;
-    let done = false;
-    const timer: { deadline?: ReturnType<typeof setTimeout> } = {};
-    let release = () => {};
-    const complete = (answer: ReferenceResult) => {
-      if (done) return;
-      done = true;
-      if (timer.deadline !== undefined) clearTimeout(timer.deadline);
-      signal?.removeEventListener('abort', onAbort);
-      worker?.terminate();
-      release();
-      resolve(answer);
-    };
-    const onAbort = () => complete(failure('Reference lookup cancelled.'));
-    release = claimCompilerWorker(onAbort);
-    try {
-      worker = new Worker(new URL('../runner/worker.ts', import.meta.url), { type: 'module' });
-    } catch {
-      complete(failure('Unable to start Scarp reference lookup worker.'));
-      return;
-    }
-    signal?.addEventListener('abort', onAbort, { once: true });
-    if (signal?.aborted) {
-      complete(failure('Reference lookup cancelled.'));
-      return;
-    }
-    timer.deadline = setTimeout(() => complete(failure('Reference lookup exceeded the 12-second browser limit.')), TIMEOUT_MS);
-    worker.onerror = e => {
-      e.preventDefault();
-      complete(failure('Scarp reference lookup worker failed or crashed.'));
-    };
-    worker.onmessageerror = () => complete(failure('Unreadable reference lookup worker reply.'));
-    worker.onmessage = (event: MessageEvent<{
-      id: number; references: ReferenceResult;
-    }>) => {
-      if (event.data?.id === 1) complete(validatedReferencesResult(event.data.references));
-    };
-    try {
-      worker.postMessage({ id: 1, workspace, mode: 'references', path, offset });
-    } catch {
-      complete(failure('Unable to send source to the Scarp reference lookup worker.'));
-    }
+  return invokeCompilerWorker({
+    request: { id: 1, workspace, mode: 'references' as const, path, offset },
+    signal, errors: messages, failure,
+    decode: reply => validatedReferencesResult(reply.references),
   });
 }
