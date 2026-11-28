@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { readFile } from 'node:fs/promises';
 import { expect, test } from '@playwright/test';
 
@@ -21,7 +22,7 @@ test('downloads an exact UTF-8 .srp source file without affecting the virtual pr
 
 test('downloads the current imported module, not the entry file or entire JSON workspace', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   const pending = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Download .srp' }).click();
