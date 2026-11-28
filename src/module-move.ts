@@ -137,6 +137,34 @@ export function previewModuleMove(
     return { ok: false, error: 'The destination must be a different unused .srp path.' };
   }
 
+  const result = previewPathMoves(workspace, new Map([[from, to]]));
+  return result.ok ? { ...result, from, to } : result;
+}
+
+export type PathMoveResult =
+  | { ok: true; workspace: Workspace; rewrittenImports: number; changedFiles: string[]; lines: ModuleMoveLine[] }
+  | { ok: false; error: string };
+
+/** Simultaneous path relocation, independent of the UI. Folder moves require
+ * existing targets so missing imports cannot silently bind to new modules. */
+export function previewPathMoves(
+  workspace: Workspace,
+  destinations: ReadonlyMap<string, string>,
+  requireExistingTargets = false,
+): PathMoveResult {
+  const invalid = validateWorkspace(workspace);
+  if (invalid) return { ok: false, error: invalid };
+  if (!destinations.size) return { ok: false, error: 'Select at least one source path to move.' };
+  for (const [from, to] of destinations) {
+    if (!Object.hasOwn(workspace.files, from) || !validPath(to) || from === to) {
+      return { ok: false, error: 'Invalid source path mapping.' };
+    }
+  }
+  const projected = Object.keys(workspace.files).map(path => destinations.get(path) ?? path);
+  if (new Set(projected).size !== projected.length) {
+    return { ok: false, error: 'The destination would overwrite an existing source file.' };
+  }
+
   const changedFiles: string[] = [];
   const lines: ModuleMoveLine[] = [];
   const files: Record<string, string> = Object.create(null) as Record<string, string>;
@@ -149,7 +177,7 @@ export function previewModuleMove(
       return { ok: false, error: 'Cannot safely inspect import syntax in ' + path +
         '. Fix the source before moving a module.' };
     }
-    const newImporter = path === from ? to : path;
+    const newImporter = destinations.get(path) ?? path;
     const edits: Array<{ start: number; end: number; replacement: string }> = [];
     for (const site of sites) {
       const originalTarget = resolveVirtualImport(path, site.specifier);
@@ -157,8 +185,12 @@ export function previewModuleMove(
         return { ok: false, error: 'Cannot safely resolve an import in ' + path +
           '. Use an ordinary relative .srp path.' };
       }
-      const newTarget = originalTarget === from ? to : originalTarget;
+      const newTarget = destinations.get(originalTarget) ?? originalTarget;
+      if (requireExistingTargets && !Object.hasOwn(workspace.files, originalTarget)) {
+        return { ok: false, error: 'Missing import target ' + originalTarget + ' in ' + path + '. Resolve imports before moving a folder.' };
+      }
       if (newImporter === path && newTarget === originalTarget) continue;
+      if (requireExistingTargets && resolveVirtualImport(newImporter, site.specifier) === newTarget) continue;
       const replacement = relativeImportPath(newImporter, newTarget);
       if (resolveVirtualImport(newImporter, replacement) !== newTarget) {
         return { ok: false, error: 'Could not preserve a relative import in ' + path + '.' };
@@ -197,8 +229,8 @@ export function previewModuleMove(
     }
     files[newImporter] = nextSource;
   }
-  const next = { entry: workspace.entry === from ? to : workspace.entry, files };
+  const next = { entry: destinations.get(workspace.entry) ?? workspace.entry, files };
   const failure = validateWorkspace(next);
   if (failure) return { ok: false, error: 'Module move exceeds project limits: ' + failure };
-  return { ok: true, from, to, workspace: next, rewrittenImports, changedFiles, lines };
+  return { ok: true, workspace: next, rewrittenImports, changedFiles, lines };
 }

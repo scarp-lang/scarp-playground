@@ -1,4 +1,5 @@
 import { validPath, validateWorkspace, type Workspace } from './workspace';
+import { previewFolderMove } from './folder-move';
 
 /**
  * One ephemeral, in-memory undo token for an atomic multi-file editor change.
@@ -8,7 +9,7 @@ export type BulkEditUndo = {
   before: Workspace;
   after: Workspace;
   label: 'project-wide replacement' | 'symbol rename' | 'file move' | 'file removal' |
-    'file duplication' | 'source import';
+    'file duplication' | 'source import' | 'folder move';
   restoreActiveFile?: string;
 };
 
@@ -20,10 +21,22 @@ export function createBulkEditUndo(
   moved?: { from: string; to: string },
   removed?: string,
   duplicated?: { from: string; to: string },
+  folder?: { from: string; to: string; activeFile: string },
 ): BulkEditUndo | null {
   if (before === after || validateWorkspace(before) || validateWorkspace(after)) return null;
   const oldPaths = Object.keys(before.files).sort();
   const newPaths = Object.keys(after.files).sort();
+  if (label === 'folder move') {
+    if (moved || removed || duplicated || !folder ||
+        !Object.hasOwn(before.files, folder.activeFile)) return null;
+    const expected = previewFolderMove(before, folder.from, folder.to);
+    if (!expected.ok || expected.workspace.entry !== after.entry ||
+        Object.keys(expected.workspace.files).length !== newPaths.length ||
+        newPaths.some(path => !Object.hasOwn(expected.workspace.files, path) ||
+          expected.workspace.files[path] !== after.files[path])) return null;
+    return { before, after, label, restoreActiveFile: folder.activeFile };
+  }
+  if (folder) return null;
   if (label === 'source import') {
     // No existing path, entrypoint or source may change in an add-only batch.
     if (moved || removed || duplicated || before.entry !== after.entry ||
