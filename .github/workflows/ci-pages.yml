@@ -32,6 +32,8 @@ jobs:
         run: npm run verify:locks
       - name: Test lockfile tampering detection
         run: npm run test:locks
+      - name: Test independent Wasm32 memory parser and policy failures
+        run: npm run test:wasm-memory
       - name: Lint TypeScript
         run: npm run lint
       - name: Type-check TypeScript
@@ -47,7 +49,12 @@ jobs:
       - name: Install wasm-pack
         run: cargo install wasm-pack --locked
       - name: Compile the real interpreter to browser WebAssembly
+        env:
+          # Applies only to Wasm32 link steps; host Rust tests stay unaffected.
+          CARGO_TARGET_WASM32_UNKNOWN_UNKNOWN_RUSTFLAGS: "-C link-arg=--max-memory=536870912"
         run: wasm-pack build bridge --release --target web --out-dir ../public/compiler --locked
+      - name: Require a physical 512 MiB maximum in the produced Wasm32 binary
+        run: npm run verify:wasm-memory
       - name: Build client with compiler bundle
         run: npm run build
       - name: Verify executable WASM and JavaScript bridge are deployed
