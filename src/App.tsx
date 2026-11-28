@@ -2447,7 +2447,7 @@ export function App() {
                   disabled={!result || (!result.stdout && !result.stderr)}>
                   Find in output
                 </button>
-                <button type="button" onClick={() => void copyConsoleResult()
+                <button type="button" onClick={() => void copyConsoleResult()}
                   disabled={!transcriptAvailable}
                   title="Copy the current output or diagnostic; no source files or stdin">Copy result</button>
                 <button type="button" onClick={downloadConsoleResult}
