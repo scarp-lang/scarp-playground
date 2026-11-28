@@ -227,6 +227,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Module dependencies** gives a local, bounded import overview with entry reachability, missing targets, cycle members and clickable source locations. This lexical navigation aid is not compiler verification. See [module dependencies](docs/module-dependencies.md).
+
 - React + Vite with TypeScript and Tailwind CSS, adaptive dark/light interface.
 - Monaco editor with a Scarp-specific tokenizer, separate text models per
   source file (preserving per-file undo/view history), and selectable entrypoint.
