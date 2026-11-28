@@ -227,6 +227,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Local project library** stores up to six explicitly named source-only snapshots in transactional browser storage. See [project library](docs/project-library.md).
+
 - **Import sources ZIP** restores canonical uncompressed Playground source exports with strict byte validation and entrypoint review. See [source archive](docs/source-archive.md).
 
 - **Source explorer** offers nested folder navigation, literal path filtering, source byte counts and validated undoable module creation. See [source explorer](docs/source-explorer.md).
