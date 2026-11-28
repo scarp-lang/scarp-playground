@@ -567,3 +567,21 @@ a { color: inherit; text-decoration: none; }
 .source-outline-list button span { color: var(--muted); font-size: 11px; }
 .source-outline-error { color: #e4ae72; overflow-wrap: anywhere; font-size: 12px; }
 :root[data-theme='light'] .source-outline-error { color: #985c1b; }
+
+/* Resolved compiler inventory. */
+.inspection-heading h2 { margin: 0 auto 0 0; font-size: 13px; font-weight: 750; }
+.inspection-select { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin: 8px 0; min-width: 0; }
+.inspection-select label { display: grid; gap: 4px; flex: 1 1 130px; min-width: 0; font-size: 12px; }
+.inspection-select select, .inspection-select input[type="search"] { min-width: 0; width: 100%; border: 1px solid var(--border); border-radius: 6px; color: var(--text); background: var(--panel); padding: 6px; }
+.inspection-select .inspection-checkbox { display: flex; flex: 0 1 auto; align-items: center; gap: 5px; }
+.inspection-section { border: 1px solid var(--border); border-radius: 8px; padding: 8px; margin: 8px 0; font-size: 12px; min-width: 0; overflow-wrap: anywhere; }
+.inspection-section h3 { margin: 0 0 6px; font-size: 13px; }
+.inspection-section ul { margin: 6px 0; padding-left: 18px; }
+.inspection-links { display: grid; gap: 5px; }
+.inspection-links li { display: flex; flex-wrap: wrap; gap: 6px; }
+.inspection-links button, .inspection-signature { text-align: left; color: var(--accent); white-space: normal; overflow-wrap: anywhere; }
+.inspection-scroll { max-height: 360px; overflow: auto; }
+.inspection-symbol { padding: 6px; border-bottom: 1px solid var(--border); min-width: 0; }
+.inspection-signature { font-family: monospace; width: 100%; }
+.inspection-error { color: #e4ae72; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; }
+:root[data-theme='light'] .inspection-error { color: #985c1b; }

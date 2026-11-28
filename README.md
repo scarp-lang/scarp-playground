@@ -227,6 +227,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Compiler inspection** exposes the real resolved module inventory, signatures and constant dependency sites with validated editor navigation. See [compiler inspection](docs/compiler-module-inspection.md).
+
 - **Source outline** inspects actual declaration tokens from the real Scarp parser with verified editor coordinates and filters, without executing code. See [source outline](docs/source-outline.md).
 
 - **Import sources ZIP** restores canonical uncompressed Playground source exports with strict byte validation and entrypoint review. See [source archive](docs/source-archive.md).

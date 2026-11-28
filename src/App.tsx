@@ -14,6 +14,8 @@ const ModuleGraphPanel = lazy(() => import('./ModuleGraphPanel').then(module => 
 const SourceOutlinePanel = lazy(() => import('./SourceOutlinePanel').then(module => ({ default: module.SourceOutlinePanel })));
 import { inspectSourceOutline } from './navigation/outline-client';
 import type { LocatedOutline } from './navigation/outline-protocol';
+import type { LocatedInspection } from './navigation/inspection-protocol';
+const ModuleInspectionPanel = lazy(() => import('./ModuleInspectionPanel').then(module => ({ default: module.ModuleInspectionPanel })));
 
 import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
@@ -114,6 +116,10 @@ export function App() {
   const [outlineBusy, setOutlineBusy] = useState(false);
   const [outlineResult, setOutlineResult] = useState<{ workspace: Workspace; path: string; result: LocatedOutline } | null>(null);
   const outlineTask = useRef<ActiveExecution | null>(null);
+  const [inspectionOpen, setInspectionOpen] = useState(false);
+  const [inspectionBusy, setInspectionBusy] = useState(false);
+  const [inspectionResult, setInspectionResult] = useState<{ workspace: Workspace; result: LocatedInspection } | null>(null);
+  const inspectionTask = useRef<ActiveExecution | null>(null);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -209,6 +215,44 @@ export function App() {
   useEffect(() => {
     if (renameTarget) renameInputRef.current?.focus();
   }, [renameTarget]);
+
+  async function refreshInspection() {
+    if (executionScope.current.running || inspectionTask.current) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setRenameBusy(false);
+    const lookup = definitionScope.current.start();
+    if (!lookup) return;
+    inspectionTask.current = lookup;
+    setInspectionBusy(true);
+    setInspectionResult(null);
+    const snapshot = workspace;
+    try {
+      const { inspectWorkspace } = await import('./navigation/inspection-client');
+      if (!definitionScope.current.isCurrent(lookup)) return;
+      const result = await inspectWorkspace(snapshot, lookup.controller.signal);
+      if (definitionScope.current.isCurrent(lookup) && latestSession.current.workspace === snapshot) {
+        setInspectionResult({ workspace: snapshot, result });
+      }
+    } catch {
+      if (definitionScope.current.isCurrent(lookup)) setInspectionResult({
+        workspace: snapshot, result: { ok: false, error: 'Unable to load module inspection.' },
+      });
+    } finally {
+      definitionScope.current.finish(lookup);
+      if (inspectionTask.current === lookup) {
+        inspectionTask.current = null;
+        setInspectionBusy(false);
+      }
+    }
+  }
+
+  function closeInspection() {
+    if (inspectionTask.current && definitionScope.current.isCurrent(inspectionTask.current)) definitionScope.current.invalidate();
+    setInspectionOpen(false);
+    setInspectionResult(null);
+  }
 
   async function refreshOutline() {
     if (executionScope.current.running || outlineTask.current) return;
@@ -315,6 +359,7 @@ export function App() {
 
   function invalidateExecution() {
     setOutlineResult(null);
+    setInspectionResult(null);
     setFolderPreview(null);
     setFolderMoveOpen(false);
     setQuickOpen(false);
@@ -1588,6 +1633,11 @@ export function App() {
                   if (outlineOpen) closeOutline();
                   else setOutlineOpen(true);
                 }}>Source outline</button>
+              <button type="button" className="button-secondary" aria-expanded={inspectionOpen}
+                aria-controls="module-inspection-panel" onClick={() => {
+                  if (inspectionOpen) closeInspection();
+                  else setInspectionOpen(true);
+                }}>Compiler inspection</button>
               <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
                 aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
                 Module dependencies
@@ -1633,6 +1683,14 @@ export function App() {
                   preview: entry.name });
               }
             }} />
+          </Suspense>}
+
+          {inspectionOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading module inspection…</p>}>
+            <ModuleInspectionPanel result={inspectionResult?.workspace === workspace ? inspectionResult.result : null}
+              running={running} busy={inspectionBusy} onRefresh={() => void refreshInspection()}
+              onClose={closeInspection} onNavigate={site => {
+                if (inspectionResult?.workspace === workspace) jumpToSearchHit({ ...site, preview: '' });
+              }} />
           </Suspense>}
 
           {moduleGraphOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
