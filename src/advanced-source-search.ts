@@ -223,7 +223,7 @@ function safeCut(source: string, position: number, atStart: boolean): number {
   return betweenSurrogates ? position + (atStart ? -1 : 1) : position;
 }
 
-function preview(line: string, start: number, end: number):
+function preview(line: string, start: number):
   { value: string; truncated: boolean } {
   if (line.length <= MAX_ADVANCED_SOURCE_PREVIEW) return { value: line, truncated: false };
   const length = MAX_ADVANCED_SOURCE_PREVIEW;
@@ -280,7 +280,7 @@ export function advancedSourceSearch(
             truncated = true;
             break outer;
           }
-          const snippet = preview(line, found.start, found.end);
+          const snippet = preview(line, found.start);
           results.push({
             path, line: i + 1, column: found.start + 1,
             endColumn: found.end + 1, clause: clauseIndex + 1,
