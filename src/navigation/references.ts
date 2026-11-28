@@ -32,6 +32,15 @@ function range(v: unknown): v is SourceRange {
   return b.line > a.line || (b.line === a.line && b.column >= a.column);
 }
 
+// Copy only the validated coordinates, never arbitrary nested Worker data.
+function projectRange(value: SourceRange): SourceRange {
+  return {
+    path: value.path,
+    start: { line: value.start.line, column: value.start.column },
+    end: { line: value.end.line, column: value.end.column },
+  };
+}
+
 export function validatedReferencesResult(value: unknown): ReferenceResult {
   if (!record(value) || typeof value.ok !== 'boolean') return invalid();
   if (!value.ok) {
@@ -61,13 +70,13 @@ export function validatedReferencesResult(value: unknown): ReferenceResult {
     const kind: unknown = (item as unknown as Record<string, unknown>).kind;
     if (typeof kind !== 'string' || kind.length > 32) return invalid();
     sites.push({
-      path: item.path, start: item.start, end: item.end, kind,
+      ...projectRange(item), kind,
     });
   }
   return {
     ok: true,
     symbol: { name: symbol.name, kind: symbol.kind },
-    declaration: value.declaration as SourceRange | null,
+    declaration: value.declaration === null ? null : projectRange(value.declaration as SourceRange),
     references: sites,
     truncated: value.truncated,
   };
