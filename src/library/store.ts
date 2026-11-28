@@ -1,3 +1,4 @@
+import { planLibraryRestore, type RestoreChoice } from './backup';
 import { parseLibrary, serializeLibrary, mutateLibrary, type LibraryMutation, type LibraryResult, type ProjectLibrary } from './model';
 
 export const LIBRARY_DATABASE = 'scarp-playground-project-library';
@@ -113,6 +114,29 @@ export function clearProjectLibrary(factory: IDBFactory, expected: LibrarySnapsh
       }
       const removal = store.delete(KEY);
       removal.onsuccess = () => set(decodeSnapshot(null));
+    };
+  });
+}
+
+/** Revalidate a reviewed backup against the exact current record inside
+ * one readwrite transaction. No partial restoration or stale overwrite. */
+export function restoreProjectLibrary(factory: IDBFactory, expected: LibrarySnapshot, backup: ProjectLibrary,
+  choices: readonly RestoreChoice[]): Promise<Result<LibrarySnapshot>> {
+  return transact(factory, 'readwrite', (store, set) => {
+    const request = store.get(KEY);
+    request.onsuccess = () => {
+      const latest = decodeSnapshot(request.result);
+      if (!latest.ok) { set(latest); return; }
+      if (latest.value.raw !== expected.raw) {
+        set(fail('Saved projects changed in another tab. Refresh before restoring the backup.'));
+        return;
+      }
+      const plan = planLibraryRestore(latest.value.library, backup, choices);
+      if (!plan.ok) { set(plan); return; }
+      const serialized = serializeLibrary(plan.value);
+      if (!serialized.ok) { set(serialized); return; }
+      const write = store.put(serialized.value, KEY);
+      write.onsuccess = () => set({ ok: true, value: { raw: serialized.value, library: plan.value } });
     };
   });
 }
