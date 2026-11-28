@@ -56,7 +56,9 @@ const CommandPalette = lazy(() => import('./CommandPalette').then(module => ({ d
 import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
 const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({ default: module.FolderMovePanel })));
+const BatchModuleMovePanel = lazy(() => import('./BatchModuleMovePanel').then(module => ({ default: module.BatchModuleMovePanel })));
 import type { FolderMovePlan } from './folder-move';
+import { prepareBatchMoveUndo, type BatchMovePlan } from './batch-module-move';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
@@ -139,6 +141,7 @@ export function App() {
   const [inspectionResult, setInspectionResult] = useState<{ workspace: Workspace; result: LocatedInspection } | null>(null);
   const inspectionTask = useRef<ActiveExecution | null>(null);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
+  const [batchMoveOpen, setBatchMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
@@ -413,6 +416,7 @@ export function App() {
     setInspectionResult(null);
     setFolderPreview(null);
     setFolderMoveOpen(false);
+    setBatchMoveOpen(false);
     setQuickOpen(false);
     setFileDuplicate(null);
     setFileDuplicatePlan(null);
@@ -1207,6 +1211,26 @@ export function App() {
       rewrittenImports + ' import path(s). Use Check code to validate the copy.');
   }
 
+  function applyBatchMove(snapshot: Workspace, plan: Extract<BatchMovePlan, { ok: true }>) {
+    if (workspace !== snapshot) {
+      setNotice('The batch move preview is stale. Review the current source again.');
+      return;
+    }
+    const undo = prepareBatchMoveUndo(snapshot, activeFile, plan);
+    if (!undo) {
+      setNotice('The batch module move cannot be safely verified. No changes were applied.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(plan.nextActiveFile);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setBatchMoveOpen(false);
+    setNotice('Moved ' + plan.moves.length + ' file(s) together, preserving ' +
+      plan.verifiedReferences.length + ' local imports. Undo bulk change can restore the original sources.');
+  }
+
   function applyFolderMove(snapshot: Workspace, plan: Extract<FolderMovePlan, { ok: true }>) {
     if (snapshot !== workspace) {
       setFolderMoveOpen(false);
@@ -1653,6 +1677,7 @@ export function App() {
     { id: 'search', label: 'Find in project', group: 'Navigation', description: 'Search or replace text across all source files', shortcut: 'Ctrl+Shift+F', invoke: () => { setReplacePreview(null); setSearchOpen(true); } },
     { id: 'explorer', label: 'Source explorer', group: 'Navigation', description: 'Browse the nested virtual folder tree', invoke: () => setExplorerOpen(true) },
     { id: 'modules', label: 'Module dependencies', group: 'Navigation', description: 'Inspect local import relationships', invoke: () => setModuleGraphOpen(true) },
+    { id: 'batch-move', label: 'Batch source file rename', group: 'Project', description: 'Simultaneously relocate Scarp files and rebase local imports', invoke: () => setBatchMoveOpen(true) },
     { id: 'save', label: 'Save locally', group: 'Project', description: 'Opt into source-only browser storage', shortcut: 'Ctrl+S', invoke: enableLocalSaving },
     { id: 'forget', label: 'Forget saved copy', group: 'Project', description: 'Remove the saved browser copy after confirmation', disabled: !savingLocally, invoke: forgetLocalSaving },
     { id: 'export', label: 'Export project JSON', group: 'Project', description: 'Download a portable source workspace', invoke: exportWorkspace },
@@ -1841,6 +1866,10 @@ export function App() {
                 aria-controls="source-explorer-panel" onClick={() => setExplorerOpen(open => !open)}>
                 Source explorer
               </button>
+              <button type="button" className="button-secondary" aria-expanded={batchMoveOpen}
+                aria-controls="batch-module-move-panel" onClick={() => setBatchMoveOpen(open => !open)}>
+                Batch rename
+              </button>
               <button type="button" className="button-secondary" aria-expanded={folderMoveOpen}
                 aria-controls="folder-move-panel" onClick={() => {
                   if (folderMoveOpen) { setFolderMoveOpen(false); return; }
@@ -1897,6 +1926,11 @@ export function App() {
           {explorerOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceExplorer workspace={workspace} activeFile={activeFile}
             onOpen={openExplorerSource} onCreate={createSource} onClose={() => setExplorerOpen(false)} />
+          </Suspense>}
+
+          {batchMoveOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading batch file rename…</p>}>
+            <BatchModuleMovePanel workspace={workspace} activeFile={activeFile}
+              onApply={applyBatchMove} onClose={() => setBatchMoveOpen(false)} />
           </Suspense>}
 
           {folderMoveOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
