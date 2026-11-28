@@ -1,3 +1,4 @@
+import { LearningProgressPanel } from './LearningProgressPanel';
 import { OutputDifferenceView } from './OutputDifferenceView';
 import { TestReportControls } from './TestReportControls';
 import { useMemo, useState } from 'react';
@@ -104,5 +105,6 @@ export function ChallengePanel({ active, busy, running, progress, report,
         </section>}
       </article>
     </>}
+    <LearningProgressPanel active={active} report={report} running={running} />
   </section>;
 }
