@@ -1,0 +1,6 @@
+import "lib/number.srp" as numbers;
+bind a = text_to_integer(read_line());
+bind b = text_to_integer(read_line());
+bind (gcd, lcm) = numbers.measures(a, b);
+print(gcd);
+print(lcm);

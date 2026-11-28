@@ -1,0 +1,5 @@
+pure funcra factorial(n: integer) -> bigint {
+    // TODO: use an exact big integer product.
+    return bigint("1");
+}
+print(factorial(text_to_integer(read_line())));

@@ -1,0 +1,3 @@
+var counter = text_to_integer(read_line());
+// TODO: print all values down to zero.
+print(counter);

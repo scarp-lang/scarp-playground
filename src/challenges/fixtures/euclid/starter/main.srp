@@ -1,0 +1,7 @@
+pure funcra gcd_value(a: integer, b: integer) -> integer {
+    // TODO: implement the Euclidean loop.
+    return a;
+}
+bind a = text_to_integer(read_line());
+bind b = text_to_integer(read_line());
+print(gcd_value(a, b));

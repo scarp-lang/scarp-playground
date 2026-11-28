@@ -1,0 +1,13 @@
+pure funcra gcd_value(a: integer, b: integer) -> integer {
+    var left = a;
+    var right = b;
+    while right != 0 {
+        bind remainder = left % right;
+        left = right;
+        right = remainder;
+    }
+    return left;
+}
+bind a = text_to_integer(read_line());
+bind b = text_to_integer(read_line());
+print(gcd_value(a, b));

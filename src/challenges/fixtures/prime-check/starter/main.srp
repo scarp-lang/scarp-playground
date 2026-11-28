@@ -1,0 +1,9 @@
+pure funcra is_prime(n: integer) -> boolean {
+    // TODO: test divisors.
+    return n >= 2;
+}
+if is_prime(text_to_integer(read_line())) {
+    print("prime");
+} else {
+    print("not prime");
+}

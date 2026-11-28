@@ -1,0 +1,7 @@
+var count: integer = 0;
+var line = try_read_line();
+while line[0] {
+    count += 1;
+    line = try_read_line();
+}
+print(count);

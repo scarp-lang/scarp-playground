@@ -1,0 +1,4 @@
+bind value = read_line();
+bind prefix = read_line();
+// TODO: compare the prefix.
+print(false);

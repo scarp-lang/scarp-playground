@@ -1,0 +1,7 @@
+bind colors: map<string, integer> = [map:
+    "red": 1,
+    "green": 2,
+    "blue": 3,
+];
+bind name = read_line();
+print(map_get_or(colors, name, 0));

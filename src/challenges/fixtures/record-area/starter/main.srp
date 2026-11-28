@@ -1,0 +1,10 @@
+record Rectangle { width: integer, height: integer }
+pure funcra area(rectangle: record Rectangle) -> integer {
+    // TODO: multiply record fields.
+    return 0;
+}
+bind rectangle = new Rectangle {
+    width: text_to_integer(read_line()),
+    height: text_to_integer(read_line()),
+};
+print(area(rectangle));

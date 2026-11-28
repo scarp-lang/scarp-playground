@@ -1,0 +1,6 @@
+bind number = text_to_integer(read_line());
+bind divisor = text_to_integer(read_line());
+bind quotient = number / divisor;
+bind remainder = number % divisor;
+print(quotient);
+print(remainder);

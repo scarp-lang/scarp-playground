@@ -1,0 +1,4 @@
+bind n = text_to_integer(read_line());
+var total: integer = 0;
+// TODO: use a counted loop.
+print(total);

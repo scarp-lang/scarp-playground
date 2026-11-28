@@ -1,0 +1,4 @@
+bind a = decimal(read_line());
+bind b = decimal(read_line());
+bind total = a + b;
+print(decimal_format(total, 2, "half_even"));
