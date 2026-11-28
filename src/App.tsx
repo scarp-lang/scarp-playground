@@ -12,6 +12,8 @@ const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ d
 const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import { previewNewSource } from './workspace-tree';
+import type { LibraryProject } from './library/model';
+const ProjectLibraryPanel = lazy(() => import('./ProjectLibraryPanel').then(module => ({ default: module.ProjectLibraryPanel })));
 const ModuleGraphPanel = lazy(() => import('./ModuleGraphPanel').then(module => ({ default: module.ModuleGraphPanel })));
 const SourceOutlinePanel = lazy(() => import('./SourceOutlinePanel').then(module => ({ default: module.SourceOutlinePanel })));
 import { inspectSourceOutline } from './navigation/outline-client';
@@ -133,6 +135,7 @@ export function App() {
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1004,6 +1007,26 @@ export function App() {
     return true;
   }
 
+  function openLibraryProject(project: LibraryProject): boolean {
+    if (!window.confirm('Open named source snapshot "' + project.name +
+      '"? Current source edits and program input will be replaced. The separate saved browser copy will be preserved.')) return false;
+    if (!preserveSavedSourceBeforeSwitch()) return false;
+    const next = { entry: project.workspace.entry, files: { ...project.workspace.files } };
+    invalidateExecution();
+    setSavingLocally(false);
+    setWorkspace(next);
+    setCheckpoint({ workspace: next, stdin: '', recoverable: false });
+    setProgramInput('');
+    setAllowPrompts(false);
+    setEditorSession(number => number + 1);
+    setActiveFile(project.activeFile);
+    setLastBulkEdit(null);
+    setNotice('Opened a copy of the named snapshot. Editing will not change the library until you explicitly replace it.');
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    acceptedHash.current = '';
+    return true;
+  }
+
   function selectExample(example: Example, untouched: boolean) {
     // Do not discard user-authored source or input without consent.
     // An untouched built-in sample can switch immediately; external,
@@ -1712,6 +1735,10 @@ export function App() {
                 aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
                 Source checkpoint
               </button>
+              <button type="button" className="button-secondary" aria-expanded={libraryOpen}
+                aria-controls="project-library-panel" onClick={() => setLibraryOpen(open => !open)}>
+                Project library
+              </button>
               <button type="button" className="button-secondary" aria-expanded={explorerOpen}
                 aria-controls="source-explorer-panel" onClick={() => setExplorerOpen(open => !open)}>
                 Source explorer
@@ -1762,6 +1789,11 @@ export function App() {
             onCapture={captureCheckpoint} onRestore={restoreCheckpoint}
             onDiscard={() => { setSourceCheckpoint(null); setNotice('Discarded the temporary source checkpoint.'); }}
             onClose={() => setSourceCheckpointOpen(false)} />
+          </Suspense>}
+
+          {libraryOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading project library…</p>}>
+            <ProjectLibraryPanel workspace={workspace} activeFile={activeFile}
+              onOpen={openLibraryProject} onClose={() => setLibraryOpen(false)} />
           </Suspense>}
 
           {explorerOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
