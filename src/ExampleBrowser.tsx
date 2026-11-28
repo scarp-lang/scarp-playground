@@ -1,12 +1,16 @@
 import { useMemo, useState } from 'react';
-import { examples } from './examples';
+import { examples, type Example } from './examples';
+import { isUntouchedExampleSession } from './example-session';
+import type { Workspace } from './workspace';
 import { filterExamples, MAX_EXAMPLE_FILTER_LENGTH } from './example-search';
 
 type Props = {
-  onSelect: (index: number) => void;
+  workspace: Workspace;
+  stdin: string;
+  onSelect: (example: Example, untouched: boolean) => void;
 };
 
-export function ExampleBrowser({ onSelect }: Props) {
+export function ExampleBrowser({ workspace, stdin, onSelect }: Props) {
   const [query, setQuery] = useState('');
   const matches = useMemo(() => filterExamples(examples, query), [query]);
 
@@ -41,7 +45,7 @@ export function ExampleBrowser({ onSelect }: Props) {
       </div>
       <div className="example-list" aria-label="Example programs">
         {matches.map(({ example, index }) => (
-          <button key={example.title} className="example-button" type="button" onClick={() => onSelect(index)}>
+          <button key={example.title} className="example-button" type="button" onClick={() => onSelect(example, isUntouchedExampleSession(workspace, stdin))}>
             <span className="example-symbol" aria-hidden="true">{index === 0 ? '✦' : index === 1 ? '∑' : '⌘'}</span>
             <span className="example-details">
               <strong>{example.title}</strong>

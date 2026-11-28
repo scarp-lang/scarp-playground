@@ -5,14 +5,15 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState, type
 const ScarpEditor = lazy(() =>
   import('./ScarpEditor').then(({ ScarpEditor }) => ({ default: ScarpEditor })),
 );
-import { examples } from './examples';
-import { ExampleBrowser } from './ExampleBrowser';
-import { SourceExplorer } from './SourceExplorer';
-import { SourceCheckpointPanel } from './SourceCheckpointPanel';
+import type { Example } from './examples';
+import { defaultExample } from './default-example';
+const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
+const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
+const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import { previewNewSource } from './workspace-tree';
-import { ModuleGraphPanel } from './ModuleGraphPanel';
-import { isUntouchedExampleSession } from './example-session';
+const ModuleGraphPanel = lazy(() => import('./ModuleGraphPanel').then(module => ({ default: module.ModuleGraphPanel })));
+
 import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
 import { previewProgramInputEdit, programInputBytes } from './program-input';
@@ -37,11 +38,11 @@ import { scarpFileStats } from './source-file';
 import { createSourceArchive, sourceArchiveProblem, parseSourceArchive, MAX_SOURCE_ARCHIVE_BYTES } from './source-archive';
 import { previewSourceImport } from './source-import';
 import { decodeSourceFolder, MAX_FOLDER_SELECTION_ENTRIES, planFolderSelection } from './source-folder';
-import { SourceFolderPreview } from './SourceFolderPreview';
+const SourceFolderPreview = lazy(() => import('./SourceFolderPreview').then(module => ({ default: module.SourceFolderPreview })));
 import { QuickOpenFiles } from './QuickOpenFiles';
 import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
-import { FolderMovePanel } from './FolderMovePanel';
+const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({ default: module.FolderMovePanel })));
 import type { FolderMovePlan } from './folder-move';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
@@ -66,7 +67,7 @@ function startingSession(): InitialSession {
   } catch {
     // Storage may be unavailable in private browsing or restricted contexts.
   }
-  const initial = examples[0];
+  const initial = defaultExample;
   return {
     workspace: { entry: initial.entry, files: { ...initial.files } },
     activeFile: initial.entry,
@@ -857,14 +858,12 @@ export function App() {
     return true;
   }
 
-  function selectExample(index: number) {
-    const example = examples[index];
-    if (!example) return;
+  function selectExample(example: Example, untouched: boolean) {
     // Do not discard user-authored source or input without consent.
     // An untouched built-in sample can switch immediately; external,
     // edited, or imported sessions require an explicit decision first.
     // A cancelled switch must not stop an ongoing compiler Worker.
-    if (!isUntouchedExampleSession(workspace, programInput) &&
+    if (!untouched &&
         !window.confirm(
           'Replace the open workspace with the built-in example "' + example.title +
           '"? Current source edits and program input will be lost. ' +
@@ -1472,7 +1471,9 @@ export function App() {
           <div className="section-label">GET STARTED</div>
           <h1 className="sidebar-heading">Code. Run. Learn.</h1>
           <p className="sidebar-copy">Experiment with Scarp using its real Rust interpreter, compiled for your browser.</p>
-          <ExampleBrowser onSelect={selectExample} />
+          <Suspense fallback={<p className="sidebar-copy" role="status">Loading example catalogue…</p>}>
+            <ExampleBrowser workspace={workspace} stdin={programInput} onSelect={selectExample} />
+          </Suspense>
           <div className="sidebar-bottom">
             <div className="section-label">COMPATIBILITY</div>
             <strong>Scarp v{compilerCompatibility.version}</strong>
@@ -1600,23 +1601,33 @@ export function App() {
             </div>
           </div>
 
-          {sourceCheckpointOpen && <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
+          {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
+            <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
             onCapture={captureCheckpoint} onRestore={restoreCheckpoint}
             onDiscard={() => { setSourceCheckpoint(null); setNotice('Discarded the temporary source checkpoint.'); }}
-            onClose={() => setSourceCheckpointOpen(false)} />}
+            onClose={() => setSourceCheckpointOpen(false)} />
+          </Suspense>}
 
-          {explorerOpen && <SourceExplorer workspace={workspace} activeFile={activeFile}
-            onOpen={openExplorerSource} onCreate={createSource} onClose={() => setExplorerOpen(false)} />}
+          {explorerOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
+            <SourceExplorer workspace={workspace} activeFile={activeFile}
+            onOpen={openExplorerSource} onCreate={createSource} onClose={() => setExplorerOpen(false)} />
+          </Suspense>}
 
-          {folderMoveOpen && <FolderMovePanel workspace={workspace} onApply={applyFolderMove}
-            onClose={() => setFolderMoveOpen(false)} />}
+          {folderMoveOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
+            <FolderMovePanel workspace={workspace} onApply={applyFolderMove}
+            onClose={() => setFolderMoveOpen(false)} />
+          </Suspense>}
 
-          {moduleGraphOpen && <ModuleGraphPanel workspace={workspace} activeFile={activeFile}
-            onNavigate={jumpToSearchHit} onClose={() => setModuleGraphOpen(false)} />}
+          {moduleGraphOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
+            <ModuleGraphPanel workspace={workspace} activeFile={activeFile}
+            onNavigate={jumpToSearchHit} onClose={() => setModuleGraphOpen(false)} />
+          </Suspense>}
 
-          {folderPreview && <SourceFolderPreview key={folderPreview.key}
+          {folderPreview && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
+            <SourceFolderPreview key={folderPreview.key}
             workspace={folderPreview.workspace} ignored={folderPreview.ignored} kind={folderPreview.kind}
-            onApply={applySourceFolder} onCancel={() => setFolderPreview(null)} />}
+            onApply={applySourceFolder} onCancel={() => setFolderPreview(null)} />
+          </Suspense>}
 
           {searchOpen && (
             <section id="project-search-panel" className="project-search" aria-label="Search Scarp project">
