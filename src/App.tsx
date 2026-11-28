@@ -56,7 +56,9 @@ const CommandPalette = lazy(() => import('./CommandPalette').then(module => ({ d
 import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
 const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({ default: module.FolderMovePanel })));
+const ImportRepairPanel = lazy(() => import('./ImportRepairPanel').then(module => ({ default: module.ImportRepairPanel })));
 import type { FolderMovePlan } from './folder-move';
+import { createImportRepairUndo, type ImportRepairPlan } from './import-repair';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
@@ -139,6 +141,7 @@ export function App() {
   const [inspectionResult, setInspectionResult] = useState<{ workspace: Workspace; result: LocatedInspection } | null>(null);
   const inspectionTask = useRef<ActiveExecution | null>(null);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
+  const [importRepairOpen, setImportRepairOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
@@ -1207,6 +1210,25 @@ export function App() {
       rewrittenImports + ' import path(s). Use Check code to validate the copy.');
   }
 
+  function applyImportRepair(snapshot: Workspace, plan: Extract<ImportRepairPlan, { ok: true }>) {
+    if (workspace !== snapshot) {
+      setNotice('The import repair preview is stale. Review the current source again.');
+      return;
+    }
+    const undo = createImportRepairUndo(snapshot, plan);
+    if (!undo) {
+      setNotice('The import repair could not be reverified. No source files were changed.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setImportRepairOpen(false);
+    setNotice('Repaired ' + plan.edits.length + ' selected local imports. ' +
+      'Undo bulk change can restore the original sources.');
+  }
+
   function applyFolderMove(snapshot: Workspace, plan: Extract<FolderMovePlan, { ok: true }>) {
     if (snapshot !== workspace) {
       setFolderMoveOpen(false);
@@ -1653,6 +1675,7 @@ export function App() {
     { id: 'search', label: 'Find in project', group: 'Navigation', description: 'Search or replace text across all source files', shortcut: 'Ctrl+Shift+F', invoke: () => { setReplacePreview(null); setSearchOpen(true); } },
     { id: 'explorer', label: 'Source explorer', group: 'Navigation', description: 'Browse the nested virtual folder tree', invoke: () => setExplorerOpen(true) },
     { id: 'modules', label: 'Module dependencies', group: 'Navigation', description: 'Inspect local import relationships', invoke: () => setModuleGraphOpen(true) },
+    { id: 'repair-imports', label: 'Repair missing imports', group: 'Project', description: 'Preview explicit replacements for missing local .srp import paths', invoke: () => setImportRepairOpen(true) },
     { id: 'save', label: 'Save locally', group: 'Project', description: 'Opt into source-only browser storage', shortcut: 'Ctrl+S', invoke: enableLocalSaving },
     { id: 'forget', label: 'Forget saved copy', group: 'Project', description: 'Remove the saved browser copy after confirmation', disabled: !savingLocally, invoke: forgetLocalSaving },
     { id: 'export', label: 'Export project JSON', group: 'Project', description: 'Download a portable source workspace', invoke: exportWorkspace },
@@ -1857,6 +1880,10 @@ export function App() {
                   if (inspectionOpen) closeInspection();
                   else setInspectionOpen(true);
                 }}>Compiler inspection</button>
+              <button type="button" className="button-secondary" aria-expanded={importRepairOpen}
+                aria-controls="import-repair-panel" onClick={() => setImportRepairOpen(open => !open)}>
+                Repair imports
+              </button>
               <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
                 aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
                 Module dependencies
@@ -1922,6 +1949,12 @@ export function App() {
               onClose={closeInspection} onNavigate={site => {
                 if (inspectionResult?.workspace === workspace) jumpToSearchHit({ ...site, preview: '' });
               }} />
+          </Suspense>}
+
+          {importRepairOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading import repair…</p>}>
+            <ImportRepairPanel workspace={workspace} onApply={applyImportRepair}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setImportRepairOpen(false)} />
           </Suspense>}
 
           {moduleGraphOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
