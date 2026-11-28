@@ -10,6 +10,7 @@ import { defaultExample } from './default-example';
 const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
 const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
 const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
+const SourceBookmarksPanel = lazy(() => import('./SourceBookmarksPanel').then(module => ({ default: module.SourceBookmarksPanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
@@ -54,6 +55,11 @@ import { QuickOpenFiles } from './QuickOpenFiles';
 import type { WorkspaceCommand } from './command-palette';
 const CommandPalette = lazy(() => import('./CommandPalette').then(module => ({ default: module.CommandPalette })));
 import { quickOpenPosition } from './quick-open';
+import {
+  emptySourceTrail, visitSourcePoint, stepSourceTrail,
+  pruneSourceBookmarks, pruneSourceTrail, validSourcePoint,
+  type SourceBookmark, type SourcePoint, type SourceTrail,
+} from './source-navigation';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
 const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({ default: module.FolderMovePanel })));
 import type { FolderMovePlan } from './folder-move';
@@ -141,6 +147,10 @@ export function App() {
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
+  const [bookmarksOpen, setBookmarksOpen] = useState(false);
+  const [sourceBookmarks, setSourceBookmarks] = useState<SourceBookmark[]>([]);
+  const [sourceTrail, setSourceTrail] = useState<SourceTrail>(emptySourceTrail);
+  const cursorPosition = useRef<SourcePoint>({ path: initial.activeFile, line: 1, column: 1 });
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -312,17 +322,47 @@ export function App() {
     setOutlineResult(null);
   }
 
+  useEffect(() => {
+    setSourceBookmarks(previous => {
+      const next = pruneSourceBookmarks(workspace, previous);
+      return JSON.stringify(next) === JSON.stringify(previous) ? previous : next;
+    });
+    setSourceTrail(previous => {
+      const next = pruneSourceTrail(workspace, previous);
+      return JSON.stringify(next) === JSON.stringify(previous) ? previous : next;
+    });
+  }, [workspace]);
+
+  const navigateSource = useCallback((point: SourcePoint) => {
+    if (!validSourcePoint(workspace, point)) return;
+    const from = { ...cursorPosition.current };
+    setSourceTrail(previous => visitSourcePoint(workspace, previous, from, point));
+    setActiveFile(point.path);
+    setNavigationTarget(previous => ({
+      ...point, sequence: (previous?.sequence ?? 0) + 1,
+    }));
+  }, [workspace]);
+
+  function stepNavigation(direction: -1 | 1) {
+    const moved = stepSourceTrail(workspace, sourceTrail, cursorPosition.current, direction);
+    if (!moved) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setSourceTrail(moved.trail);
+    setActiveFile(moved.point.path);
+    setNavigationTarget(previous => ({
+      ...moved.point, sequence: (previous?.sequence ?? 0) + 1,
+    }));
+  }
+
   function jumpToSearchHit(hit: ProjectSearchHit) {
     if (!Object.hasOwn(workspace.files, hit.path)) return;
     // Any delayed definition result must not replace explicit text navigation.
     definitionScope.current.invalidate();
     setRenameTarget(null);
     setRenamePreview(null);
-    setActiveFile(hit.path);
-    setNavigationTarget(previous => ({
-      path: hit.path, line: hit.line, column: hit.column,
-      sequence: (previous?.sequence ?? 0) + 1,
-    }));
+    navigateSource({ path: hit.path, line: hit.line, column: hit.column });
   }
 
   function planProjectReplacement() {
@@ -474,12 +514,7 @@ export function App() {
       const target = !response.ok
         ? diagnosticNavigationPosition(workspace.files, response.diagnostic, response.diagnostic?.primary)
         : null;
-      if (target) {
-        setActiveFile(target.path);
-        setNavigationTarget(previous => ({
-          ...target, sequence: (previous?.sequence ?? 0) + 1,
-        }));
-      }
+      if (target) navigateSource(target);
     } catch (problem) {
       if (!executionScope.current.isCurrent(execution)) return;
       setResult({
@@ -491,7 +526,7 @@ export function App() {
     } finally {
       if (executionScope.current.finish(execution)) setRunning(false);
     }
-  }, [workspace, programInput, allowPrompts]);
+  }, [workspace, programInput, allowPrompts, navigateSource]);
 
   async function runSuite(kind: 'manual' | 'challenge' = 'manual') {
     const cases = kind === 'challenge' ? activeChallenge?.cases : testCases;
@@ -547,10 +582,7 @@ export function App() {
     }
     // Repeated clicks on the same link must still move the cursor after editing
     // or manual navigation. Incrementing sequence retriggers the Monaco effect.
-    setActiveFile(target.path);
-    setNavigationTarget(previous => ({
-      ...target, sequence: (previous?.sequence ?? 0) + 1,
-    }));
+    navigateSource(target);
     setNotice('Opened compiler location ' + target.path + ':' +
       location!.start.line + ':' + location!.start.column + '.');
   }
@@ -714,11 +746,7 @@ export function App() {
     setRenameTarget(null);
     setRenamePreview(null);
     setSelectedReferenceIndex(index);
-    setActiveFile(site.path);
-    setNavigationTarget(previous => ({
-      path: site.path, line: range.startLineNumber, column: range.startColumn,
-      sequence: (previous?.sequence ?? 0) + 1,
-    }));
+    navigateSource({ path: site.path, line: range.startLineNumber, column: range.startColumn });
   }
 
   function moveReference(direction: -1 | 1) {
@@ -784,16 +812,12 @@ export function App() {
         setNotice('Compiler returned an invalid source position.');
         return;
       }
-      setActiveFile(target.path);
-      setNavigationTarget(previous => ({
-        path: target.path, line: range.startLineNumber, column: range.startColumn,
-        sequence: (previous?.sequence ?? 0) + 1,
-      }));
+      navigateSource({ path: target.path, line: range.startLineNumber, column: range.startColumn });
       setNotice('Navigated to definition in ' + target.path + '.');
     } finally {
       definitionScope.current.finish(lookup);
     }
-  }, [workspace]);
+  }, [workspace, navigateSource]);
 
   useEffect(() => {
     const onQuickOpen = (event: KeyboardEvent) => {
@@ -1644,6 +1668,9 @@ export function App() {
     { id: 'stop', label: 'Stop execution', group: 'Execution', description: 'Cancel the active compiler operation', disabled: !running, invoke: invalidateExecution },
     { id: 'challenges', label: 'Learning challenges', group: 'Execution', description: 'Practice with public cases and reference solutions', invoke: () => setChallengeOpen(true) },
     { id: 'checkpoint', label: 'Source checkpoint', group: 'Project', description: 'Review temporary source changes and restore a checkpoint', invoke: () => setSourceCheckpointOpen(true) },
+    { id: 'bookmarks', label: 'Source bookmarks', group: 'Navigation', description: 'Save source positions and navigate Back/Forward', invoke: () => setBookmarksOpen(true) },
+    { id: 'back', label: 'Navigate backward', group: 'Navigation', description: 'Return to the previous source location', disabled: sourceTrail.back.length === 0, invoke: () => stepNavigation(-1) },
+    { id: 'forward', label: 'Navigate forward', group: 'Navigation', description: 'Move forward in the source trail', disabled: sourceTrail.forward.length === 0, invoke: () => stepNavigation(1) },
     { id: 'library', label: 'Project library', group: 'Project', description: 'Open named local source snapshots', invoke: () => setLibraryOpen(true) },
     { id: 'outline', label: 'Source outline', group: 'Navigation', description: 'Inspect declarations with the Scarp parser', invoke: () => setOutlineOpen(true) },
     { id: 'inspection', label: 'Compiler module inspection', group: 'Navigation', description: 'Inspect resolved modules and signatures', invoke: () => setInspectionOpen(true) },
@@ -1698,15 +1725,12 @@ export function App() {
             definitionScope.current.invalidate();
             setRenameTarget(null);
             setRenamePreview(null);
-            setActiveFile(path);
             if (line !== null) {
               const position = quickOpenPosition(workspace.files[path], line, column);
-              setNavigationTarget(previous => ({
-                path, line: position.line, column: position.column,
-                sequence: (previous?.sequence ?? 0) + 1,
-              }));
+              navigateSource({ path, line: position.line, column: position.column });
               setNotice('Opened ' + path + ':' + position.line + ':' + position.column + '.');
             } else {
+              setActiveFile(path);
               setNavigationTarget(null);
             }
             setQuickOpen(false);
@@ -1829,6 +1853,14 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={bookmarksOpen}
+                aria-controls="source-bookmarks-panel" onClick={() => setBookmarksOpen(open => !open)}>
+                Bookmarks
+              </button>
+              <button type="button" className="button-secondary" disabled={sourceTrail.back.length === 0}
+                aria-label="Navigate backward" onClick={() => stepNavigation(-1)}>← Back</button>
+              <button type="button" className="button-secondary" disabled={sourceTrail.forward.length === 0}
+                aria-label="Navigate forward" onClick={() => stepNavigation(1)}>Forward →</button>
               <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
                 aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
                 Source checkpoint
@@ -1881,6 +1913,14 @@ export function App() {
               )}
             </div>
           </div>
+
+          {bookmarksOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source bookmarks…</p>}>
+            <SourceBookmarksPanel workspace={workspace} bookmarks={sourceBookmarks}
+              trail={sourceTrail} getCursorPosition={() => cursorPosition.current}
+              onChange={setSourceBookmarks} onJump={navigateSource}
+              onBack={() => stepNavigation(-1)} onForward={() => stepNavigation(1)}
+              onClose={() => setBookmarksOpen(false)} />
+          </Suspense>}
 
           {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
@@ -2311,7 +2351,7 @@ export function App() {
                   </div>
                 }
               >
-                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} onFindReferences={locateReferences} onRename={beginRename} navigationTarget={navigationTarget}
+                <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onCursorMove={(path, line, column) => { cursorPosition.current = { path, line, column }; }} onNavigate={navigateToDefinition} onFindReferences={locateReferences} onRename={beginRename} navigationTarget={navigationTarget}
                   navigationTrigger={navigationTrigger} referenceTrigger={referenceTrigger} renameTrigger={renameTrigger}
                   commentTrigger={commentTrigger} wordWrap={wordWrap}
                   referenceSites={referenceResult?.sites ?? null}
