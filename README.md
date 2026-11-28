@@ -227,6 +227,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Download sources ZIP** exports every validated .srp file with nested relative paths and exact UTF-8 bytes. It excludes session input and results; use project JSON to preserve the selected entrypoint. See [source archive](docs/source-archive.md).
+
 - **Module dependencies** gives a local, bounded import overview with entry reachability, missing targets, cycle members and clickable source locations. This lexical navigation aid is not compiler verification. See [module dependencies](docs/module-dependencies.md).
 
 - React + Vite with TypeScript and Tailwind CSS, adaptive dark/light interface.
