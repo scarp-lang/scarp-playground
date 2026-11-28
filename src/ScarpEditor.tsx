@@ -9,6 +9,7 @@ import { SCARP_NUMBER_TOKEN } from './scarp-number-token';
 import { referenceDecorationsForFile } from './navigation/reference-view';
 import type { ReferenceSite } from './navigation/references';
 import type { CompilerDiagnostic } from './runner/types';
+import { editorViewOptions, editorModelOptions, type EditorPreferences } from './editor-preferences';
 
 const environment = globalThis as typeof globalThis & {
   MonacoEnvironment?: { getWorker: () => Worker };
@@ -111,12 +112,12 @@ interface Props {
   referenceTrigger: number;
   renameTrigger: number;
   commentTrigger: number;
-  wordWrap: boolean;
+  preferences: EditorPreferences;
   referenceSites: ReadonlyArray<ReferenceSite> | null;
   selectedReferenceIndex: number;
 }
 
-export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger, renameTrigger, commentTrigger, wordWrap, referenceSites, selectedReferenceIndex, onRename }: Props) {
+export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger, renameTrigger, commentTrigger, preferences, referenceSites, selectedReferenceIndex, onRename }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
@@ -141,17 +142,17 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
   useEffect(() => {
     if (!container.current) return;
     const initial = monaco.editor.createModel(files[path] ?? '', 'scarp', modelUri(path));
+    initial.updateOptions(editorModelOptions(preferences));
     models.current.set(path, initial);
     activePath.current = path;
     const instance = monaco.editor.create(container.current, {
       model: initial,
       theme: dark ? 'vs-dark' : 'vs',
-      fontSize: 14,
-      minimap: { enabled: false },
-      wordWrap: wordWrap ? 'on' : 'off',
+      ...editorViewOptions(preferences),
+      detectIndentation: false,
       scrollBeyondLastLine: false,
       automaticLayout: true,
-      tabSize: 2,
+      ...editorModelOptions(preferences),
       padding: { top: 18 },
       fontFamily: 'ui-monospace, SFMono-Regular, Consolas, monospace',
     });
@@ -247,7 +248,9 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
     // New tabs become independent Monaco text models (and independent undo stacks).
     for (const [file, source] of Object.entries(files)) {
       if (!models.current.has(file)) {
-        models.current.set(file, monaco.editor.createModel(source, 'scarp', modelUri(file)));
+        const model = monaco.editor.createModel(source, 'scarp', modelUri(file));
+        model.updateOptions(editorModelOptions(preferences));
+        models.current.set(file, model);
       }
     }
 
@@ -275,7 +278,7 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       models.current.delete(file);
       views.current.delete(file);
     }
-  }, [files, path]);
+  }, [files, path, preferences]);
 
   useEffect(() => {
     const collection = referenceDecorations.current;
@@ -365,8 +368,9 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
   }, [commentTrigger]);
 
   useEffect(() => {
-    editor.current?.updateOptions({ wordWrap: wordWrap ? 'on' : 'off' });
-  }, [wordWrap]);
+    editor.current?.updateOptions(editorViewOptions(preferences));
+    for (const model of models.current.values()) model.updateOptions(editorModelOptions(preferences));
+  }, [preferences]);
 
   useEffect(() => {
     if (renameTrigger === lastRenameTrigger.current) return;
