@@ -1,7 +1,7 @@
 # Editor completions
 
 Scarp Playground offers lightweight, offline Monaco suggestions for the
-**published Scarp v0.0.6-alpha.20 syntax**. Press **Ctrl+Space** in the editor
+**published Scarp v0.0.7-alpha.3 syntax**. Press **Ctrl+Space** in the editor
 to open the suggestion list.
 
 - Starter snippets cover immutable/mutable declarations, conditional and
@@ -46,3 +46,12 @@ as `0.1d` and offers a `decimal literal` starter snippet. This is
 explicitly different from unsuffixed IEEE-754 floats: `0.1d + 0.2d` prints
 `0.3`, while `0.1 + 0.2` retains binary64 rounding. This is syntax-only
 highlighting; the compiler rejects invalid suffixes and implicit mixed types.
+
+## Generic functions and verbatim strings (v0.0.7-alpha.3)
+
+The editor offers generic identity and Numeric-constrained function snippets,
+plus raw and triple-quoted string starters. The syntax highlighter preserves
+multiline string state across lines. Completion context is derived from the
+source preceding the cursor, so import paths and code snippets are not offered
+inside multiline literals. Raw strings do not treat a backslash as an escape.
+These remain syntax-only hints; the compiler is responsible for validity.

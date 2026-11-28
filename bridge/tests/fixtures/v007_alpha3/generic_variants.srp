@@ -1,0 +1,24 @@
+pure funcra some<T>(value: T) -> option<T> {
+    return new option<T>::Some(value);
+}
+pure funcra none<T>() -> option<T> { return new option<T>::None(); }
+pure funcra unwrap<T>(input: option<T>, fallback: T) -> T {
+    match on input {
+        case Some(value) { return value; }
+        case None { return fallback; }
+    }
+}
+pure funcra wrap<T, E>(input: result<T, E>) -> result<tuple<T>, E> {
+    bind value = input?;
+    return new result<tuple<T>, E>::Ok((value,));
+}
+funcra display(input: result<tuple<integer>, string>) -> unit {
+    match on input {
+        case Ok((value,)) { print(value); }
+        case Err(error) { print(error); }
+    }
+}
+bind absent: option<integer> = none();
+print(unwrap(some("Scarp"), "missing"), unwrap(absent, 9));
+display(wrap(new result<integer, string>::Ok(12)));
+display(wrap(new result<integer, string>::Err("failed")));
