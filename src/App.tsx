@@ -80,12 +80,14 @@ import {
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
 const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({ default: module.FolderMovePanel })));
 const BatchModuleMovePanel = lazy(() => import('./BatchModuleMovePanel').then(module => ({ default: module.BatchModuleMovePanel })));
+const BatchScaffoldPanel = lazy(() => import('./BatchScaffoldPanel').then(module => ({ default: module.BatchScaffoldPanel })));
 const ImportRepairPanel = lazy(() => import('./ImportRepairPanel').then(module => ({ default: module.ImportRepairPanel })));
 const SelectiveReplacePanel = lazy(() => import('./SelectiveReplacePanel').then(module => ({ default: module.SelectiveReplacePanel })));
 const SourceFileComparePanel = lazy(() => import('./SourceFileComparePanel').then(module => ({ default: module.SourceFileComparePanel })));
 const WorkspaceBudgetPanel = lazy(() => import('./WorkspaceBudgetPanel').then(module => ({ default: module.WorkspaceBudgetPanel })));
 import type { FolderMovePlan } from './folder-move';
 import type { BatchMovePlan } from './batch-module-move';
+import type { ScaffoldPlan, ScaffoldRequest } from './batch-scaffold';
 import type { ImportRepairPlan } from './import-repair';
 import type { SelectivePlan, SelectiveSearch } from './selective-replace';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
@@ -185,6 +187,7 @@ export function App() {
   const inspectionTask = useRef<ActiveExecution | null>(null);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [batchMoveOpen, setBatchMoveOpen] = useState(false);
+  const [batchScaffoldOpen, setBatchScaffoldOpen] = useState(false);
   const [importRepairOpen, setImportRepairOpen] = useState(false);
   const [selectiveReplaceOpen, setSelectiveReplaceOpen] = useState(false);
   const [sourceFileCompareOpen, setSourceFileCompareOpen] = useState(false);
@@ -1367,6 +1370,33 @@ export function App() {
       rewrittenImports + ' import path(s). Use Check code to validate the copy.');
   }
 
+  async function applyBatchScaffold(
+    snapshot: Workspace, requests: ScaffoldRequest[],
+    plan: Extract<ScaffoldPlan, { ok: true }>,
+  ) {
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('Scaffold preview is stale. Review the current workspace again.');
+      return;
+    }
+    const { verifiedScaffoldUndo } = await import('./batch-scaffold');
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('Source changed while verifying the scaffold. Nothing was added.');
+      return;
+    }
+    const undo = verifiedScaffoldUndo(snapshot, requests, plan);
+    if (!undo) {
+      setNotice('Unable to verify the complete scaffold. No source files were added.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setBatchScaffoldOpen(false);
+    setNotice('Added ' + plan.added.length + ' reviewed Scarp source files. ' +
+      'Undo bulk change restores the original project.');
+  }
+
   async function applyBatchMove(snapshot: Workspace, plan: Extract<BatchMovePlan, { ok: true }>) {
     if (workspace !== snapshot) {
       setNotice('The batch move preview is stale. Review the current source again.');
@@ -1903,6 +1933,7 @@ export function App() {
     { id: 'impact', label: 'Module change impact', group: 'Navigation', description: 'Inspect possible downstream changes without compiler execution', invoke: () => setModuleImpactOpen(true) },
     { id: 'batch-move', label: 'Batch source file rename', group: 'Project', description: 'Simultaneously relocate Scarp files and rebase local imports', invoke: () => setBatchMoveOpen(true) },
     { id: 'repair-imports', label: 'Repair missing imports', group: 'Project', description: 'Preview explicit replacements for missing local .srp import paths', invoke: () => setImportRepairOpen(true) },
+    { id: 'batch-scaffold', label: 'Batch source scaffold', group: 'Project', description: 'Preview creation of several new local Scarp files with atomic undo', invoke: () => setBatchScaffoldOpen(true) },
     { id: 'selective-replace', label: 'Selective replace', group: 'Project', description: 'Choose and preview exact literal occurrences across source files', invoke: () => setSelectiveReplaceOpen(true) },
     { id: 'source-file-compare', label: 'Compare Scarp files', group: 'Navigation', description: 'Read-only bounded line comparison of two local source files', invoke: () => setSourceFileCompareOpen(true) },
     { id: 'workspace-budget', label: 'Workspace source budget', group: 'Project', description: 'Measure exact source bytes, import edges, line counts, and browser file quotas', invoke: () => setWorkspaceBudgetOpen(true) },
@@ -2244,6 +2275,11 @@ export function App() {
           {explorerOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceExplorer workspace={workspace} activeFile={activeFile}
             onOpen={openExplorerSource} onCreate={createSource} onClose={() => setExplorerOpen(false)} />
+          </Suspense>}
+
+          {batchScaffoldOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source scaffolds…</p>}>
+            <BatchScaffoldPanel workspace={workspace} onApply={applyBatchScaffold}
+              onClose={() => setBatchScaffoldOpen(false)} />
           </Suspense>}
 
           {batchMoveOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading batch file rename…</p>}>
