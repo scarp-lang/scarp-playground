@@ -15,6 +15,7 @@ import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
 const ProjectLibraryPanel = lazy(() => import('./ProjectLibraryPanel').then(module => ({ default: module.ProjectLibraryPanel })));
 const ModuleGraphPanel = lazy(() => import('./ModuleGraphPanel').then(module => ({ default: module.ModuleGraphPanel })));
+const ModuleImpactPanel = lazy(() => import('./ModuleImpactPanel').then(module => ({ default: module.ModuleImpactPanel })));
 const SourceOutlinePanel = lazy(() => import('./SourceOutlinePanel').then(module => ({ default: module.SourceOutlinePanel })));
 import { inspectSourceOutline } from './navigation/outline-client';
 import type { LocatedOutline } from './navigation/outline-protocol';
@@ -130,6 +131,7 @@ export function App() {
   const [allowPrompts, setAllowPrompts] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
+  const [moduleImpactOpen, setModuleImpactOpen] = useState(false);
   const [outlineOpen, setOutlineOpen] = useState(false);
   const [outlineBusy, setOutlineBusy] = useState(false);
   const [outlineResult, setOutlineResult] = useState<{ workspace: Workspace; path: string; result: LocatedOutline } | null>(null);
@@ -1653,6 +1655,7 @@ export function App() {
     { id: 'search', label: 'Find in project', group: 'Navigation', description: 'Search or replace text across all source files', shortcut: 'Ctrl+Shift+F', invoke: () => { setReplacePreview(null); setSearchOpen(true); } },
     { id: 'explorer', label: 'Source explorer', group: 'Navigation', description: 'Browse the nested virtual folder tree', invoke: () => setExplorerOpen(true) },
     { id: 'modules', label: 'Module dependencies', group: 'Navigation', description: 'Inspect local import relationships', invoke: () => setModuleGraphOpen(true) },
+    { id: 'impact', label: 'Module change impact', group: 'Navigation', description: 'Inspect possible downstream changes without compiler execution', invoke: () => setModuleImpactOpen(true) },
     { id: 'save', label: 'Save locally', group: 'Project', description: 'Opt into source-only browser storage', shortcut: 'Ctrl+S', invoke: enableLocalSaving },
     { id: 'forget', label: 'Forget saved copy', group: 'Project', description: 'Remove the saved browser copy after confirmation', disabled: !savingLocally, invoke: forgetLocalSaving },
     { id: 'export', label: 'Export project JSON', group: 'Project', description: 'Download a portable source workspace', invoke: exportWorkspace },
@@ -1857,6 +1860,10 @@ export function App() {
                   if (inspectionOpen) closeInspection();
                   else setInspectionOpen(true);
                 }}>Compiler inspection</button>
+              <button type="button" className="button-secondary" aria-expanded={moduleImpactOpen}
+                aria-controls="module-impact-panel" onClick={() => setModuleImpactOpen(open => !open)}>
+                Module impact
+              </button>
               <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
                 aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
                 Module dependencies
@@ -1922,6 +1929,12 @@ export function App() {
               onClose={closeInspection} onNavigate={site => {
                 if (inspectionResult?.workspace === workspace) jumpToSearchHit({ ...site, preview: '' });
               }} />
+          </Suspense>}
+
+          {moduleImpactOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading module impact…</p>}>
+            <ModuleImpactPanel workspace={workspace} activeFile={activeFile}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setModuleImpactOpen(false)} />
           </Suspense>}
 
           {moduleGraphOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
