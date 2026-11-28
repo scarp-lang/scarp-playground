@@ -1,10 +1,11 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // These cases run the published Scarp interpreter in a real disposable
 // WebAssembly Worker on Chromium, Firefox and WebKit.
 test('official alpha.17 typed Boolean prompt uses explicit buffered input', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Typed Boolean prompts/ }).click();
+  await loadExample(page, /Typed Boolean prompts/);
   const toggle = page.getByRole('checkbox', { name: 'Enable prompt functions with supplied input' });
   const input = page.getByRole('textbox', { name: 'Program input (stdin)' });
   await expect(toggle).toBeChecked();
@@ -16,7 +17,7 @@ test('official alpha.17 typed Boolean prompt uses explicit buffered input', asyn
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText("Continue (true/false)? Continue (true/false)? Continuing\nStopped\n", { timeout: 30_000 });
   await expect(page.locator('.result-status.success')).toBeVisible();
-  await page.getByRole('button', { name: 'Hello, Scarp' }).click();
+  await loadExample(page, 'Hello, Scarp');
   await expect(toggle).not.toBeChecked();
   await expect(input).toHaveValue('');
 });

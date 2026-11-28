@@ -1,7 +1,8 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 async function selectImportedFunction(page: import('@playwright/test').Page) {
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
   await editor.focus();

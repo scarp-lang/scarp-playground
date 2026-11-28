@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // These cases run on Chromium, Firefox and WebKit against the same production
@@ -28,7 +29,7 @@ test('loads Monaco and runs the real compiler under production CSP', async ({ pa
 
 test('resolves a virtual imported module in Check and Run modes', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await expect(page.getByRole('tab', { name: /math.srp/ })).toBeVisible();
   await page.getByRole('button', { name: 'Check code' }).click();
   await expect(page.locator('.terminal-output')).toContainText('Checks passed.', { timeout: 30_000 });

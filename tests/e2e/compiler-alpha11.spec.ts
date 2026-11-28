@@ -1,9 +1,10 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // Verify the released alpha.11 Rust interpreter inside the actual WASM Worker.
 test('alpha.11 executes the published exact decimal fixture', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Exact decimal arithmetic/ }).click();
+  await loadExample(page, /Exact decimal arithmetic/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('235.99\n0.3\n0.33\n', { timeout: 30_000 });
   await expect(page.locator('.error-panel')).toHaveCount(0);
@@ -11,14 +12,14 @@ test('alpha.11 executes the published exact decimal fixture', async ({ page }) =
 
 test('alpha.11 preserves exact decimal arithmetic across imports', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Decimal across modules/ }).click();
+  await loadExample(page, /Decimal across modules/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('0.3\n', { timeout: 30_000 });
 });
 
 test('alpha.11 accepts explicit bounded stdin for decimal conversion', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Buffered decimal input/ }).click();
+  await loadExample(page, /Buffered decimal input/);
   await expect(page.getByRole('textbox', { name: 'Program input (stdin)' })).toHaveValue('1.225\n');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('1.22\n', { timeout: 30_000 });

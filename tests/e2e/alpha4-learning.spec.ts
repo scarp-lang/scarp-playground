@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
@@ -8,9 +9,7 @@ for (const { title, stdout } of cases) {
     await page.goto('./');
     const filter = page.getByRole('searchbox', { name: 'Find an example' });
     await filter.fill(title);
-    const choice = page.locator('.example-button').filter({ has: page.getByText(title, { exact: true }) });
-    await expect(choice).toHaveCount(1);
-    await choice.click();
+    await loadExample(page, title);
     await page.getByRole('button', { name: 'Verify code' }).click();
     await expect(page.locator('.terminal-output')).toContainText('Static verification passed', { timeout: 30_000 });
     await page.getByRole('button', { name: 'Run code' }).click();

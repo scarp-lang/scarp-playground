@@ -1,3 +1,5 @@
+import { measureUtf8, isUtf8Text } from './utf8';
+
 export const MAX_FILES = 12;
 export const MAX_FILE_BYTES = 64 * 1024;
 export const MAX_TOTAL_BYTES = 128 * 1024;
@@ -37,15 +39,16 @@ export function validateWorkspace(value: unknown): string | null {
     return 'A workspace must contain between 1 and ' + MAX_FILES + ' files.';
   }
   let total = 0;
-  const encoder = new TextEncoder();
   for (const [path, source] of entries) {
     if (!validPath(path)) return 'Invalid .srp path: ' + String(path).slice(0, 128);
     if (typeof source !== 'string') {
       return 'The source in ' + path + ' must be text.';
     }
-    const size = encoder.encode(source).byteLength;
-    if (size > MAX_FILE_BYTES) return path + ' exceeds the 64 KiB source limit.';
-    total += size;
+    const size = measureUtf8(source, MAX_FILE_BYTES);
+    if (!size.ok) return size.reason === 'invalid-unicode'
+      ? path + ' contains invalid Unicode (an unmatched UTF-16 surrogate).'
+      : path + ' exceeds the 64 KiB source limit.';
+    total += size.bytes;
     if (total > MAX_TOTAL_BYTES) {
       return 'Project sources exceed the 128 KiB total limit.';
     }
@@ -54,16 +57,16 @@ export function validateWorkspace(value: unknown): string | null {
 }
 
 export function sourceFromHash(hash: string): string | null {
-  if (!hash.startsWith('#code=')) return null;
+  if (!hash.startsWith('#code=') || hash.length > 6 + MAX_SHARE_BYTES * 3) return null;
   try {
     const source = decodeURIComponent(hash.slice(6));
-    return new TextEncoder().encode(source).length <= MAX_SHARE_BYTES ? source : null;
+    return isUtf8Text(source, MAX_SHARE_BYTES) ? source : null;
   } catch {
     return null;
   }
 }
 
 export function makeShareUrl(origin: string, pathname: string, source: string): string | null {
-  if (new TextEncoder().encode(source).length > MAX_SHARE_BYTES) return null;
+  if (!isUtf8Text(source, MAX_SHARE_BYTES)) return null;
   return origin + pathname + '#code=' + encodeURIComponent(source);
 }

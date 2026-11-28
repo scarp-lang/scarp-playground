@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test, type Page } from '@playwright/test';
 
 async function editorInput(page: Page) {
@@ -54,7 +55,7 @@ test('selected lines toggle together and keep normal Monaco undo/redo', async ({
 
 test('toolbar comment action edits only the selected virtual module and supports undo', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await editorInput(page);
   await page.keyboard.press('ControlOrMeta+Home');

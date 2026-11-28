@@ -1,5 +1,6 @@
 import { validPath, validateWorkspace, type Workspace } from '../workspace';
 import { MAX_PROGRAM_INPUT_BYTES } from './limits';
+import { isUtf8Text } from '../utf8';
 import type {
   RunRequest, RunResponse, DefinitionRequest, DefinitionResponse,
   ReferencesRequest, ReferencesResponse, RenameRequest, RenameResponse, OutlineRequest, OutlineResponse,
@@ -35,7 +36,7 @@ export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRe
     if (value.allowPrompts !== undefined && typeof value.allowPrompts !== 'boolean') return null;
     if (value.stdin !== undefined && typeof value.stdin !== 'string') return null;
     if (typeof value.stdin === 'string' &&
-        new TextEncoder().encode(value.stdin).byteLength > MAX_PROGRAM_INPUT_BYTES) return null;
+        !isUtf8Text(value.stdin, MAX_PROGRAM_INPUT_BYTES)) return null;
     return {
       id: 1, workspace, mode: 'run',
       ...(typeof value.stdin === 'string' ? { stdin: value.stdin } : {}),

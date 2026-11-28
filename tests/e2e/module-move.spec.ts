@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('renames an imported module with complete preview, then runs and undoes it', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await page.getByRole('button', { name: 'Rename file' }).click();
   await page.getByLabel('New relative .srp path').fill('lib/math.srp');
@@ -37,7 +38,7 @@ test('renames an imported module with complete preview, then runs and undoes it'
 
 test('moving an entry file to a new directory rebases its own imports', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /main.srp/ }).click();
   await page.getByRole('button', { name: 'Rename file' }).click();
   await page.getByLabel('New relative .srp path').fill('apps/main.srp');
@@ -62,7 +63,7 @@ test('moving an entry file to a new directory rebases its own imports', async ({
 
 test('cancelling or modifying the proposed file path invalidates its preview', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await page.getByRole('button', { name: 'Rename file' }).click();
   const path = page.getByLabel('New relative .srp path');
@@ -78,7 +79,7 @@ test('cancelling or modifying the proposed file path invalidates its preview', a
 
 test('invalid duplicate destination is rejected before changing source and editing invalidates preview', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Rename file' }).click();
   await page.getByLabel('New relative .srp path').fill('math.srp');
   await page.getByRole('button', { name: 'Preview file rename' }).click();
@@ -98,7 +99,7 @@ test('invalid duplicate destination is rejected before changing source and editi
 test('narrow screens keep the file rename form and complete import review accessible', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   const button = page.getByRole('button', { name: 'Rename file' });
   await button.scrollIntoViewIfNeeded();

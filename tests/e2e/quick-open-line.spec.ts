@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('Ctrl/Cmd+G moves the Monaco cursor to a requested line without executing code', async ({ page }) => {
@@ -24,7 +25,7 @@ test('Ctrl/Cmd+G moves the Monaco cursor to a requested line without executing c
 
 test('Quick Open accepts a module:line:column target without changing the entrypoint', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
   await editor.focus();
@@ -44,7 +45,7 @@ test('Quick Open accepts a module:line:column target without changing the entryp
 
 test('invalid addresses are rejected and Escape restores focus and current file', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const button = page.getByRole('button', { name: 'Quick open' });
   await button.click();
   const dialog = page.getByRole('dialog', { name: 'Quick open Scarp file' });
