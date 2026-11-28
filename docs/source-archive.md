@@ -10,7 +10,7 @@ entrypoint, active editor tab, browser storage, program input, captured
 output, diagnostics, host paths or additional metadata.
 Source itself can contain sensitive text; inspect it before sharing.
 Use **Export project** (JSON) if you need to restore the exact entrypoint
-and selected tab to the Playground. ZIP import is not supported.
+and selected tab to the Playground. Use **Import sources ZIP** to restore a canonical Playground export. Choose the entrypoint explicitly; the ZIP contains no editor-session metadata.
 
 The archive is produced locally without a new package or network request.
 Files must pass the existing virtual workspace path and byte limits.
@@ -20,3 +20,14 @@ case-insensitive filesystems. The original JSON export remains available.
 Classic ZIP records use method 0 (stored), fixed timestamps, sorted
 names and standard CRC-32 checksums. The checksum detects accidental
 corruption but does not authenticate a file.
+
+## Import validation
+
+Only the exact canonical uncompressed ZIP format emitted by Playground is
+accepted. Arbitrary ZIPs, compressed/encrypted data, ZIP64, extra fields,
+comments, symlinks, non-source entries and mismatched central directories
+are rejected. The bounded reader checks source sizes, safe paths, strict
+UTF-8, checksums and canonical byte equality. It never extracts files to
+the host filesystem or executes code. Review all files and select an
+entrypoint before confirming replacement. Existing saved browser copies
+are preserved. Use folder import or project JSON for other sources.

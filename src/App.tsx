@@ -32,7 +32,7 @@ import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
-import { createSourceArchive, sourceArchiveProblem } from './source-archive';
+import { createSourceArchive, sourceArchiveProblem, parseSourceArchive, MAX_SOURCE_ARCHIVE_BYTES } from './source-archive';
 import { previewSourceImport } from './source-import';
 import { decodeSourceFolder, MAX_FOLDER_SELECTION_ENTRIES, planFolderSelection } from './source-folder';
 import { SourceFolderPreview } from './SourceFolderPreview';
@@ -134,7 +134,8 @@ export function App() {
   const importFileRef = useRef<HTMLInputElement>(null);
   const sourceFilesRef = useRef<HTMLInputElement>(null);
   const sourceFolderRef = useRef<HTMLInputElement>(null);
-  const [folderPreview, setFolderPreview] = useState<{ snapshot: Workspace; workspace: Workspace; ignored: number; key: number } | null>(null);
+  const sourceArchiveRef = useRef<HTMLInputElement>(null);
+  const [folderPreview, setFolderPreview] = useState<{ snapshot: Workspace; workspace: Workspace; ignored: number; key: number; kind: 'folder' | 'archive' } | null>(null);
   const folderPreviewSequence = useRef(0);
   const sourceImportActive = useRef(false);
   const [importingSources, setImportingSources] = useState(false);
@@ -1177,7 +1178,7 @@ export function App() {
       }
       const plan = decodeSourceFolder(selection, uploads);
       if (!plan.ok) { setNotice(plan.error); return; }
-      setFolderPreview({ snapshot, workspace: plan.workspace, ignored: selection.ignored,
+      setFolderPreview({ snapshot, workspace: plan.workspace, ignored: selection.ignored, kind: 'folder',
         key: ++folderPreviewSequence.current });
       setNotice('Review the source folder and choose its entrypoint before replacing the workspace.');
     } catch {
@@ -1188,14 +1189,47 @@ export function App() {
     }
   }
 
+  async function previewLocalSourceArchive(event: ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+    event.currentTarget.value = '';
+    if (!file || sourceImportActive.current) return;
+    setFolderPreview(null);
+    if (file.size > MAX_SOURCE_ARCHIVE_BYTES) {
+      setNotice('The ZIP exceeds the source archive size limit.');
+      return;
+    }
+    sourceImportActive.current = true;
+    setImportingSources(true);
+    const snapshot = latestSession.current;
+    try {
+      const bytes = new Uint8Array(await file.arrayBuffer());
+      const current = latestSession.current;
+      if (current.workspace !== snapshot.workspace || current.programInput !== snapshot.programInput ||
+          current.savingLocally !== snapshot.savingLocally || current.activeFile !== snapshot.activeFile) {
+        setNotice('The editor session changed while reading the ZIP. Select it again.');
+        return;
+      }
+      const plan = parseSourceArchive(bytes);
+      if (!plan.ok) { setNotice(plan.error); return; }
+      setFolderPreview({ snapshot: snapshot.workspace, workspace: plan.workspace, ignored: 0,
+        kind: 'archive', key: ++folderPreviewSequence.current });
+      setNotice('Review the ZIP sources and choose an entrypoint before replacement.');
+    } catch {
+      setNotice('Unable to read the selected source ZIP. No source files were changed.');
+    } finally {
+      sourceImportActive.current = false;
+      setImportingSources(false);
+    }
+  }
+
   function applySourceFolder(entry: string) {
     if (!folderPreview || folderPreview.snapshot !== workspace || !Object.hasOwn(folderPreview.workspace.files, entry)) {
       setFolderPreview(null);
-      setNotice('The folder preview is stale. Select the source folder again.');
+      setNotice('The source import preview is stale. Select the sources again.');
       return;
     }
     if (!window.confirm(
-      'Replace the open workspace with the selected source folder? Current source edits and program input will be lost. Your locally saved browser copy will not be overwritten.',
+      'Replace the open workspace with the selected ' + (folderPreview.kind === 'archive' ? 'source ZIP' : 'source folder') + '? Current source edits and program input will be lost. Your locally saved browser copy will not be overwritten.',
     )) return;
     if (!preserveSavedSourceBeforeSwitch()) return;
     const next = { ...folderPreview.workspace, entry };
@@ -1471,6 +1505,10 @@ export function App() {
                 Undo bulk change
               </button>
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
+              <input ref={sourceArchiveRef} type="file" accept=".zip,application/zip" hidden
+                aria-label="Choose source ZIP to import" onChange={event => void previewLocalSourceArchive(event)} />
+              <button type="button" className="button-secondary" disabled={importingSources}
+                onClick={() => sourceArchiveRef.current?.click()} title="Import a source ZIP previously exported by Playground">Import sources ZIP</button>
               <button type="button" className="button-secondary" onClick={exportSourceArchive}
                 title="Download all .srp sources as a ZIP with relative paths, without program input">Download sources ZIP</button>
               <button type="button" className="button-secondary"
@@ -1535,7 +1573,7 @@ export function App() {
             onNavigate={jumpToSearchHit} onClose={() => setModuleGraphOpen(false)} />}
 
           {folderPreview && <SourceFolderPreview key={folderPreview.key}
-            workspace={folderPreview.workspace} ignored={folderPreview.ignored}
+            workspace={folderPreview.workspace} ignored={folderPreview.ignored} kind={folderPreview.kind}
             onApply={applySourceFolder} onCancel={() => setFolderPreview(null)} />}
 
           {searchOpen && (
