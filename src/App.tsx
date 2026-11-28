@@ -1214,13 +1214,28 @@ export function App() {
     const file = event.currentTarget.files?.[0];
     // Allow the same file to be selected again after a rejected import.
     event.currentTarget.value = '';
-    if (!file) return;
+    if (!file || sourceImportActive.current) return;
     if (file.size > MAX_PORTABLE_WORKSPACE_BYTES) {
       setNotice('The selected project exceeds the 160 KiB portable workspace limit.');
       return;
     }
+    // Keep whole-project and add-only local imports mutually exclusive.
+    // An asynchronous read must not replace a different session or flush a
+    // captured, older editor snapshot into the user's saved browser copy.
+    const snapshot = latestSession.current;
+    sourceImportActive.current = true;
+    setImportingSources(true);
     try {
-      const imported = parsePortableWorkspace(await file.text());
+      const raw = await file.text();
+      const current = latestSession.current;
+      if (current.workspace !== snapshot.workspace ||
+          current.activeFile !== snapshot.activeFile ||
+          current.programInput !== snapshot.programInput ||
+          current.savingLocally !== snapshot.savingLocally) {
+        setNotice('The editor session changed during project reading. Select the project again.');
+        return;
+      }
+      const imported = parsePortableWorkspace(raw);
       if (!imported) {
         setNotice('Invalid Scarp workspace JSON. Check the format, version, source files and size limits.');
         return;
@@ -1246,6 +1261,9 @@ export function App() {
       acceptedHash.current = '';
     } catch {
       setNotice('The selected project could not be read.');
+    } finally {
+      sourceImportActive.current = false;
+      setImportingSources(false);
     }
   }
 
@@ -1380,7 +1398,8 @@ export function App() {
                 hidden
                 onChange={(event) => void importWorkspaceFile(event)}
               />
-              <button type="button" className="button-secondary" onClick={() => importFileRef.current?.click()}>Import project</button>
+              <button type="button" className="button-secondary" disabled={importingSources}
+                onClick={() => importFileRef.current?.click()}>Import project</button>
               <input
                 ref={sourceFilesRef}
                 type="file"

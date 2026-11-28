@@ -52,6 +52,10 @@ Scarp, an analytics service or a server. The downloaded JSON is plain text and
 - Imported JSON is treated as untrusted data: each source must be a string,
   file names are copied into a clean map, and the sources cannot execute
   unless the user separately selects **Run code**.
+- While a project file is being read, a changed source, active tab, stdin or
+  persistence mode cancels the import before confirmation. Select the project
+  again to review the replacement against the current session. Local file
+  imports cannot overlap.
 - Replacing an open project requires a confirmation dialog. The browser's
   existing opt-in saved project is **not** replaced by import; autosave is
   disabled for the imported session until **Save locally** is selected again.
