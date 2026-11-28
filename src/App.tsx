@@ -51,6 +51,8 @@ import { previewSourceImport } from './source-import';
 import { decodeSourceFolder, MAX_FOLDER_SELECTION_ENTRIES, planFolderSelection } from './source-folder';
 const SourceFolderPreview = lazy(() => import('./SourceFolderPreview').then(module => ({ default: module.SourceFolderPreview })));
 import { QuickOpenFiles } from './QuickOpenFiles';
+import type { WorkspaceCommand } from './command-palette';
+const CommandPalette = lazy(() => import('./CommandPalette').then(module => ({ default: module.CommandPalette })));
 import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
 const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({ default: module.FolderMovePanel })));
@@ -142,6 +144,7 @@ export function App() {
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [replaceText, setReplaceText] = useState('');
@@ -795,12 +798,19 @@ export function App() {
   useEffect(() => {
     const onQuickOpen = (event: KeyboardEvent) => {
       const key = event.key.toLowerCase();
-      if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey ||
-          (key !== 'p' && key !== 'g')) return;
+      if (!(event.ctrlKey || event.metaKey) || event.altKey) return;
+      if (event.shiftKey && key === 'p') {
+        event.preventDefault();
+        event.stopPropagation();
+        if (!event.repeat) { setQuickOpen(false); setPaletteOpen(open => !open); }
+        return;
+      }
+      if (event.shiftKey || (key !== 'p' && key !== 'g')) return;
       // Capture before Monaco and the browser's native Print/Find Next actions.
       event.preventDefault();
       event.stopPropagation();
       if (!event.repeat) {
+        setPaletteOpen(false);
         setQuickOpenPrefill(key === 'g' ? ':' : '');
         setQuickOpen(true);
       }
@@ -811,6 +821,7 @@ export function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (paletteOpen || event.defaultPrevented) return;
       if ((event.ctrlKey || event.metaKey) && event.shiftKey &&
           event.key.toLowerCase() === 'f') {
         event.preventDefault();
@@ -828,7 +839,7 @@ export function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [run, workspace, activeFile, savingLocally]);
+  }, [run, workspace, activeFile, savingLocally, paletteOpen]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
@@ -1626,8 +1637,57 @@ export function App() {
   const errorText = diagnostic?.message || result?.error;
   const transcriptAvailable = !running && consoleTranscript(result, operation) !== null;
 
+  const commands: WorkspaceCommand[] = paletteOpen ? [
+    { id: 'run', label: 'Run code', group: 'Execution', description: 'Execute with buffered program input', shortcut: 'Ctrl+Enter', disabled: running, invoke: () => void run() },
+    { id: 'verify', label: 'Verify code', group: 'Execution', description: 'Parse, resolve and type-check without runtime execution', disabled: running, invoke: () => void run('verify') },
+    { id: 'check', label: 'Check code', group: 'Execution', description: 'Validate runtime paths without returning output', disabled: running, invoke: () => void run('check') },
+    { id: 'stop', label: 'Stop execution', group: 'Execution', description: 'Cancel the active compiler operation', disabled: !running, invoke: invalidateExecution },
+    { id: 'challenges', label: 'Learning challenges', group: 'Execution', description: 'Practice with public cases and reference solutions', invoke: () => setChallengeOpen(true) },
+    { id: 'checkpoint', label: 'Source checkpoint', group: 'Project', description: 'Review temporary source changes and restore a checkpoint', invoke: () => setSourceCheckpointOpen(true) },
+    { id: 'library', label: 'Project library', group: 'Project', description: 'Open named local source snapshots', invoke: () => setLibraryOpen(true) },
+    { id: 'outline', label: 'Source outline', group: 'Navigation', description: 'Inspect declarations with the Scarp parser', invoke: () => setOutlineOpen(true) },
+    { id: 'inspection', label: 'Compiler module inspection', group: 'Navigation', description: 'Inspect resolved modules and signatures', invoke: () => setInspectionOpen(true) },
+    { id: 'tests', label: 'Open test cases', group: 'Execution', description: 'Configure and run independent input/output cases', invoke: () => setTestCasesOpen(true) },
+    { id: 'quick-open', label: 'Quick open file', group: 'Navigation', description: 'Search workspace source paths', shortcut: 'Ctrl+P', invoke: () => { setQuickOpenPrefill(''); setQuickOpen(true); } },
+    { id: 'go-line', label: 'Go to line', group: 'Navigation', description: 'Jump to a line and column in the active file', shortcut: 'Ctrl+G', invoke: () => { setQuickOpenPrefill(':'); setQuickOpen(true); } },
+    { id: 'search', label: 'Find in project', group: 'Navigation', description: 'Search or replace text across all source files', shortcut: 'Ctrl+Shift+F', invoke: () => { setReplacePreview(null); setSearchOpen(true); } },
+    { id: 'explorer', label: 'Source explorer', group: 'Navigation', description: 'Browse the nested virtual folder tree', invoke: () => setExplorerOpen(true) },
+    { id: 'modules', label: 'Module dependencies', group: 'Navigation', description: 'Inspect local import relationships', invoke: () => setModuleGraphOpen(true) },
+    { id: 'save', label: 'Save locally', group: 'Project', description: 'Opt into source-only browser storage', shortcut: 'Ctrl+S', invoke: enableLocalSaving },
+    { id: 'forget', label: 'Forget saved copy', group: 'Project', description: 'Remove the saved browser copy after confirmation', disabled: !savingLocally, invoke: forgetLocalSaving },
+    { id: 'export', label: 'Export project JSON', group: 'Project', description: 'Download a portable source workspace', invoke: exportWorkspace },
+    { id: 'zip', label: 'Download sources ZIP', group: 'Project', description: 'Download source files and relative paths', invoke: exportSourceArchive },
+    { id: 'import', label: 'Import project JSON', group: 'Project', description: 'Review and open a local workspace file', disabled: importingSources, invoke: () => importFileRef.current?.click() },
+    { id: 'source-import', label: 'Add source files', group: 'Project', description: 'Import local .srp files without overwriting sources', disabled: importingSources, invoke: () => sourceFilesRef.current?.click() },
+    { id: 'folder-import', label: 'Import source folder', group: 'Project', description: 'Review nested source files from a folder', disabled: importingSources || !folderPickerSupported, invoke: () => sourceFolderRef.current?.click() },
+    { id: 'zip-import', label: 'Import sources ZIP', group: 'Project', description: 'Review a canonical Playground source archive', disabled: importingSources, invoke: () => sourceArchiveRef.current?.click() },
+    { id: 'share', label: 'Copy project share link', group: 'Project', description: 'Copy an unencrypted source-only URL', invoke: () => void share() },
+    { id: 'undo', label: 'Undo bulk change', group: 'Project', description: 'Reverse the latest atomic workspace edit', disabled: !lastBulkEdit || workspace !== lastBulkEdit.after, invoke: undoLastBulkChange },
+    { id: 'folder-move', label: 'Move source folder', group: 'Project', description: 'Preview an import-aware folder relocation', invoke: () => { invalidateExecution(); setFolderMoveOpen(true); } },
+    { id: 'source-copy', label: 'Copy active source', group: 'Editor', description: 'Copy the active file to the clipboard', invoke: () => void copyActiveSource() },
+    { id: 'source-download', label: 'Download active source', group: 'Editor', description: 'Download the current .srp file', invoke: downloadActiveSource },
+    { id: 'wrap', label: wordWrap ? 'Disable word wrap' : 'Enable word wrap', group: 'Editor', description: 'Change visual wrapping without altering source', invoke: () => setWordWrap(value => !value) },
+    { id: 'entry', label: 'Set active file as entrypoint', group: 'Editor', description: 'Change the execution entry file', disabled: workspace.entry === activeFile, invoke: () => { invalidateExecution(); setWorkspace(previous => ({ ...previous, entry: activeFile })); } },
+    { id: 'duplicate', label: 'Duplicate active file', group: 'Editor', description: 'Review a copied module with rebased imports', disabled: files.length >= MAX_FILES, invoke: beginFileDuplicate },
+    { id: 'rename', label: 'Rename active file', group: 'Editor', description: 'Preview moving a module and updating imports', invoke: beginFileMove },
+    { id: 'remove', label: 'Remove active file', group: 'Editor', description: 'Review source removal and import impact', disabled: files.length < 2, invoke: reviewFileRemoval },
+    { id: 'copy-result', label: 'Copy result', group: 'Output', description: 'Copy captured output or diagnostics', disabled: !transcriptAvailable, invoke: () => void copyConsoleResult() },
+    { id: 'download-result', label: 'Download result', group: 'Output', description: 'Download a local output transcript', disabled: !transcriptAvailable, invoke: downloadConsoleResult },
+    { id: 'clear-result', label: 'Clear output', group: 'Output', description: 'Clear result and cancel any active operation', invoke: invalidateExecution },
+    { id: 'theme', label: dark ? 'Switch to light theme' : 'Switch to dark theme', group: 'View', description: 'Toggle the workspace appearance', invoke: () => setDark(value => !value) },
+  ] : [];
+
   return (
     <div className="app-shell min-h-screen">
+      {paletteOpen && <Suspense fallback={<p role="status">Loading command palette…</p>}>
+        <CommandPalette commands={commands} onClose={() => setPaletteOpen(false)}
+          onInvoke={id => {
+            const command = commands.find(item => item.id === id);
+            if (!command || command.disabled) return;
+            setPaletteOpen(false);
+            command.invoke();
+          }} />
+      </Suspense>}
       {quickOpen && (
         <QuickOpenFiles key={quickOpenPrefill === ':' ? 'go-to-line' : 'quick-open'}
           paths={files} entry={workspace.entry} activeFile={activeFile}
@@ -1662,6 +1722,8 @@ export function App() {
           <span className="alpha-badge">Development preview</span>
         </div>
         <nav className="header-actions" aria-label="Project links">
+          <button type="button" className="button-secondary command-launch" aria-keyshortcuts="Control+Shift+P Meta+Shift+P"
+            onClick={() => { setQuickOpen(false); setPaletteOpen(true); }}>Commands</button>
           <a href="https://scarp-lang.github.io/scarp-docs/" target="_blank" rel="noreferrer">Docs ↗</a>
           <a href="https://github.com/scarp-lang/scarp-by-example" target="_blank" rel="noreferrer">Examples ↗</a>
           <a href="https://github.com/scarp-lang/scarp-playground" target="_blank" rel="noreferrer">GitHub ↗</a>
