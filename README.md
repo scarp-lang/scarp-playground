@@ -227,6 +227,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Program test cases** runs up to eight independent input/output or diagnostic-code assertions sequentially against the real WASM interpreter. See [test cases](docs/program-test-cases.md).
+
 - **Import sources ZIP** restores canonical uncompressed Playground source exports with strict byte validation and entrypoint review. See [source archive](docs/source-archive.md).
 
 - **Source explorer** offers nested folder navigation, literal path filtering, source byte counts and validated undoable module creation. See [source explorer](docs/source-explorer.md).

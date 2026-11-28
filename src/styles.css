@@ -551,3 +551,27 @@ a { color: inherit; text-decoration: none; }
 .source-explorer-new { flex: none; min-width: 26px; min-height: 26px; border: 1px solid var(--border); border-radius: 5px; }
 .source-explorer-error { color: #e4ae72; font-size: 12px; overflow-wrap: anywhere; }
 :root[data-theme='light'] .source-explorer-error { color: #985c1b; }
+
+/* Session-only program test cases. */
+.test-case-launch { display: flex; justify-content: flex-start; }
+.test-case-heading h2 { margin: 0 auto 0 0; font-size: 13px; font-weight: 750; }
+.test-case-list { display: grid; gap: 10px; max-height: 540px; overflow: auto; min-width: 0; }
+.test-case-item { display: grid; gap: 8px; min-width: 0; border: 1px solid var(--border); border-radius: 8px; padding: 10px; }
+.test-case-item legend { font-size: 12px; color: var(--muted); padding: 0 6px; }
+.test-case-item label { display: grid; gap: 5px; font-size: 12px; min-width: 0; }
+.test-case-item input:not([type="checkbox"]), .test-case-item select, .test-case-item textarea {
+  width: 100%; min-width: 0; box-sizing: border-box; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 7px; font-size: 12px;
+}
+.test-case-item textarea { resize: vertical; font-family: monospace; }
+.test-case-item .test-case-prompts { display: flex; align-items: center; gap: 7px; }
+.test-case-actions { display: flex; flex-wrap: wrap; align-items: end; gap: 8px; margin: 8px 0; font-size: 12px; }
+.test-case-actions label { flex: 1 1 150px; }
+.test-case-outputs { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 190px), 1fr)); gap: 8px; min-width: 0; }
+.test-case-error { color: #e4ae72; font-size: 12px; overflow-wrap: anywhere; }
+:root[data-theme='light'] .test-case-error { color: #985c1b; }
+.test-case-report { display: grid; gap: 8px; min-width: 0; margin-top: 12px; }
+.test-case-report h3 { font-size: 12px; margin: 0; overflow-wrap: anywhere; }
+.test-case-result { border: 1px solid var(--border); border-radius: 7px; padding: 8px; font-size: 12px; min-width: 0; overflow-wrap: anywhere; }
+.test-case-result p { margin: 5px 0; }
+.test-case-result pre { overflow: auto; white-space: pre; max-height: 180px; padding: 6px; background: var(--panel-2); }
