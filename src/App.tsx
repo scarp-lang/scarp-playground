@@ -19,9 +19,9 @@ const AdvancedSourceSearchPanel = lazy(() => import('./AdvancedSourceSearchPanel
 const SourceNotesPanel = lazy(() => import('./SourceNotesPanel').then(module => ({ default: module.SourceNotesPanel })));
 const OutputSearchPanel = lazy(() => import('./OutputSearchPanel').then(module => ({ default: module.OutputSearchPanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
-import { emptySourceTimeline, previewTimelineRestore, type SourceTimeline } from './source-timeline';
+import type { SourceTimeline } from './source-timeline';
 import type { WorkspaceIntegrityManifest } from './workspace-integrity';
-import { emptySourceNotes, type SourceNotes } from './source-notes';
+import type { SourceNotes } from './source-notes';
 import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
 const ProjectLibraryPanel = lazy(() => import('./ProjectLibraryPanel').then(module => ({ default: module.ProjectLibraryPanel })));
@@ -47,14 +47,14 @@ import { ExecutionScope, type ActiveExecution } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
-import { appendRunHistory, type RunHistoryEntry } from './run-history';
+import type { RunHistoryEntry } from './run-history';
 const RunHistoryPanel = lazy(() => import('./RunHistoryPanel').then(module => ({ default: module.RunHistoryPanel })));
 const TestCasePanel = lazy(() => import('./TestCasePanel').then(module => ({ default: module.TestCasePanel })));
 const InputPresetsPanel = lazy(() => import('./InputPresetsPanel').then(module => ({ default: module.InputPresetsPanel })));
 import type { Challenge } from './challenges/model';
 const ChallengePanel = lazy(() => import('./ChallengePanel').then(module => ({ default: module.ChallengePanel })));
 import { newTestCase, runTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
-import { emptyInputPresetLibrary, type InputPresetLibrary } from './input-presets';
+import type { InputPresetLibrary } from './input-presets';
 import { consoleTranscript, consoleOperationSubtitle, type ConsoleMode } from './runner/transcript';
 import { browserDiagnosticHelp } from './runner/browser-diagnostic-help';
 import { MAX_FILES, MAX_FILE_BYTES, validPath, type Workspace } from './workspace';
@@ -80,8 +80,8 @@ const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({
 const BatchModuleMovePanel = lazy(() => import('./BatchModuleMovePanel').then(module => ({ default: module.BatchModuleMovePanel })));
 const ImportRepairPanel = lazy(() => import('./ImportRepairPanel').then(module => ({ default: module.ImportRepairPanel })));
 import type { FolderMovePlan } from './folder-move';
-import { prepareBatchMoveUndo, type BatchMovePlan } from './batch-module-move';
-import { createImportRepairUndo, type ImportRepairPlan } from './import-repair';
+import type { BatchMovePlan } from './batch-module-move';
+import type { ImportRepairPlan } from './import-repair';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
@@ -125,6 +125,12 @@ export function App() {
   const [initial] = useState(startingSession);
   const [workspace, setWorkspace] = useState<Workspace>(initial.workspace);
   const [activeFile, setActiveFile] = useState(initial.activeFile);
+  // Late-loaded edit validation must compare against the current render,
+  // not a stale closure captured before a module finished loading.
+  const currentWorkspace = useRef(workspace);
+  currentWorkspace.current = workspace;
+  const currentActiveFile = useRef(activeFile);
+  currentActiveFile.current = activeFile;
   const [editorSession, setEditorSession] = useState(0);
   const [savingLocally, setSavingLocally] = useState(initial.savingLocally);
   const [savedWorkspace, setSavedWorkspace] = useState<Workspace | null>(
@@ -145,7 +151,7 @@ export function App() {
   const [suiteKind, setSuiteKind] = useState<'manual' | 'challenge'>('manual');
   const [testCasesOpen, setTestCasesOpen] = useState(false);
   const [inputPresetsOpen, setInputPresetsOpen] = useState(false);
-  const [inputPresets, setInputPresets] = useState<InputPresetLibrary>(emptyInputPresetLibrary);
+  const [inputPresets, setInputPresets] = useState<InputPresetLibrary>(() => ({ items: [], nextId: 1 }));
   const [testCases, setTestCases] = useState<TestCase[]>(() => [newTestCase()]);
   const [suiteRunning, setSuiteRunning] = useState(false);
   const [suiteProgress, setSuiteProgress] = useState(0);
@@ -180,14 +186,14 @@ export function App() {
   const [sourceTrail, setSourceTrail] = useState<SourceTrail>(emptySourceTrail);
   const cursorPosition = useRef<SourcePoint>({ path: initial.activeFile, line: 1, column: 1 });
   const [timelineOpen, setTimelineOpen] = useState(false);
-  const [sourceTimeline, setSourceTimeline] = useState<SourceTimeline>(emptySourceTimeline);
+  const [sourceTimeline, setSourceTimeline] = useState<SourceTimeline>(() => ({ items: [], nextId: 1 }));
   const [integrityOpen, setIntegrityOpen] = useState(false);
   const [integrityBaseline, setIntegrityBaseline] = useState<WorkspaceIntegrityManifest | null>(null);
   const [sourceTasksOpen, setSourceTasksOpen] = useState(false);
   const [sourceTaskReviews, setSourceTaskReviews] = useState<string[]>([]);
   const [advancedSourceSearchOpen, setAdvancedSourceSearchOpen] = useState(false);
   const [sourceNotesOpen, setSourceNotesOpen] = useState(false);
-  const [sourceNotes, setSourceNotes] = useState<SourceNotes>(emptySourceNotes);
+  const [sourceNotes, setSourceNotes] = useState<SourceNotes>(() => ({ items: [], nextId: 1 }));
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -468,12 +474,17 @@ export function App() {
     }));
   }
 
-  function restoreTimelineItem(snapshot: Workspace, id: number) {
+  async function restoreTimelineItem(snapshot: Workspace, id: number) {
     if (workspace !== snapshot) {
       setNotice('The source timeline restore became stale. Review the current snapshot again.');
       return;
     }
-    const plan = previewTimelineRestore(sourceTimeline, id, workspace, activeFile);
+    const { previewTimelineRestore } = await import('./source-timeline');
+    if (currentWorkspace.current !== snapshot || currentActiveFile.current !== activeFile) {
+      setNotice('The timeline source changed before verification completed. Review the snapshot again.');
+      return;
+    }
+    const plan = previewTimelineRestore(sourceTimeline, id, snapshot, activeFile);
     if (!plan) {
       setNotice('The selected timeline snapshot could not be safely restored.');
       return;
@@ -600,7 +611,17 @@ export function App() {
       if (!executionScope.current.isCurrent(execution)) return;
       const stats = describeBrowserRun(mode, response, started, performance.now());
       setResult({ ...response, browserStats: stats });
-      setRunHistory(previous => appendRunHistory(previous, mode, response, stats));
+      // History is optional UI data. Keep its bounded snapshot model out of
+      // startup JS and never allow an optional chunk to invalidate a Run.
+      try {
+        const { appendRunHistory } = await import('./run-history');
+        if (executionScope.current.isCurrent(execution)) {
+          setRunHistory(previous => appendRunHistory(previous, mode, response, stats));
+        }
+      } catch {
+        // A failed optional history chunk must not replace a successful
+        // compiler result with an execution error.
+      }
       // Navigate only to a valid source span from this exact execution snapshot.
       const target = !response.ok
         ? diagnosticNavigationPosition(workspace.files, response.diagnostic, response.diagnostic?.primary)
@@ -1322,9 +1343,14 @@ export function App() {
       rewrittenImports + ' import path(s). Use Check code to validate the copy.');
   }
 
-  function applyBatchMove(snapshot: Workspace, plan: Extract<BatchMovePlan, { ok: true }>) {
+  async function applyBatchMove(snapshot: Workspace, plan: Extract<BatchMovePlan, { ok: true }>) {
     if (workspace !== snapshot) {
       setNotice('The batch move preview is stale. Review the current source again.');
+      return;
+    }
+    const { prepareBatchMoveUndo } = await import('./batch-module-move');
+    if (currentWorkspace.current !== snapshot || currentActiveFile.current !== activeFile) {
+      setNotice('The batch move source changed during validation. Review the current project again.');
       return;
     }
     const undo = prepareBatchMoveUndo(snapshot, activeFile, plan);
@@ -1342,9 +1368,14 @@ export function App() {
       plan.verifiedReferences.length + ' local imports. Undo bulk change can restore the original sources.');
   }
 
-  function applyImportRepair(snapshot: Workspace, plan: Extract<ImportRepairPlan, { ok: true }>) {
+  async function applyImportRepair(snapshot: Workspace, plan: Extract<ImportRepairPlan, { ok: true }>) {
     if (workspace !== snapshot) {
       setNotice('The import repair preview is stale. Review the current source again.');
+      return;
+    }
+    const { createImportRepairUndo } = await import('./import-repair');
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('Source changed while validating the import repair. Preview the current project again.');
       return;
     }
     const undo = createImportRepairUndo(snapshot, plan);
