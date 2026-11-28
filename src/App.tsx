@@ -10,6 +10,7 @@ import { defaultExample } from './default-example';
 const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
 const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
 const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
+const SourceHygienePanel = lazy(() => import('./SourceHygienePanel').then(module => ({ default: module.SourceHygienePanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
@@ -141,6 +142,7 @@ export function App() {
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
+  const [hygieneOpen, setHygieneOpen] = useState(false);
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -357,6 +359,38 @@ export function App() {
     setEditorSession(previous => previous + 1);
     setNotice('Replaced ' + plan.changes + ' literal text occurrence(s) in ' +
       plan.changedFiles.length + ' .srp file(s). Check the program before running.');
+  }
+
+  function applySourceHygiene(snapshot: Workspace, cleaned: Workspace) {
+    // An asynchronous import, editor edit, or workspace switch invalidates
+    // any cleanup computed from a previous source snapshot.
+    if (workspace !== snapshot) {
+      setNotice('The source hygiene preview is stale. Review the current workspace again.');
+      return;
+    }
+    const undo = createBulkEditUndo(workspace, cleaned, 'source cleanup');
+    if (!undo) {
+      setNotice('Source cleanup could not be safely applied. No files were changed.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(cleaned);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setHygieneOpen(false);
+    setNotice('Applied reviewed source cleanup to the workspace. Undo bulk change can reverse it.');
+  }
+
+  function navigateToSourceHygiene(path: string, line: number, column: number) {
+    if (!Object.hasOwn(workspace.files, path) || !Number.isSafeInteger(line) ||
+        !Number.isSafeInteger(column) || line < 1 || column < 1) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setActiveFile(path);
+    setNavigationTarget(previous => ({
+      path, line, column, sequence: (previous?.sequence ?? 0) + 1,
+    }));
   }
 
   function captureCheckpoint() {
@@ -1644,6 +1678,7 @@ export function App() {
     { id: 'stop', label: 'Stop execution', group: 'Execution', description: 'Cancel the active compiler operation', disabled: !running, invoke: invalidateExecution },
     { id: 'challenges', label: 'Learning challenges', group: 'Execution', description: 'Practice with public cases and reference solutions', invoke: () => setChallengeOpen(true) },
     { id: 'checkpoint', label: 'Source checkpoint', group: 'Project', description: 'Review temporary source changes and restore a checkpoint', invoke: () => setSourceCheckpointOpen(true) },
+    { id: 'hygiene', label: 'Source hygiene and Unicode safety', group: 'Editor', description: 'Inspect Unicode controls and preview safe whitespace cleanup', invoke: () => setHygieneOpen(true) },
     { id: 'library', label: 'Project library', group: 'Project', description: 'Open named local source snapshots', invoke: () => setLibraryOpen(true) },
     { id: 'outline', label: 'Source outline', group: 'Navigation', description: 'Inspect declarations with the Scarp parser', invoke: () => setOutlineOpen(true) },
     { id: 'inspection', label: 'Compiler module inspection', group: 'Navigation', description: 'Inspect resolved modules and signatures', invoke: () => setInspectionOpen(true) },
@@ -1829,6 +1864,10 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={hygieneOpen}
+                aria-controls="source-hygiene-panel" onClick={() => setHygieneOpen(open => !open)}>
+                Source hygiene
+              </button>
               <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
                 aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
                 Source checkpoint
@@ -1881,6 +1920,11 @@ export function App() {
               )}
             </div>
           </div>
+
+          {hygieneOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source hygiene inspector…</p>}>
+            <SourceHygienePanel workspace={workspace} onApply={applySourceHygiene}
+              onNavigate={navigateToSourceHygiene} onClose={() => setHygieneOpen(false)} />
+          </Suspense>}
 
           {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
