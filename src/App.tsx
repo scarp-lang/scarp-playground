@@ -10,6 +10,7 @@ import { defaultExample } from './default-example';
 const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
 const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
 const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
+const OutputSearchPanel = lazy(() => import('./OutputSearchPanel').then(module => ({ default: module.OutputSearchPanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
@@ -123,6 +124,7 @@ export function App() {
   const [suiteReport, setSuiteReport] = useState<SuiteReport | null>(null);
   const [operation, setOperation] = useState<ConsoleMode>('run');
   const [result, setResult] = useState<(RunResult & { browserStats?: BrowserRunStats | null }) | null>(null);
+  const [outputSearchOpen, setOutputSearchOpen] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   // Runtime input is intentionally ephemeral: never saved or placed in shared links.
   const [programInput, setProgramInput] = useState('');
@@ -1672,6 +1674,7 @@ export function App() {
     { id: 'rename', label: 'Rename active file', group: 'Editor', description: 'Preview moving a module and updating imports', invoke: beginFileMove },
     { id: 'remove', label: 'Remove active file', group: 'Editor', description: 'Review source removal and import impact', disabled: files.length < 2, invoke: reviewFileRemoval },
     { id: 'copy-result', label: 'Copy result', group: 'Output', description: 'Copy captured output or diagnostics', disabled: !transcriptAvailable, invoke: () => void copyConsoleResult() },
+    { id: 'find-output', label: 'Find in output', group: 'Output', description: 'Search captured stdout and stderr without rerunning source', disabled: !result || (!result.stdout && !result.stderr), invoke: () => setOutputSearchOpen(true) },
     { id: 'download-result', label: 'Download result', group: 'Output', description: 'Download a local output transcript', disabled: !transcriptAvailable, invoke: downloadConsoleResult },
     { id: 'clear-result', label: 'Clear output', group: 'Output', description: 'Clear result and cancel any active operation', invoke: invalidateExecution },
     { id: 'theme', label: dark ? 'Switch to light theme' : 'Switch to dark theme', group: 'View', description: 'Toggle the workspace appearance', invoke: () => setDark(value => !value) },
@@ -2439,7 +2442,12 @@ export function App() {
               <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">{consoleOperationSubtitle(operation)}</span></div>
               <div className="console-right">
                 {result && <span className={'result-status ' + (result.ok ? 'success' : 'failure')}>{result.ok ? '● Success' : '● Error'}</span>}
-                <button type="button" onClick={() => void copyConsoleResult()}
+                <button type="button" onClick={() => setOutputSearchOpen(open => !open)}
+                  aria-expanded={outputSearchOpen} aria-controls="output-search-panel"
+                  disabled={!result || (!result.stdout && !result.stderr)}>
+                  Find in output
+                </button>
+                <button type="button" onClick={() => void copyConsoleResult()
                   disabled={!transcriptAvailable}
                   title="Copy the current output or diagnostic; no source files or stdin">Copy result</button>
                 <button type="button" onClick={downloadConsoleResult}
@@ -2448,6 +2456,11 @@ export function App() {
                 <button type="button" onClick={invalidateExecution}>Clear</button>
               </div>
             </div>
+            {result && outputSearchOpen && <Suspense fallback={
+              <p className="project-search-status" role="status">Loading output search…</p>
+            }>
+              <OutputSearchPanel result={result} onClose={() => setOutputSearchOpen(false)} />
+            </Suspense>}
             <div className="terminal-output" aria-live="polite">
               {running && <p className="terminal-muted">{suiteRunning ? 'Running sequential program test cases…' : operation === 'verify' ? 'Verifying source without running program statements…' : operation === 'check' ? 'Checking Scarp with the real interpreter…' : 'Loading compiler and executing program…'}</p>}
               {!running && !result && <p className="terminal-muted">$ Select an example or write code, then click Run code.</p>}
