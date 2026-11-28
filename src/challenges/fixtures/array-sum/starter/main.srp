@@ -1,0 +1,7 @@
+bind values: array<integer, 3> = [array:
+    text_to_integer(read_line()),
+    text_to_integer(read_line()),
+    text_to_integer(read_line()),
+];
+// TODO: use the array elements.
+print(values[0]);

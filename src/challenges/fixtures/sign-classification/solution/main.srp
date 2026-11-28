@@ -1,0 +1,8 @@
+bind number = text_to_integer(read_line());
+if number > 0 {
+    print("positive");
+} elif number < 0 {
+    print("negative");
+} else {
+    print("zero");
+}

@@ -1,0 +1,19 @@
+pure funcra is_prime(n: integer) -> boolean {
+    if n < 2 {
+        return false;
+    }
+    var divisor: integer = 2;
+    while divisor * divisor <= n {
+        if n % divisor == 0 {
+            return false;
+        }
+        divisor += 1;
+    }
+    return true;
+}
+bind n = text_to_integer(read_line());
+if is_prime(n) {
+    print("prime");
+} else {
+    print("not prime");
+}

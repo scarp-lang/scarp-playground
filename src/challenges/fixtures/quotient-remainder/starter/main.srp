@@ -1,0 +1,5 @@
+bind number = text_to_integer(read_line());
+bind divisor = text_to_integer(read_line());
+// TODO: print the quotient and remainder.
+print(0);
+print(0);

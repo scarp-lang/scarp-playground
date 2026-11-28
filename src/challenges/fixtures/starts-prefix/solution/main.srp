@@ -1,0 +1,3 @@
+bind value = read_line();
+bind prefix = read_line();
+print(text_starts_with(value, prefix));

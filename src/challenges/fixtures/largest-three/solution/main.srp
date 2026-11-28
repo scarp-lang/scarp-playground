@@ -1,0 +1,11 @@
+bind a = text_to_integer(read_line());
+bind b = text_to_integer(read_line());
+bind c = text_to_integer(read_line());
+var largest = a;
+if b > largest {
+    largest = b;
+}
+if c > largest {
+    largest = c;
+}
+print(largest);

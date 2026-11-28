@@ -1,0 +1,4 @@
+bind width = text_to_integer(read_line());
+bind height = text_to_integer(read_line());
+bind area = width * height;
+print(area);

@@ -1708,3 +1708,6 @@ print(topk(softmax_temp(logits, 0.5), 3));
 
 #[cfg(test)]
 mod fuzz_regression;
+
+#[cfg(test)]
+mod learning_challenges;

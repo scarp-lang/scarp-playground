@@ -1,0 +1,4 @@
+bind raw = read_line();
+bind trimmed = text_trim(raw);
+bind number = text_to_integer(trimmed);
+print(number * 2);
