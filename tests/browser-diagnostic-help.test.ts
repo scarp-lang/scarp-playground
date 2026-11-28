@@ -30,6 +30,17 @@ describe('browser-specific compiler diagnostic guidance', () => {
     expect(browserDiagnosticHelp('E0064', 'run')).toContain('failed allocation');
   });
 
+  it('explains exact alpha.3 generic codes in all compiler operations', () => {
+    for (const mode of ['run', 'check', 'verify', 'definition', 'references', 'rename'] as const) {
+      expect(browserDiagnosticHelp('E0085', mode)).toContain('Declare each generic type parameter once');
+      expect(browserDiagnosticHelp('E0086', mode)).toContain('identity::<integer>(7)');
+      expect(browserDiagnosticHelp('E0087', mode)).toContain('compile-time limit');
+      expect(browserDiagnosticHelp('E0087', mode)).toContain('does not identify');
+    }
+    expect(browserDiagnosticHelp('E0088', 'verify')).toBeNull();
+    expect(browserDiagnosticHelp('e0086', 'verify')).toBeNull();
+  });
+
   it('uses fixed browser limits rather than suggesting native configuration changes', () => {
     for (const [code, expected] of [
       ['E0017', '200,000-step'], ['E0018', '1,000 selected'],
