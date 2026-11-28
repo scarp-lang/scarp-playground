@@ -48,7 +48,7 @@ export function planFolderSelection(entries: readonly FolderSelectionEntry[]): F
     if (typeof pickerPath !== 'string' || !pickerPath ||
         pickerPath.length > MAX_RELATIVE_PICKER_PATH ||
         pickerPath.includes('\\') || pickerPath.startsWith('/') ||
-        /[\u0000-\u001f\u007f]/u.test(pickerPath)) {
+        Array.from(pickerPath).some(char => char.charCodeAt(0) <= 31 || char.charCodeAt(0) === 127)) {
       return fail('The directory picker did not supply a safe relative source path.');
     }
     const segments = pickerPath.split('/');
