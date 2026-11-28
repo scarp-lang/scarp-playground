@@ -1,3 +1,5 @@
+import { describeOutputDifference, type OutputDifference } from './output-difference';
+import { isUtf8Text } from '../utf8';
 import { MAX_PROGRAM_INPUT_BYTES } from './limits';
 import { validatedRunResult } from './protocol';
 import type { RunResult } from './types';
@@ -24,6 +26,7 @@ export type CaseResult = {
   stdout: string;
   stderr: string;
   diagnosticCode: string | null;
+  differences?: OutputDifference[];
 };
 
 export type SuiteReport = {
@@ -41,7 +44,7 @@ const record = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
 function boundedText(value: unknown, limit: number): value is string {
-  return typeof value === 'string' && value.length <= limit && bytes(value) <= limit;
+  return typeof value === 'string' && isUtf8Text(value, limit);
 }
 
 export function newTestCase(name = 'Case 1', stdin = '', allowPrompts = false): TestCase {
@@ -134,8 +137,13 @@ function compareCase(test: TestCase, reply: unknown): CaseResult {
   const mismatches: string[] = [];
   if (result.stdout !== test.expected.stdout) mismatches.push('stdout: ' + firstDifference(test.expected.stdout, result.stdout));
   if (result.stderr !== test.expected.stderr) mismatches.push('stderr: ' + firstDifference(test.expected.stderr, result.stderr));
+  const differences = [
+    describeOutputDifference('stdout', test.expected.stdout, result.stdout),
+    describeOutputDifference('stderr', test.expected.stderr, result.stderr),
+  ].filter((item): item is OutputDifference => item !== null);
   return { ...display, status: mismatches.length ? 'failed' : 'passed',
-    message: mismatches.length ? mismatches.join('; ') : 'Exact stdout and stderr match.' };
+    message: mismatches.length ? mismatches.join('; ') : 'Exact stdout and stderr match.',
+    ...(differences.length ? { differences } : {}) };
 }
 
 /**
@@ -176,7 +184,7 @@ export async function runTestCases(
         stdout: '', stderr: '', diagnosticCode: null };
     }
     results.push(result);
-    onProgress?.(results.map(item => ({ ...item })), cases.length);
+    onProgress?.(results.map(item => ({ ...item, ...(item.differences ? { differences: item.differences.map(diff => ({ ...diff, expected: { ...diff.expected }, actual: { ...diff.actual } })) } : {}) })), cases.length);
     if (result.status === 'execution-error') {
       return report('complete', 'Stopped after an execution error; remaining cases were not run.');
     }

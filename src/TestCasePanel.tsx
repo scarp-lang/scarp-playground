@@ -1,3 +1,5 @@
+import { OutputDifferenceView } from './OutputDifferenceView';
+import { TestReportControls } from './TestReportControls';
 import { MAX_CASE_NAME_LENGTH, MAX_TEST_CASES, MAX_EXPECTED_OUTPUT_BYTES, newTestCase, validateTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
 
 import { MAX_PROGRAM_INPUT_BYTES } from './runner/limits';
@@ -108,12 +110,14 @@ export function TestCasePanel({ cases, running, busy, report, progress, stdin, a
         {report.results.map((item, index) => <article key={index} className="test-case-result">
           <strong>{item.name} — {item.status}</strong>
           <p>{item.message}</p>
+          {item.differences?.length ? <OutputDifferenceView differences={item.differences} /> : null}
           {(item.stdout || item.stderr) && <details>
             <summary>Captured output (bounded preview)</summary>
             {item.stdout && <pre aria-label={'Actual stdout for ' + item.name}>{item.stdout}</pre>}
             {item.stderr && <pre aria-label={'Actual stderr for ' + item.name}>{item.stderr}</pre>}
           </details>}
         </article>)}
+        <TestReportControls report={report} suiteName="Manual Scarp test suite" />
       </section>}
     </section>
   );
