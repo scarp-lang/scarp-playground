@@ -4,26 +4,29 @@ import type { Workspace } from './workspace';
 type Props = {
   workspace: Workspace;
   ignored: number;
+  kind?: 'folder' | 'archive';
   onApply: (entry: string) => void;
   onCancel: () => void;
 };
 
-export function SourceFolderPreview({ workspace, ignored, onApply, onCancel }: Props) {
+export function SourceFolderPreview({ workspace, ignored, kind = 'folder', onApply, onCancel }: Props) {
+  const isArchive = kind === 'archive';
+  const label = isArchive ? 'source ZIP' : 'source folder';
   const [entry, setEntry] = useState(workspace.entry);
   const paths = Object.keys(workspace.files).sort();
   const encoder = new TextEncoder();
   const size = Object.values(workspace.files).reduce((sum, source) => sum + encoder.encode(source).byteLength, 0);
   return (
-    <section className="project-search source-folder-preview" aria-label="Source folder preview">
+    <section className="project-search source-folder-preview" aria-label={isArchive ? "Source ZIP preview" : "Source folder preview"}>
       <div className="project-search-bar source-folder-heading">
-        <h2>Review source folder</h2>
-        <button type="button" onClick={onCancel}>Cancel folder import</button>
+        <h2>Review {label}</h2>
+        <button type="button" onClick={onCancel}>{isArchive ? 'Cancel ZIP import' : 'Cancel folder import'}</button>
       </div>
       <p className="project-search-status">
-        {paths.length} .srp files · {size} UTF-8 bytes · {ignored} non-source files ignored
+        {paths.length} .srp files · {size} UTF-8 bytes{!isArchive && ' · ' + ignored + ' non-source files ignored'}
       </p>
       <p className="project-replace-help">
-        Relative paths are preserved. Only source text is imported; manifests and other files are ignored.
+        Relative paths are preserved. {isArchive ? 'Only canonical uncompressed Playground source exports are accepted.' : 'Only source text is imported; manifests and other files are ignored.'}
         The current project is unchanged until you confirm replacement. Nothing runs automatically.
       </p>
       <label className="source-folder-entry">
@@ -39,7 +42,7 @@ export function SourceFolderPreview({ workspace, ignored, onApply, onCancel }: P
         </li>)}
       </ul>
       <button type="button" className="button-primary" onClick={() => onApply(entry)}
-        disabled={!Object.hasOwn(workspace.files, entry)}>Replace with source folder</button>
+        disabled={!Object.hasOwn(workspace.files, entry)}>Replace with {label}</button>
     </section>
   );
 }
