@@ -223,6 +223,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Download sources ZIP** exports every validated .srp file with nested relative paths and exact UTF-8 bytes. It excludes session input and results; use project JSON to preserve the selected entrypoint. See [source archive](docs/source-archive.md).
+
 - React + Vite with TypeScript and Tailwind CSS, adaptive dark/light interface.
 - Monaco editor with a Scarp-specific tokenizer, separate text models per
   source file (preserving per-file undo/view history), and selectable entrypoint.

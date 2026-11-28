@@ -29,6 +29,7 @@ import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
+import { createSourceArchive } from './source-archive';
 import { previewSourceImport } from './source-import';
 import { QuickOpenFiles } from './QuickOpenFiles';
 import { quickOpenPosition } from './quick-open';
@@ -1103,6 +1104,23 @@ export function App() {
     setNotice('Downloaded a portable copy of all .srp files. No source was uploaded.');
   }
 
+  function exportSourceArchive() {
+    const bytes = createSourceArchive(workspace);
+    if (!bytes) {
+      setNotice('The source archive requires valid workspace paths and source sizes.');
+      return;
+    }
+    const address = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
+    const link = document.createElement('a');
+    link.href = address;
+    link.download = 'scarp-sources.zip';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(address), 1000);
+    setNotice('Downloaded all .srp files with their relative paths. No source or program input was uploaded.');
+  }
+
   async function importWorkspaceFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
     // Allow the same file to be selected again after a rejected import.
@@ -1295,6 +1313,8 @@ export function App() {
                 Undo bulk change
               </button>
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
+              <button type="button" className="button-secondary" onClick={exportSourceArchive}
+                title="Download all .srp sources as a ZIP with relative paths, without program input">Download sources ZIP</button>
               <button type="button" className="button-secondary"
                 aria-keyshortcuts="Control+P Meta+P"
                 title="Quickly switch between Scarp source files (Ctrl+P / Cmd+P)"
