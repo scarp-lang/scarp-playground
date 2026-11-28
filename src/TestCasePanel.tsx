@@ -1,4 +1,6 @@
-import { MAX_CASE_NAME_LENGTH, MAX_TEST_CASES, newTestCase, validateTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
+import { MAX_CASE_NAME_LENGTH, MAX_TEST_CASES, MAX_EXPECTED_OUTPUT_BYTES, newTestCase, validateTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
+
+import { MAX_PROGRAM_INPUT_BYTES } from './runner/limits';
 
 type Props = {
   cases: TestCase[];
@@ -51,7 +53,7 @@ export function TestCasePanel({ cases, running, busy, report, progress, stdin, a
                 onClick={() => onChange(cases.filter((_, at) => at !== index))}>Remove case</button>
             </div>
             <label>Test stdin
-              <textarea rows={3} value={item.stdin} spellCheck={false}
+              <textarea rows={3} maxLength={MAX_PROGRAM_INPUT_BYTES} value={item.stdin} spellCheck={false}
                 onChange={event => change(index, { ...item, stdin: event.target.value })} />
             </label>
             <label className="test-case-prompts">
@@ -71,12 +73,12 @@ export function TestCasePanel({ cases, running, busy, report, progress, stdin, a
             {item.expected.kind === 'output' ? (
               <div className="test-case-outputs">
                 <label>Expected stdout
-                  <textarea rows={3} spellCheck={false} value={item.expected.stdout}
+                  <textarea rows={3} maxLength={MAX_EXPECTED_OUTPUT_BYTES} spellCheck={false} value={item.expected.stdout}
                     onChange={event => change(index, { ...item, expected: { kind: 'output',
                       stdout: event.target.value, stderr: item.expected.kind === 'output' ? item.expected.stderr : '' } })} />
                 </label>
                 <label>Expected stderr
-                  <textarea rows={3} spellCheck={false} value={item.expected.stderr}
+                  <textarea rows={3} maxLength={MAX_EXPECTED_OUTPUT_BYTES} spellCheck={false} value={item.expected.stderr}
                     onChange={event => change(index, { ...item, expected: { kind: 'output',
                       stdout: item.expected.kind === 'output' ? item.expected.stdout : '', stderr: event.target.value } })} />
                 </label>
