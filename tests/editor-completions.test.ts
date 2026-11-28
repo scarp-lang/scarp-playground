@@ -169,3 +169,25 @@ describe('Scarp editor syntax hints', () => {
       .map((s) => s.label)).not.toContain('main.srp');
   });
 });
+
+
+describe('alpha.4 BigInt completions', () => {
+  const names = ["bigint_pow_big","bigint_pow_mod_big","bigint_factorial","bigint_fibonacci","bigint_binomial","bigint_permutation","bigint_next_prime","bigint_is_perfect_square","bigint_is_power_of_two","bigint_reverse","bigint_is_palindrome","bigint_min","bigint_max","bigint_mod_inverse","bigint_is_prime"];
+  it('offers each verified builtin once, with the full prefix replacement', () => {
+    const hints = editorCompletionHints('bigint_', 'main.srp', files);
+    for (const name of names) {
+      const matches = hints.filter(hint => hint.label === name);
+      expect(matches).toHaveLength(1);
+      expect(matches[0].insertText).toContain(name + '(');
+      expect(matches[0].replaceLength).toBe(7);
+    }
+    expect(hints.find(h => h.label === 'bigint_pow_mod_big')?.insertText)
+      .toBe('bigint_pow_mod_big(${1:value}, ${2:exponent}, ${3:modulus})');
+  });
+  it('suppresses hints inside ordinary, raw and multiline strings and comments', () => {
+    for (const prefix of ['// bigint_', 'print("bigint_', 'print(r"bigint_', '"""bigint_']) {
+      expect(editorCompletionHints(prefix, 'main.srp', files)).toEqual([]);
+    }
+    expect(editorCompletionHints('bigint_', 'main.srp', files, '"""first\n')).toEqual([]);
+  });
+});

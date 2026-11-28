@@ -7,6 +7,7 @@ const ScarpEditor = lazy(() =>
 );
 import { examples } from './examples';
 import { ExampleBrowser } from './ExampleBrowser';
+import { ModuleGraphPanel } from './ModuleGraphPanel';
 import { isUntouchedExampleSession } from './example-session';
 import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
@@ -29,6 +30,7 @@ import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
+import { createSourceArchive, sourceArchiveProblem } from './source-archive';
 import { previewSourceImport } from './source-import';
 import { decodeSourceFolder, MAX_FOLDER_SELECTION_ENTRIES, planFolderSelection } from './source-folder';
 import { SourceFolderPreview } from './SourceFolderPreview';
@@ -99,6 +101,7 @@ export function App() {
   // Session-only opt-in; pre-supplied input never creates a live host terminal.
   const [allowPrompts, setAllowPrompts] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1185,6 +1188,28 @@ export function App() {
     setNotice('Downloaded a portable copy of all .srp files. No source was uploaded.');
   }
 
+  function exportSourceArchive() {
+    const problem = sourceArchiveProblem(workspace);
+    if (problem) {
+      setNotice('Cannot export a portable ZIP: ' + problem + ' Use Export project for JSON instead.');
+      return;
+    }
+    const bytes = createSourceArchive(workspace);
+    if (!bytes) {
+      setNotice('The source archive requires valid workspace paths and source sizes.');
+      return;
+    }
+    const address = URL.createObjectURL(new Blob([bytes], { type: 'application/zip' }));
+    const link = document.createElement('a');
+    link.href = address;
+    link.download = 'scarp-sources.zip';
+    document.body.append(link);
+    link.click();
+    link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(address), 1000);
+    setNotice('Downloaded all .srp files with their relative paths. No source or program input was uploaded.');
+  }
+
   async function importWorkspaceFile(event: ChangeEvent<HTMLInputElement>) {
     const file = event.currentTarget.files?.[0];
     // Allow the same file to be selected again after a rejected import.
@@ -1384,6 +1409,8 @@ export function App() {
                 Undo bulk change
               </button>
               <button type="button" className="button-secondary" onClick={exportWorkspace}>Export project</button>
+              <button type="button" className="button-secondary" onClick={exportSourceArchive}
+                title="Download all .srp sources as a ZIP with relative paths, without program input">Download sources ZIP</button>
               <button type="button" className="button-secondary"
                 aria-keyshortcuts="Control+P Meta+P"
                 title="Quickly switch between Scarp source files (Ctrl+P / Cmd+P)"
@@ -1400,6 +1427,10 @@ export function App() {
                 aria-expanded={searchOpen} aria-controls="project-search-panel"
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
+                aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
+                Module dependencies
               </button>
               <button type="button" className="button-secondary" onClick={() => void share()} title="Copy a link to the complete project when it fits the URL limit">Share ↗</button>
               <button type="button" className="button-secondary" onClick={() => void run('verify')}
@@ -1421,6 +1452,9 @@ export function App() {
               )}
             </div>
           </div>
+
+          {moduleGraphOpen && <ModuleGraphPanel workspace={workspace} activeFile={activeFile}
+            onNavigate={jumpToSearchHit} onClose={() => setModuleGraphOpen(false)} />}
 
           {folderPreview && <SourceFolderPreview key={folderPreview.key}
             workspace={folderPreview.workspace} ignored={folderPreview.ignored}

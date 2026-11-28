@@ -1,0 +1,5 @@
+import "lib.srp" as lib;
+bind ids: list<integer> = lib.keep(tag: "ids", items: lib.blank());
+bind flags: list<boolean> = lib.keep(items: (lib.blank()), tag: 7);
+bind more: list<integer> = lib.keep(lib.blank(), "more");
+print(ids, flags, more);

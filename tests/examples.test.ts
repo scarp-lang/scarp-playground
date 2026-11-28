@@ -122,3 +122,23 @@ describe('shipped compiler-backed learning examples', () => {
     expect(source).not.toContain('unreleased assertion development branch');
   });
 });
+
+describe('alpha.4 learning workspaces', () => {
+  it('ships exact fixture bytes, unique titles and no prompt or stdin settings', () => {
+    const cases = [{"title":"Mutual recursion and GCD","files":{"main.srp":"native_recursive_entry.srp"}},{"title":"Nested aggregate snapshots","files":{"main.srp":"native_nested_aggregate_locals.srp"}},{"title":"BigInt wide exponents","files":{"main.srp":"bigint_wide_exponents.srp"}},{"title":"Contextual generic imports","files":{"main.srp":"context/main.srp","lib.srp":"context/lib.srp"}},{"title":"BigInt sequences and number theory","files":{"main.srp":"bigint_number_theory.srp"}}];
+    for (const item of cases) {
+      const example = examples.find(e => e.title === item.title);
+      expect(example).toBeDefined();
+      expect(example?.description).toContain('v0.0.7-alpha.4');
+      expect(example?.entry).toBe('main.srp');
+      expect(example?.stdin).toBeUndefined();
+      expect(example?.allowPrompts).toBeUndefined();
+      expect(Object.keys(example!.files).sort()).toEqual(Object.keys(item.files).sort());
+      for (const [path, fixture] of Object.entries(item.files)) {
+        expect(example!.files[path]).toBe(readFileSync(new URL(
+          '../bridge/tests/fixtures/v007_alpha4/' + fixture, import.meta.url,
+        ), 'utf8'));
+      }
+    }
+  });
+});
