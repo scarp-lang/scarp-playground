@@ -1,9 +1,10 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // Executes the published compiler's alpha.19 fixture in real browser WebAssembly.
 test('alpha.19 named functions keep Verify and Check silent and Run exact', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Named function boundaries/ }).click();
+  await loadExample(page, /Named function boundaries/);
   await page.getByRole('button', { name: 'Verify code' }).click();
   await expect(page.locator('.terminal-output')).toContainText(
     'Static verification passed', { timeout: 30_000 },

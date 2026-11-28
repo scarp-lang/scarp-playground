@@ -1,9 +1,10 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // Run the real published alpha.10 Rust interpreter inside the deployed WASM Worker.
 test('alpha.10 runs published fixed-array source with Unicode', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Fixed-size arrays/ }).click();
+  await loadExample(page, /Fixed-size arrays/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText(
     'Scarp 3 [array: <array<integer, 2>>]\n' +
@@ -14,7 +15,7 @@ test('alpha.10 runs published fixed-array source with Unicode', async ({ page })
 
 test('alpha.10 executes exact divmod, exponent, radix and GCD', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Advanced BigInt/ }).click();
+  await loadExample(page, /Advanced BigInt/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText(
     '111111111111111111111111111111 8\n' +
@@ -26,7 +27,7 @@ test('alpha.10 executes exact divmod, exponent, radix and GCD', async ({ page })
 
 test('alpha.10 preserves Unicode blank lines and detects EOF', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /EOF-aware input/ }).click();
+  await loadExample(page, /EOF-aware input/);
   await expect(page.getByRole('textbox', { name: 'Program input (stdin)' }))
     .toHaveValue('नमस्ते\n\ncafé 🌍');
   await page.getByRole('button', { name: 'Run code' }).click();
@@ -38,7 +39,7 @@ test('alpha.10 preserves Unicode blank lines and detects EOF', async ({ page }) 
 
 test('alpha.10 EOF-only fallback preserves a genuinely empty line', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Input with fallback/ }).click();
+  await loadExample(page, /Input with fallback/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('Ada Guest\n', { timeout: 30_000 });
   await page.getByRole('textbox', { name: 'Program input (stdin)' }).fill('\n');

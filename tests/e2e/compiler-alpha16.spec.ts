@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // The real pinned Rust/WASM interpreter runs the upstream fixtures in all browsers.
@@ -15,7 +16,7 @@ const published = [
 for (const fixture of published) {
   test('alpha.16 verifies, checks, and runs official fixture: ' + fixture.title, async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('button', { name: fixture.title }).click();
+    await loadExample(page, fixture.title);
     await page.getByRole('button', { name: 'Verify code' }).click();
     await expect(page.locator('.terminal-output')).toContainText(
       'Static verification passed', { timeout: 30_000 },
