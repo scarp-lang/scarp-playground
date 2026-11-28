@@ -49,3 +49,15 @@ fn generic_inference_failure_remains_a_static_error() {
         assert_eq!(result["stdout"], "", "{result}");
     }
 }
+
+#[test]
+fn duplicate_generic_parameter_is_a_parser_error_without_synthetic_hints() {
+    let payload = json!({"entry":"main.srp","files":{"main.srp":"funcra f<T,T>(a:T)->T{return a;}"}}).to_string();
+    let result: Value = serde_json::from_str(&verify_request(&payload)).unwrap();
+    assert_eq!(result["ok"], false, "{result}");
+    assert!(result["error"].as_str().unwrap().contains("duplicate type parameter"), "{result}");
+    let diagnostic = &result["diagnostic"];
+    assert_eq!(diagnostic["code"], "E0085", "{result}");
+    assert!(diagnostic["help"].is_null(), "{result}");
+    assert!(diagnostic["related"].as_array().map_or(true, |notes| notes.is_empty()), "{result}");
+}
