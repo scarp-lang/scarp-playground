@@ -77,3 +77,21 @@
   .preflight-controls label[for='preflight-file'] { flex: 1 0 100%; }
   .preflight-delta-sections { grid-template-columns: minmax(0,1fr); }
 }
+
+.preflight-review-plan { margin: 13px 0; padding: 11px; background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 8px; }
+.preflight-review-heading { display: flex; flex-wrap: wrap; gap: 8px 11px; align-items: center; }
+.preflight-review-heading h3 { margin: 0; font-size: 13px; }
+.preflight-review-heading span { color: var(--muted); font-size: 11px; margin-right: auto; }
+.preflight-review-heading button, .preflight-review-plan li button {
+  background: var(--panel); border: 1px solid var(--border); color: var(--text);
+  border-radius: 7px; padding: 7px 9px; font-size: 11px; }
+.preflight-review-plan ol { padding-left: 23px; margin: 11px 0; }
+.preflight-review-plan li { padding: 8px 0; border-bottom: 1px solid var(--border); }
+.preflight-review-plan li:last-child { border-bottom: 0; }
+.preflight-review-plan li > div { display: flex; flex-wrap: wrap;
+  gap: 7px 10px; align-items: baseline; }
+.preflight-review-plan li strong { font-size: 12px; }
+.preflight-review-plan li p, .preflight-review-plan li small {
+  color: var(--muted); font-size: 11px; line-height: 1.5; }
+.preflight-review-plan li small { overflow-wrap: anywhere; }

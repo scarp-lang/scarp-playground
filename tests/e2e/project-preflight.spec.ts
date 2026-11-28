@@ -66,3 +66,29 @@ test('preflight never changes source and remains available in the mobile command
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
 });
+
+
+test('prioritized review plan links missing imports to source, then requires official Check', async ({ page }) => {
+  await page.goto(link('import "missing.srp" as missing;\n// TODO: inspect formatting  \n'));
+  const panel = await openPreflight(page);
+  const actions = panel.getByLabel('Suggested review sequence');
+  await expect(actions).toContainText('Resolve missing source imports');
+  await expect(actions).toContainText('Run the official Scarp compiler checks');
+  await actions.getByRole('button', {
+    name: 'Open first review location for Resolve missing source imports',
+  }).click();
+  await expect(page.locator('.monaco-editor textarea.inputarea')).toBeAttached();
+  await actions.getByRole('button', { name: 'Hide review plan' }).click();
+  await expect(actions).not.toContainText('Resolve missing source imports');
+  await actions.getByRole('button', { name: 'Show review plan' }).click();
+  await expect(actions).toContainText('Resolve missing source imports');
+});
+
+test('a source-clean preflight still suggests real Rust compiler verification', async ({ page }) => {
+  await page.goto(link('print(42);\n'));
+  const panel = await openPreflight(page);
+  await expect(panel).toContainText('No preflight blockers detected');
+  await expect(panel.getByLabel('Suggested review sequence')).toContainText(
+    'Run the official Scarp compiler checks',
+  );
+});

@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Workspace } from './workspace';
+import { planPreflightActions, summarizeActionPlan, visiblePreflightActions } from './preflight-actions';
 import {
   capturePreflightSnapshot, comparePreflightSnapshot,
   filterProjectPreflight, inspectProjectPreflight,
@@ -26,10 +27,15 @@ export function ProjectPreflightPanel({
   const [filter, setFilter] = useState<PreflightFilter>(initialFilter);
   const [showGuidance, setShowGuidance] = useState(true);
   const [compare, setCompare] = useState(false);
+  const [showActions, setShowActions] = useState(true);
+  const [urgentActionsOnly, setUrgentActionsOnly] = useState(false);
   const [status, setStatus] = useState('');
   const report: PreflightReport = useMemo(() => inspectProjectPreflight(workspace), [workspace]);
   const files = useMemo(() => Object.keys(workspace.files).sort(), [workspace]);
   const results = useMemo(() => filterProjectPreflight(report, filter), [report, filter]);
+  const actions = useMemo(() => planPreflightActions(report), [report]);
+  const actionSummary = useMemo(() => summarizeActionPlan(actions), [actions]);
+  const visibleActions = useMemo(() => visiblePreflightActions(actions, urgentActionsOnly), [actions, urgentActionsOnly]);
   const delta = useMemo(() => compare && baseline
     ? comparePreflightSnapshot(baseline, report) : null,
     [compare, baseline, report]);
@@ -144,6 +150,48 @@ export function ProjectPreflightPanel({
           {showGuidance && <p className="preflight-guidance">{issue.guidance}</p>}
         </li>)}</ol>}
       </div>
+
+      <section className="preflight-review-plan" aria-label="Suggested review sequence">
+        <div className="preflight-review-heading">
+          <h3>Suggested next checks</h3>
+          <span>{actionSummary.manualReview} review action(s) ·
+            {' '}{actionSummary.compilerRequired} compiler-check-dependent action(s)</span>
+          <button type="button" aria-expanded={showActions}
+            aria-controls="preflight-guided-actions"
+            onClick={() => setShowActions(value => !value)}>
+            {showActions ? 'Hide review plan' : 'Show review plan'}
+          </button>
+        </div>
+        {showActions && <>
+          <label className="preflight-urgent-actions">
+            <input type="checkbox" checked={urgentActionsOnly}
+              onChange={event => setUrgentActionsOnly(event.target.checked)}/>
+            Focus on blockers and warnings (keep compiler verification)
+          </label>
+          <ol id="preflight-guided-actions">
+          {visibleActions.map((action, index) => <li key={action.id}>
+            <div>
+              <strong>{index + 1}. {action.title}</strong>
+              <small>{action.severity} · {action.count} related finding(s)</small>
+              {action.firstLocation && <button type="button"
+                aria-label={'Open first review location for ' + action.title}
+                onClick={() => {
+                  const target = action.firstLocation!;
+                  onNavigate(target.path, target.line, target.column);
+                }}>
+                Open first source location
+              </button>}
+            </div>
+            <p>{action.instruction}</p>
+            {action.paths.length > 0 && <small>
+              {action.paths.length} relevant file(s): {action.paths.slice(0, 4).join(', ')}
+              {action.paths.length > 4 ? ', …' : ''}
+            </small>}
+          </li>)}
+        </ol></>}
+        <p className="project-replace-help">This checklist is guidance only;
+          it never changes code, runs the compiler or dismisses findings.</p>
+      </section>
 
       <div className="preflight-baseline">
         <h3>Compare preflight changes</h3>
