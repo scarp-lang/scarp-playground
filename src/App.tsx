@@ -10,6 +10,7 @@ import { defaultExample } from './default-example';
 const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
 const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
 const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
+const SourceTasksPanel = lazy(() => import('./SourceTasksPanel').then(module => ({ default: module.SourceTasksPanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
@@ -141,6 +142,8 @@ export function App() {
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
+  const [sourceTasksOpen, setSourceTasksOpen] = useState(false);
+  const [sourceTaskReviews, setSourceTaskReviews] = useState<string[]>([]);
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -1644,6 +1647,7 @@ export function App() {
     { id: 'stop', label: 'Stop execution', group: 'Execution', description: 'Cancel the active compiler operation', disabled: !running, invoke: invalidateExecution },
     { id: 'challenges', label: 'Learning challenges', group: 'Execution', description: 'Practice with public cases and reference solutions', invoke: () => setChallengeOpen(true) },
     { id: 'checkpoint', label: 'Source checkpoint', group: 'Project', description: 'Review temporary source changes and restore a checkpoint', invoke: () => setSourceCheckpointOpen(true) },
+    { id: 'source-tasks', label: 'Source tasks and review', group: 'Project', description: 'Inspect tagged TODO/FIXME comments and review them in this tab', invoke: () => setSourceTasksOpen(true) },
     { id: 'library', label: 'Project library', group: 'Project', description: 'Open named local source snapshots', invoke: () => setLibraryOpen(true) },
     { id: 'outline', label: 'Source outline', group: 'Navigation', description: 'Inspect declarations with the Scarp parser', invoke: () => setOutlineOpen(true) },
     { id: 'inspection', label: 'Compiler module inspection', group: 'Navigation', description: 'Inspect resolved modules and signatures', invoke: () => setInspectionOpen(true) },
@@ -1829,6 +1833,10 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={sourceTasksOpen}
+                aria-controls="source-tasks-panel" onClick={() => setSourceTasksOpen(open => !open)}>
+                Source tasks
+              </button>
               <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
                 aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
                 Source checkpoint
@@ -1882,6 +1890,11 @@ export function App() {
             </div>
           </div>
 
+          {sourceTasksOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source tasks…</p>}>
+            <SourceTasksPanel workspace={workspace} reviewed={sourceTaskReviews}
+              onReviewChange={setSourceTaskReviews} onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setSourceTasksOpen(false)} />
+          </Suspense>}
           {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
             onCapture={captureCheckpoint} onRestore={restoreCheckpoint}
