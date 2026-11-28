@@ -32,6 +32,8 @@ import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from 
 import { scarpFileStats } from './source-file';
 import { createSourceArchive, sourceArchiveProblem } from './source-archive';
 import { previewSourceImport } from './source-import';
+import { decodeSourceFolder, MAX_FOLDER_SELECTION_ENTRIES, planFolderSelection } from './source-folder';
+import { SourceFolderPreview } from './SourceFolderPreview';
 import { QuickOpenFiles } from './QuickOpenFiles';
 import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
@@ -125,8 +127,19 @@ export function App() {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const importFileRef = useRef<HTMLInputElement>(null);
   const sourceFilesRef = useRef<HTMLInputElement>(null);
+  const sourceFolderRef = useRef<HTMLInputElement>(null);
+  const [folderPreview, setFolderPreview] = useState<{ snapshot: Workspace; workspace: Workspace; ignored: number; key: number } | null>(null);
+  const folderPreviewSequence = useRef(0);
   const sourceImportActive = useRef(false);
   const [importingSources, setImportingSources] = useState(false);
+  const [folderPickerSupported, setFolderPickerSupported] = useState(false);
+  useEffect(() => {
+    const picker = sourceFolderRef.current;
+    if (picker && 'webkitdirectory' in picker) {
+      picker.setAttribute('webkitdirectory', '');
+      setFolderPickerSupported(true);
+    }
+  }, []);
   const executionScope = useRef(new ExecutionScope());
   const definitionScope = useRef(new ExecutionScope());
   const [navigationTrigger, setNavigationTrigger] = useState(0);
@@ -250,6 +263,7 @@ export function App() {
   }
 
   function invalidateExecution() {
+    setFolderPreview(null);
     setQuickOpen(false);
     setFileDuplicate(null);
     setFileDuplicatePlan(null);
@@ -1089,6 +1103,74 @@ export function App() {
     }
   }
 
+  async function previewLocalSourceFolder(event: ChangeEvent<HTMLInputElement>) {
+    const selected = event.currentTarget.files;
+    // Copy file handles before clearing the picker, but bound the enumeration.
+    const count = selected?.length ?? 0;
+    if (!count || sourceImportActive.current) {
+      event.currentTarget.value = '';
+      return;
+    }
+    if (count > MAX_FOLDER_SELECTION_ENTRIES) {
+      event.currentTarget.value = '';
+      setNotice('Choose a smaller source folder (at most 2,048 selected file entries).');
+      return;
+    }
+    const files = Array.from(selected!);
+    event.currentTarget.value = '';
+    setFolderPreview(null);
+    const selection = planFolderSelection(files);
+    if (!selection.ok) { setNotice(selection.error); return; }
+    sourceImportActive.current = true;
+    setImportingSources(true);
+    const snapshot = workspace;
+    try {
+      const uploads = await Promise.all(selection.candidates.map(async candidate => ({
+        path: candidate.path, bytes: new Uint8Array(await files[candidate.index].arrayBuffer()),
+      })));
+      if (latestSession.current.workspace !== snapshot) {
+        setNotice('The workspace changed while reading the folder. Select it again.');
+        return;
+      }
+      const plan = decodeSourceFolder(selection, uploads);
+      if (!plan.ok) { setNotice(plan.error); return; }
+      setFolderPreview({ snapshot, workspace: plan.workspace, ignored: selection.ignored,
+        key: ++folderPreviewSequence.current });
+      setNotice('Review the source folder and choose its entrypoint before replacing the workspace.');
+    } catch {
+      setNotice('Unable to read the selected source folder. No source files were changed.');
+    } finally {
+      sourceImportActive.current = false;
+      setImportingSources(false);
+    }
+  }
+
+  function applySourceFolder(entry: string) {
+    if (!folderPreview || folderPreview.snapshot !== workspace || !Object.hasOwn(folderPreview.workspace.files, entry)) {
+      setFolderPreview(null);
+      setNotice('The folder preview is stale. Select the source folder again.');
+      return;
+    }
+    if (!window.confirm(
+      'Replace the open workspace with the selected source folder? Current source edits and program input will be lost. Your locally saved browser copy will not be overwritten.',
+    )) return;
+    if (!preserveSavedSourceBeforeSwitch()) return;
+    const next = { ...folderPreview.workspace, entry };
+    invalidateExecution();
+    setSavingLocally(false);
+    setWorkspace(next);
+    setCheckpoint({ workspace: next, stdin: '', recoverable: false });
+    setProgramInput('');
+    setAllowPrompts(false);
+    setEditorSession(number => number + 1);
+    setActiveFile(entry);
+    setLastBulkEdit(null);
+    setNotice('Imported ' + Object.keys(next.files).length +
+      ' nested Scarp source files. Save locally if you want this project to persist after reload.');
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    acceptedHash.current = '';
+  }
+
   function exportWorkspace() {
     const json = serializePortableWorkspace(workspace, activeFile);
     if (!json) {
@@ -1313,6 +1395,13 @@ export function App() {
                 onClick={() => sourceFilesRef.current?.click()}>
                 {importingSources ? 'Reading .srp files…' : 'Add .srp files'}
               </button>
+              <input ref={sourceFolderRef} type="file" multiple hidden
+                aria-label="Choose Scarp source folder"
+                onChange={event => void previewLocalSourceFolder(event)} />
+              <button type="button" className="button-secondary"
+                disabled={importingSources || !folderPickerSupported}
+                title={folderPickerSupported ? 'Review nested .srp files from a local folder' : 'Folder picker unavailable; use Add .srp files or project JSON'}
+                onClick={() => sourceFolderRef.current?.click()}>Import source folder</button>
               <button type="button" className="button-secondary"
                 title="Undo the latest atomic project change, including imported source files"
                 onClick={undoLastBulkChange}
@@ -1366,6 +1455,10 @@ export function App() {
 
           {moduleGraphOpen && <ModuleGraphPanel workspace={workspace} activeFile={activeFile}
             onNavigate={jumpToSearchHit} onClose={() => setModuleGraphOpen(false)} />}
+
+          {folderPreview && <SourceFolderPreview key={folderPreview.key}
+            workspace={folderPreview.workspace} ignored={folderPreview.ignored}
+            onApply={applySourceFolder} onCancel={() => setFolderPreview(null)} />}
 
           {searchOpen && (
             <section id="project-search-panel" className="project-search" aria-label="Search Scarp project">

@@ -227,6 +227,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Import source folder** previews nested local .srp files, ignores non-source files without reading them, lets you choose an entrypoint and confirms replacement without overwriting an existing saved browser copy. See [folder import](docs/import-source-folder.md).
+
 - **Download sources ZIP** exports every validated .srp file with nested relative paths and exact UTF-8 bytes. It excludes session input and results; use project JSON to preserve the selected entrypoint. See [source archive](docs/source-archive.md).
 
 - **Module dependencies** gives a local, bounded import overview with entry reachability, missing targets, cycle members and clickable source locations. This lexical navigation aid is not compiler verification. See [module dependencies](docs/module-dependencies.md).
