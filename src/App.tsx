@@ -80,6 +80,7 @@ const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({
 const BatchModuleMovePanel = lazy(() => import('./BatchModuleMovePanel').then(module => ({ default: module.BatchModuleMovePanel })));
 const ImportRepairPanel = lazy(() => import('./ImportRepairPanel').then(module => ({ default: module.ImportRepairPanel })));
 const SelectiveReplacePanel = lazy(() => import('./SelectiveReplacePanel').then(module => ({ default: module.SelectiveReplacePanel })));
+const SourceFileComparePanel = lazy(() => import('./SourceFileComparePanel').then(module => ({ default: module.SourceFileComparePanel })));
 import type { FolderMovePlan } from './folder-move';
 import type { BatchMovePlan } from './batch-module-move';
 import type { ImportRepairPlan } from './import-repair';
@@ -181,6 +182,7 @@ export function App() {
   const [batchMoveOpen, setBatchMoveOpen] = useState(false);
   const [importRepairOpen, setImportRepairOpen] = useState(false);
   const [selectiveReplaceOpen, setSelectiveReplaceOpen] = useState(false);
+  const [sourceFileCompareOpen, setSourceFileCompareOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
   const [hygieneOpen, setHygieneOpen] = useState(false);
@@ -1883,6 +1885,7 @@ export function App() {
     { id: 'batch-move', label: 'Batch source file rename', group: 'Project', description: 'Simultaneously relocate Scarp files and rebase local imports', invoke: () => setBatchMoveOpen(true) },
     { id: 'repair-imports', label: 'Repair missing imports', group: 'Project', description: 'Preview explicit replacements for missing local .srp import paths', invoke: () => setImportRepairOpen(true) },
     { id: 'selective-replace', label: 'Selective replace', group: 'Project', description: 'Choose and preview exact literal occurrences across source files', invoke: () => setSelectiveReplaceOpen(true) },
+    { id: 'source-file-compare', label: 'Compare Scarp files', group: 'Navigation', description: 'Read-only bounded line comparison of two local source files', invoke: () => setSourceFileCompareOpen(true) },
     { id: 'save', label: 'Save locally', group: 'Project', description: 'Opt into source-only browser storage', shortcut: 'Ctrl+S', invoke: enableLocalSaving },
     { id: 'forget', label: 'Forget saved copy', group: 'Project', description: 'Remove the saved browser copy after confirmation', disabled: !savingLocally, invoke: forgetLocalSaving },
     { id: 'export', label: 'Export project JSON', group: 'Project', description: 'Download a portable source workspace', invoke: exportWorkspace },
@@ -2256,6 +2259,12 @@ export function App() {
             <ModuleImpactPanel workspace={workspace} activeFile={activeFile}
               onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
               onClose={() => setModuleImpactOpen(false)} />
+          </Suspense>}
+
+          {sourceFileCompareOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source comparison…</p>}>
+            <SourceFileComparePanel workspace={workspace} activeFile={activeFile}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setSourceFileCompareOpen(false)} />
           </Suspense>}
 
           {selectiveReplaceOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading selective replacements…</p>}>

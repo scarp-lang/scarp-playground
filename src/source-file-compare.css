@@ -1,0 +1,88 @@
+.source-file-compare { padding: 15px; }
+.source-file-compare-heading { flex: 1 1 190px; }
+.source-file-compare-heading h2 { margin: 0 0 5px; font-size: 16px; }
+.source-file-compare-heading p { margin: 0; color: var(--muted); font-size: 12px; }
+.source-file-compare-options { display: grid; gap: 8px; margin: 13px 0; }
+.source-file-compare-options > label { font-size: 11px; color: var(--muted); font-weight: 650; }
+.source-file-compare-options select {
+  background: var(--panel-2); color: var(--text);
+  border-radius: 7px; border: 1px solid var(--border);
+  padding: 8px 9px; min-width: 0; font-size: 11px;
+}
+.source-file-compare-flags {
+  display: flex; flex-wrap: wrap; gap: 8px 13px; align-items: center;
+}
+.source-file-compare-flags label, .source-file-compare-actions label {
+  display: inline-flex; align-items: center; gap: 7px;
+  font-size: 11px; color: var(--muted);
+}
+.source-file-compare-flags label[for='compare-context-lines'] { margin-left: auto; }
+.source-file-compare-options > button, .source-file-compare-actions > button {
+  color: var(--text); background: var(--panel-2); border: 1px solid var(--border);
+  border-radius: 7px; padding: 8px 11px; font-size: 11px;
+}
+.source-file-compare-options > button:disabled { opacity: .55; }
+.source-file-compare-summary {
+  display: flex; flex-wrap: wrap; gap: 7px; margin: 13px 0;
+}
+.source-file-compare-summary span, .source-file-compare-summary strong {
+  border: 1px solid var(--border); border-radius: 7px;
+  padding: 6px 9px; font-size: 11px; background: var(--panel-2);
+}
+.source-file-compare-actions {
+  display: flex; align-items: center; justify-content: space-between;
+  flex-wrap: wrap; gap: 8px; margin: 12px 0;
+}
+.source-file-compare-results {
+  max-height: 470px; overflow: auto; border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.source-file-compare-hunk { border-bottom: 2px solid var(--border); }
+.source-file-compare-hunk:last-child { border-bottom: 0; }
+.source-file-compare-hunk header {
+  display: flex; flex-wrap: wrap; gap: 8px 11px; padding: 8px 10px;
+  background: var(--panel-2); align-items: baseline;
+}
+.source-file-compare-hunk header strong { font-size: 12px; }
+.source-file-compare-hunk header span {
+  font-size: 11px; color: var(--muted); overflow-wrap: anywhere;
+}
+.source-file-compare-hunk ol { padding: 0; margin: 0; list-style: none; }
+.source-file-compare-hunk li {
+  display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  border-bottom: 1px solid var(--border);
+}
+.source-file-compare-hunk li:last-child { border-bottom: 0; }
+.source-file-compare-row {
+  min-width: 0; display: flex; align-items: flex-start; gap: 8px; padding: 6px;
+}
+.source-file-compare-row + .source-file-compare-row { border-left: 1px solid var(--border); }
+.source-file-compare-row button {
+  flex: 0 0 35px; text-align: right; background: none; border: none;
+  font-size: 10px; color: var(--accent); padding: 2px;
+}
+.source-file-compare-row button:disabled { color: var(--muted); }
+.source-file-compare-row pre {
+  flex: 1 1 auto; overflow-x: auto; white-space: pre;
+  margin: 0; font-size: 11px; line-height: 1.5;
+}
+.source-file-compare-hunk .file-compare-added .source-file-compare-row:last-child,
+.source-file-compare-hunk .file-compare-changed .source-file-compare-row:last-child {
+  background: #3e8e651a;
+}
+.source-file-compare-hunk .file-compare-removed .source-file-compare-row:first-child,
+.source-file-compare-hunk .file-compare-changed .source-file-compare-row:first-child {
+  background: #bc62621a;
+}
+.source-file-compare-results.compare-stacked .source-file-compare-hunk li {
+  grid-template-columns: minmax(0, 1fr);
+}
+.source-file-compare-results.compare-stacked .source-file-compare-row + .source-file-compare-row {
+  border-left: 0; border-top: 1px dashed var(--border);
+}
+@media(max-width: 620px) {
+  .source-file-compare-hunk li { grid-template-columns: minmax(0, 1fr); }
+  .source-file-compare-row + .source-file-compare-row {
+    border-left: none; border-top: 1px dashed var(--border);
+  }
+}
