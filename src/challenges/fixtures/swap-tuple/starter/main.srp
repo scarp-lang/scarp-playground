@@ -1,0 +1,5 @@
+bind pair = (text_to_integer(read_line()), text_to_integer(read_line()));
+bind (first, second) = pair;
+// TODO: output the two values in reverse order.
+print(first);
+print(second);

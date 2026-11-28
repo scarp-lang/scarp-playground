@@ -1,0 +1,4 @@
+bind width = text_to_integer(read_line());
+bind height = text_to_integer(read_line());
+// TODO: compute the rectangle area.
+print(0);

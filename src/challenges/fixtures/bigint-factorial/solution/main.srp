@@ -1,0 +1,9 @@
+pure funcra factorial(n: integer) -> bigint {
+    var product = bigint("1");
+    repeat n as index {
+        product *= bigint_from_integer(index + 1);
+    }
+    return product;
+}
+bind n = text_to_integer(read_line());
+print(factorial(n));

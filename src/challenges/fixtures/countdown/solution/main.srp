@@ -1,0 +1,5 @@
+var counter = text_to_integer(read_line());
+while counter >= 0 {
+    print(counter);
+    counter -= 1;
+}

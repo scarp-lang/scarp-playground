@@ -1,0 +1,11 @@
+pure funcra fibonacci(n: integer) -> integer {
+    var current: integer = 0;
+    var next: integer = 1;
+    repeat n as index {
+        bind combined = current + next;
+        current = next;
+        next = combined;
+    }
+    return current;
+}
+print(fibonacci(text_to_integer(read_line())));

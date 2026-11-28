@@ -1,0 +1,4 @@
+pub pure funcra measures(a: integer, b: integer) -> tuple<integer, integer> {
+    // TODO: calculate both measures.
+    return (0, 0);
+}

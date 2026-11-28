@@ -1,0 +1,3 @@
+bind value = read_line();
+print(text_len(value));
+print(text_bytes(value));

@@ -1,0 +1,6 @@
+bind n = text_to_integer(read_line());
+var total: integer = 0;
+repeat n as index {
+    total += index + 1;
+}
+print(total);

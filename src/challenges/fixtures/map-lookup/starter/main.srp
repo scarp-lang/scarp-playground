@@ -1,0 +1,4 @@
+bind colors: map<string, integer> = [map: "red": 1, "green": 2, "blue": 3];
+bind name = read_line();
+// TODO: perform the safe map lookup.
+print(0);

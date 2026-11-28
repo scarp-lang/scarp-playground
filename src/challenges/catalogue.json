@@ -1,0 +1,939 @@
+[
+  {
+    "id": "echo-name",
+    "title": "Echo a name",
+    "track": "Foundations",
+    "level": "beginner",
+    "goal": "Read one line and print exactly that text, followed by a newline. An empty line is a valid name.",
+    "hints": [
+      "read_line() consumes one buffered line.",
+      "print(value) emits the value and a newline."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "ASCII",
+        "stdin": "Ada\n",
+        "stdout": "Ada\n",
+        "stderr": ""
+      },
+      {
+        "name": "Unicode",
+        "stdin": "नमस्ते 😀\n",
+        "stdout": "नमस्ते 😀\n",
+        "stderr": ""
+      },
+      {
+        "name": "Blank",
+        "stdin": "\n",
+        "stdout": "\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "rectangle-area",
+    "title": "Rectangle area",
+    "track": "Foundations",
+    "level": "beginner",
+    "goal": "Read width and height as nonnegative integers on separate lines. Print their product.",
+    "hints": [
+      "Convert each line using text_to_integer().",
+      "The multiplication operator is *."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Regular",
+        "stdin": "6\n7\n",
+        "stdout": "42\n",
+        "stderr": ""
+      },
+      {
+        "name": "Zero width",
+        "stdin": "0\n15\n",
+        "stdout": "0\n",
+        "stderr": ""
+      },
+      {
+        "name": "Large",
+        "stdin": "1200\n3000\n",
+        "stdout": "3600000\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "quotient-remainder",
+    "title": "Quotient and remainder",
+    "track": "Foundations",
+    "level": "beginner",
+    "goal": "Read a nonnegative integer and a positive divisor. Print the quotient and remainder on separate lines.",
+    "hints": [
+      "Integer division uses /.",
+      "The % operator returns the remainder."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Uneven",
+        "stdin": "17\n5\n",
+        "stdout": "3\n2\n",
+        "stderr": ""
+      },
+      {
+        "name": "Exact",
+        "stdin": "20\n4\n",
+        "stdout": "5\n0\n",
+        "stderr": ""
+      },
+      {
+        "name": "Small dividend",
+        "stdin": "3\n8\n",
+        "stdout": "0\n3\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "swap-tuple",
+    "title": "Swap two values",
+    "track": "Foundations",
+    "level": "beginner",
+    "goal": "Read two integers, store them in a tuple, destructure it and print the second then the first on separate lines.",
+    "hints": [
+      "Tuple literals use parentheses: (a, b).",
+      "Destructuring uses bind (first, second) = pair;."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Distinct",
+        "stdin": "3\n9\n",
+        "stdout": "9\n3\n",
+        "stderr": ""
+      },
+      {
+        "name": "Signed",
+        "stdin": "-5\n0\n",
+        "stdout": "0\n-5\n",
+        "stderr": ""
+      },
+      {
+        "name": "Equal",
+        "stdin": "4\n4\n",
+        "stdout": "4\n4\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "sign-classification",
+    "title": "Classify an integer",
+    "track": "Control flow",
+    "level": "beginner",
+    "goal": "Read an integer. Print positive, negative or zero in lowercase.",
+    "hints": [
+      "Use if, elif and else for three exclusive branches.",
+      "Compare with 0 using > and <."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Positive",
+        "stdin": "7\n",
+        "stdout": "positive\n",
+        "stderr": ""
+      },
+      {
+        "name": "Negative",
+        "stdin": "-7\n",
+        "stdout": "negative\n",
+        "stderr": ""
+      },
+      {
+        "name": "Zero",
+        "stdin": "0\n",
+        "stdout": "zero\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "even-odd",
+    "title": "Even or odd",
+    "track": "Control flow",
+    "level": "beginner",
+    "goal": "Read an integer. Print even when it is divisible by two, otherwise print odd. Negative inputs are included.",
+    "hints": [
+      "An even integer has remainder 0 when divided by 2.",
+      "Compare the remainder rather than checking whether it equals 1."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Even",
+        "stdin": "14\n",
+        "stdout": "even\n",
+        "stderr": ""
+      },
+      {
+        "name": "Negative odd",
+        "stdin": "-9\n",
+        "stdout": "odd\n",
+        "stderr": ""
+      },
+      {
+        "name": "Zero",
+        "stdin": "0\n",
+        "stdout": "even\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "largest-three",
+    "title": "Largest of three",
+    "track": "Control flow",
+    "level": "beginner",
+    "goal": "Read three signed integers. Print the largest, including when two values tie.",
+    "hints": [
+      "Initialize a mutable maximum from the first input.",
+      "Update it only when the next value is greater."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "First",
+        "stdin": "9\n2\n5\n",
+        "stdout": "9\n",
+        "stderr": ""
+      },
+      {
+        "name": "Last",
+        "stdin": "-8\n-2\n-1\n",
+        "stdout": "-1\n",
+        "stderr": ""
+      },
+      {
+        "name": "Tie",
+        "stdin": "4\n7\n7\n",
+        "stdout": "7\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "sum-to-n",
+    "title": "Sum 1 to N",
+    "track": "Control flow",
+    "level": "beginner",
+    "goal": "Read N between 0 and 1000. Print the sum of integers from 1 through N.",
+    "hints": [
+      "repeat N as index starts index at zero.",
+      "Add index + 1 to a mutable accumulator."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Five",
+        "stdin": "5\n",
+        "stdout": "15\n",
+        "stderr": ""
+      },
+      {
+        "name": "Empty range",
+        "stdin": "0\n",
+        "stdout": "0\n",
+        "stderr": ""
+      },
+      {
+        "name": "Hundred",
+        "stdin": "100\n",
+        "stdout": "5050\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "countdown",
+    "title": "Countdown",
+    "track": "Control flow",
+    "level": "beginner",
+    "goal": "Read N between 0 and 20. Print N down to 0, one integer per line, including both endpoints.",
+    "hints": [
+      "Use a mutable counter and while counter >= 0.",
+      "Subtract 1 each time so the loop terminates."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Three",
+        "stdin": "3\n",
+        "stdout": "3\n2\n1\n0\n",
+        "stderr": ""
+      },
+      {
+        "name": "Zero",
+        "stdin": "0\n",
+        "stdout": "0\n",
+        "stderr": ""
+      },
+      {
+        "name": "One",
+        "stdin": "1\n",
+        "stdout": "1\n0\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "factorial",
+    "title": "Small factorial",
+    "track": "Functions and math",
+    "level": "intermediate",
+    "goal": "Read N in the range 0–12. Implement a pure factorial function and print N!. The factorial of zero is 1.",
+    "hints": [
+      "Start the product at 1, not 0.",
+      "Use repeat n as index and multiply by index + 1."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Zero",
+        "stdin": "0\n",
+        "stdout": "1\n",
+        "stderr": ""
+      },
+      {
+        "name": "Five",
+        "stdin": "5\n",
+        "stdout": "120\n",
+        "stderr": ""
+      },
+      {
+        "name": "Twelve",
+        "stdin": "12\n",
+        "stdout": "479001600\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "euclid",
+    "title": "Euclidean greatest common divisor",
+    "track": "Functions and math",
+    "level": "intermediate",
+    "goal": "Read two nonnegative integers. Implement the Euclidean algorithm, including cases where one or both inputs are zero.",
+    "hints": [
+      "Keep two mutable copies of the inputs.",
+      "While b is not zero, replace (a,b) with (b,a%b)."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Common factor",
+        "stdin": "84\n30\n",
+        "stdout": "6\n",
+        "stderr": ""
+      },
+      {
+        "name": "Coprime",
+        "stdin": "35\n64\n",
+        "stdout": "1\n",
+        "stderr": ""
+      },
+      {
+        "name": "Zero",
+        "stdin": "0\n12\n",
+        "stdout": "12\n",
+        "stderr": ""
+      },
+      {
+        "name": "Both zero",
+        "stdin": "0\n0\n",
+        "stdout": "0\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "prime-check",
+    "title": "Prime number check",
+    "track": "Functions and math",
+    "level": "intermediate",
+    "goal": "Read an integer from -100 to 10000. Print prime or not prime. Use trial division; 0 and 1 are not prime.",
+    "hints": [
+      "Reject n < 2 before the loop.",
+      "Test divisors while divisor * divisor <= n."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Prime",
+        "stdin": "97\n",
+        "stdout": "prime\n",
+        "stderr": ""
+      },
+      {
+        "name": "Square",
+        "stdin": "49\n",
+        "stdout": "not prime\n",
+        "stderr": ""
+      },
+      {
+        "name": "One",
+        "stdin": "1\n",
+        "stdout": "not prime\n",
+        "stderr": ""
+      },
+      {
+        "name": "Two",
+        "stdin": "2\n",
+        "stdout": "prime\n",
+        "stderr": ""
+      },
+      {
+        "name": "Negative",
+        "stdin": "-5\n",
+        "stdout": "not prime\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "fibonacci",
+    "title": "Fibonacci number",
+    "track": "Functions and math",
+    "level": "intermediate",
+    "goal": "Read N from 0 to 40. Print the Nth Fibonacci number, with F(0)=0 and F(1)=1.",
+    "hints": [
+      "Keep two adjacent values.",
+      "Compute the next value before replacing either variable."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Zero",
+        "stdin": "0\n",
+        "stdout": "0\n",
+        "stderr": ""
+      },
+      {
+        "name": "One",
+        "stdin": "1\n",
+        "stdout": "1\n",
+        "stderr": ""
+      },
+      {
+        "name": "Ten",
+        "stdin": "10\n",
+        "stdout": "55\n",
+        "stderr": ""
+      },
+      {
+        "name": "Forty",
+        "stdin": "40\n",
+        "stdout": "102334155\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "unicode-length",
+    "title": "Unicode scalar and byte length",
+    "track": "Text and input",
+    "level": "beginner",
+    "goal": "Read one line. Print its Unicode scalar count, then its UTF-8 byte count on a separate line.",
+    "hints": [
+      "text_len counts Unicode scalars, not grapheme clusters.",
+      "text_bytes counts the UTF-8 representation."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "ASCII",
+        "stdin": "abc\n",
+        "stdout": "3\n3\n",
+        "stderr": ""
+      },
+      {
+        "name": "Accent",
+        "stdin": "café\n",
+        "stdout": "4\n5\n",
+        "stderr": ""
+      },
+      {
+        "name": "Emoji",
+        "stdin": "😀\n",
+        "stdout": "1\n4\n",
+        "stderr": ""
+      },
+      {
+        "name": "Combining",
+        "stdin": "é\n",
+        "stdout": "2\n3\n",
+        "stderr": ""
+      },
+      {
+        "name": "Blank",
+        "stdin": "\n",
+        "stdout": "0\n0\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "trim-number",
+    "title": "Trim and double",
+    "track": "Text and input",
+    "level": "beginner",
+    "goal": "Read an integer surrounded by optional spaces. Trim, convert and print twice its value.",
+    "hints": [
+      "text_trim removes surrounding whitespace.",
+      "text_to_integer converts the remaining text."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Spaces",
+        "stdin": "  21  \n",
+        "stdout": "42\n",
+        "stderr": ""
+      },
+      {
+        "name": "Signed",
+        "stdin": " -8 \n",
+        "stdout": "-16\n",
+        "stderr": ""
+      },
+      {
+        "name": "Zero",
+        "stdin": "0\n",
+        "stdout": "0\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "line-count",
+    "title": "Count lines until EOF",
+    "track": "Text and input",
+    "level": "intermediate",
+    "goal": "Count all buffered input lines, including blank lines. Print the total. Empty input has zero lines.",
+    "hints": [
+      "try_read_line() returns a tuple with a success flag and text.",
+      "A blank line is not EOF; use the flag."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Empty",
+        "stdin": "",
+        "stdout": "0\n",
+        "stderr": ""
+      },
+      {
+        "name": "Blank line",
+        "stdin": "\n",
+        "stdout": "1\n",
+        "stderr": ""
+      },
+      {
+        "name": "No final LF",
+        "stdin": "one\n\ntwo",
+        "stdout": "3\n",
+        "stderr": ""
+      },
+      {
+        "name": "Trailing LF",
+        "stdin": "a\nb\n",
+        "stdout": "2\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "starts-prefix",
+    "title": "Prefix classification",
+    "track": "Text and input",
+    "level": "beginner",
+    "goal": "Read a text line and a prefix line. Print true if the text begins with the prefix; otherwise print false.",
+    "hints": [
+      "Use text_starts_with(text, prefix).",
+      "Comparison is case-sensitive."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Match",
+        "stdin": "Scarp\nScar\n",
+        "stdout": "true\n",
+        "stderr": ""
+      },
+      {
+        "name": "Case mismatch",
+        "stdin": "Scarp\nsc\n",
+        "stdout": "false\n",
+        "stderr": ""
+      },
+      {
+        "name": "Unicode",
+        "stdin": "😀 café\n😀\n",
+        "stdout": "true\n",
+        "stderr": ""
+      },
+      {
+        "name": "Long prefix",
+        "stdin": "ab\nabc\n",
+        "stdout": "false\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "array-sum",
+    "title": "Sum a fixed array",
+    "track": "Structured data",
+    "level": "intermediate",
+    "goal": "Read three integers into a fixed-size array. Print their sum using indexing.",
+    "hints": [
+      "Use [array: a, b, c] to create the array.",
+      "The first index is 0."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Three",
+        "stdin": "1\n2\n3\n",
+        "stdout": "6\n",
+        "stderr": ""
+      },
+      {
+        "name": "Signed",
+        "stdin": "-4\n6\n-2\n",
+        "stdout": "0\n",
+        "stderr": ""
+      },
+      {
+        "name": "Equal",
+        "stdin": "5\n5\n5\n",
+        "stdout": "15\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "list-accumulator",
+    "title": "Collect and sum a list",
+    "track": "Structured data",
+    "level": "intermediate",
+    "goal": "Read integers until EOF, one per line. Build a typed list and print its length and sum on separate lines. Inputs contain no blank lines.",
+    "hints": [
+      "Start with [list: <integer>].",
+      "list_push returns a new list; assign it back to your mutable variable."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "None",
+        "stdin": "",
+        "stdout": "0\n0\n",
+        "stderr": ""
+      },
+      {
+        "name": "One",
+        "stdin": "-5\n",
+        "stdout": "1\n-5\n",
+        "stderr": ""
+      },
+      {
+        "name": "Several",
+        "stdin": "2\n4\n-1\n",
+        "stdout": "3\n5\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "record-area",
+    "title": "Rectangle record",
+    "track": "Structured data",
+    "level": "intermediate",
+    "goal": "Read width and height, create a Rectangle record and call a pure function that computes its area.",
+    "hints": [
+      "Declare fields using record Rectangle { width: integer, height: integer }.",
+      "Access a field using rectangle->width."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Square",
+        "stdin": "4\n4\n",
+        "stdout": "16\n",
+        "stderr": ""
+      },
+      {
+        "name": "Zero",
+        "stdin": "0\n8\n",
+        "stdout": "0\n",
+        "stderr": ""
+      },
+      {
+        "name": "Rectangle",
+        "stdin": "7\n9\n",
+        "stdout": "63\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "map-lookup",
+    "title": "Map lookup with fallback",
+    "track": "Structured data",
+    "level": "intermediate",
+    "goal": "Read one color name. Print its numeric code from red=1, green=2, blue=3. Use 0 for an absent key.",
+    "hints": [
+      "Create a typed map with [map: key: value].",
+      "map_get_or(map, key, fallback) handles missing keys."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Red",
+        "stdin": "red\n",
+        "stdout": "1\n",
+        "stderr": ""
+      },
+      {
+        "name": "Blue",
+        "stdin": "blue\n",
+        "stdout": "3\n",
+        "stderr": ""
+      },
+      {
+        "name": "Absent",
+        "stdin": "purple\n",
+        "stdout": "0\n",
+        "stderr": ""
+      },
+      {
+        "name": "Case sensitive",
+        "stdin": "RED\n",
+        "stdout": "0\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "decimal-total",
+    "title": "Exact decimal sum",
+    "track": "Exact numbers",
+    "level": "intermediate",
+    "goal": "Read two decimal amounts. Add them exactly and print the total with two fractional digits, using half-even rounding.",
+    "hints": [
+      "Use decimal(read_line()) for exact decimal values.",
+      "decimal_format(total, 2, \"half_even\") emits fixed precision."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Tenths",
+        "stdin": "0.1\n0.2\n",
+        "stdout": "0.30\n",
+        "stderr": ""
+      },
+      {
+        "name": "Amounts",
+        "stdin": "19.99\n5.01\n",
+        "stdout": "25.00\n",
+        "stderr": ""
+      },
+      {
+        "name": "Signed",
+        "stdin": "-1.25\n0.25\n",
+        "stdout": "-1.00\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "bigint-factorial",
+    "title": "Big integer factorial",
+    "track": "Exact numbers",
+    "level": "advanced",
+    "goal": "Read N from 0 through 50. Compute N! with bigint so values beyond signed 64-bit stay exact.",
+    "hints": [
+      "Use bigint(\"1\") for the accumulator.",
+      "Convert loop indices with bigint_from_integer before multiplication."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Zero",
+        "stdin": "0\n",
+        "stdout": "1\n",
+        "stderr": ""
+      },
+      {
+        "name": "Ten",
+        "stdin": "10\n",
+        "stdout": "3628800\n",
+        "stderr": ""
+      },
+      {
+        "name": "Twenty five",
+        "stdin": "25\n",
+        "stdout": "15511210043330985984000000\n",
+        "stderr": ""
+      },
+      {
+        "name": "Fifty",
+        "stdin": "50\n",
+        "stdout": "30414093201713378043612608166064768844377641568960512000000000000\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "module-hcf-lcm",
+    "title": "Reusable number theory module",
+    "track": "Modules",
+    "level": "intermediate",
+    "goal": "Read two nonnegative integers. Implement a public pure function in lib/number.srp that returns a tuple of their GCD and LCM. Print the two results.",
+    "hints": [
+      "The entry file imports lib/number.srp under an alias.",
+      "integer_gcd and integer_lcm are available in the pinned compiler."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "lib/number.srp",
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Shared",
+        "stdin": "12\n18\n",
+        "stdout": "6\n36\n",
+        "stderr": ""
+      },
+      {
+        "name": "Coprime",
+        "stdin": "7\n11\n",
+        "stdout": "1\n77\n",
+        "stderr": ""
+      },
+      {
+        "name": "Zero",
+        "stdin": "0\n8\n",
+        "stdout": "8\n0\n",
+        "stderr": ""
+      }
+    ]
+  },
+  {
+    "id": "module-generic",
+    "title": "Generic identity across modules",
+    "track": "Modules",
+    "level": "advanced",
+    "goal": "Use the public generic identity function in lib/value.srp for two different types; print the original integer then the original text.",
+    "hints": [
+      "A generic parameter T can appear in both parameter and return type.",
+      "The identity function returns its value argument."
+    ],
+    "entry": "main.srp",
+    "files": [
+      "lib/value.srp",
+      "main.srp"
+    ],
+    "cases": [
+      {
+        "name": "Mixed",
+        "stdin": "42\nScarp\n",
+        "stdout": "42\nScarp\n",
+        "stderr": ""
+      },
+      {
+        "name": "Unicode",
+        "stdin": "-7\nनमस्ते 😀\n",
+        "stdout": "-7\nनमस्ते 😀\n",
+        "stderr": ""
+      },
+      {
+        "name": "Empty text",
+        "stdin": "0\n\n",
+        "stdout": "0\n\n",
+        "stderr": ""
+      }
+    ]
+  }
+]

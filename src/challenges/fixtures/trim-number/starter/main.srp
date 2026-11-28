@@ -1,0 +1,3 @@
+bind raw = read_line();
+// TODO: trim the line before converting.
+print(0);

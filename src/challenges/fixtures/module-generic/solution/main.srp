@@ -1,0 +1,7 @@
+import "lib/value.srp" as values;
+bind number = text_to_integer(read_line());
+bind message = read_line();
+bind exact: integer = values.identity(number);
+bind text: string = values.identity(message);
+print(exact);
+print(text);

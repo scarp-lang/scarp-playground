@@ -1,0 +1,6 @@
+import "lib/value.srp" as values;
+bind number = text_to_integer(read_line());
+bind message = read_line();
+// TODO: use the imported identity function for both types.
+print(0);
+print("");

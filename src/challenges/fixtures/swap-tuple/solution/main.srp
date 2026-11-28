@@ -1,0 +1,4 @@
+bind pair: tuple<integer, integer> = (text_to_integer(read_line()), text_to_integer(read_line()));
+bind (first, second) = pair;
+print(second);
+print(first);

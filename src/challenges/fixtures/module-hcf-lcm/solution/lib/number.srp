@@ -1,0 +1,5 @@
+pub pure funcra measures(a: integer, b: integer) -> tuple<integer, integer> {
+    bind divisor = integer_gcd(a, b);
+    bind multiple = integer_lcm(a, b);
+    return (divisor, multiple);
+}

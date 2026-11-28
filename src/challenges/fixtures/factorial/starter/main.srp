@@ -1,0 +1,5 @@
+pure funcra factorial(n: integer) -> integer {
+    // TODO: multiply the numbers 1 through n.
+    return 1;
+}
+print(factorial(text_to_integer(read_line())));

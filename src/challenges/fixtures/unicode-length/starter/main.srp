@@ -1,0 +1,4 @@
+bind value = read_line();
+// TODO: print both lengths.
+print(0);
+print(0);

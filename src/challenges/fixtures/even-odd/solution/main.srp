@@ -1,0 +1,6 @@
+bind number = text_to_integer(read_line());
+if number % 2 == 0 {
+    print("even");
+} else {
+    print("odd");
+}

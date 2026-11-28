@@ -1,0 +1,10 @@
+bind values: array<integer, 3> = [array:
+    text_to_integer(read_line()),
+    text_to_integer(read_line()),
+    text_to_integer(read_line()),
+];
+var total: integer = 0;
+repeat 3 as index {
+    total += values[index];
+}
+print(total);

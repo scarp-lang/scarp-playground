@@ -54,7 +54,7 @@ if (initialBytes > 400_000) {
   process.stderr.write('Initial static JavaScript closure exceeds 400,000 bytes.\n');
   process.exitCode = 1;
 }
-for (const component of ['ExampleBrowser', 'SourceExplorer', 'ModuleGraphPanel', 'FolderMovePanel', 'SourceFolderPreview']) {
+for (const component of ['ExampleBrowser', 'SourceExplorer', 'ModuleGraphPanel', 'FolderMovePanel', 'SourceFolderPreview', 'ProjectLibraryPanel', 'TestCasePanel', 'ChallengePanel']) {
   const key = 'src/' + component + '.tsx';
   if (!manifest[key]?.isDynamicEntry || initial.has(key)) {
     process.stderr.write('Optional workspace tool must remain a dynamic entry: ' + component + '\n');

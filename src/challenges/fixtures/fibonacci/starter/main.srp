@@ -1,0 +1,5 @@
+pure funcra fibonacci(n: integer) -> integer {
+    // TODO: maintain adjacent terms.
+    return 0;
+}
+print(fibonacci(text_to_integer(read_line())));

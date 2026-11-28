@@ -1,0 +1,12 @@
+var values: list<integer> = [list: <integer>];
+var line = try_read_line();
+while line[0] {
+    values = list_push(values, text_to_integer(line[1]));
+    line = try_read_line();
+}
+var total: integer = 0;
+repeat list_len(values) as index {
+    total += values[index];
+}
+print(list_len(values));
+print(total);

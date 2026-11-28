@@ -14,6 +14,8 @@ site; no application server evaluates user source.
 > [v0.0.1 alpha](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
 > is preserved separately. **Neither release is stable or a hardened sandbox.**
 
+The [learning challenges](docs/learning-challenges.md) provide compiler-backed practice with public cases, hints and reference solutions.
+
 ## Compiler compatibility
 
 | Component | Target |
@@ -230,6 +232,14 @@ load failure — it never fakes a successful program result.
 - **Compact example picker** searches the official catalogue and uses a native dropdown with a separate Load example action; selecting an option never replaces editor source by itself.
 
 - **Program test cases** runs up to eight independent input/output or diagnostic-code assertions sequentially against the real WASM interpreter. See [test cases](docs/program-test-cases.md).
+
+- **Source checkpoint** captures a temporary source-only workspace, compares bounded line changes and restores the exact snapshot with undo. See [source checkpoints](docs/source-checkpoints.md).
+
+- **Compiler inspection** exposes the real resolved module inventory, signatures and constant dependency sites with validated editor navigation. See [compiler inspection](docs/compiler-module-inspection.md).
+
+- **Source outline** inspects actual declaration tokens from the real Scarp parser with verified editor coordinates and filters, without executing code. See [source outline](docs/source-outline.md).
+
+- **Local project library** stores up to six explicitly named source-only snapshots in transactional browser storage. See [project library](docs/project-library.md).
 
 - **Import sources ZIP** restores canonical uncompressed Playground source exports with strict byte validation and entrypoint review. See [source archive](docs/source-archive.md).
 

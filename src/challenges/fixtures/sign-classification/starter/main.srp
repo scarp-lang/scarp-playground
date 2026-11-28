@@ -1,0 +1,3 @@
+bind number = text_to_integer(read_line());
+// TODO: distinguish all three cases.
+print("zero");

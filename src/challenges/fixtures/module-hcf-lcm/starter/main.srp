@@ -1,0 +1,6 @@
+import "lib/number.srp" as numbers;
+bind a = text_to_integer(read_line());
+bind b = text_to_integer(read_line());
+bind result = numbers.measures(a, b);
+print(result[0]);
+print(result[1]);
