@@ -54,7 +54,7 @@ function copyPoint(point: SourcePoint): SourcePoint {
 function validBookmarkLabel(value: unknown): value is string {
   return typeof value === 'string' && value.length >= 1 &&
     value.trim() === value && value.trim().length >= 1 &&
-    !/[\r\n\t\u0000-\u001f\u007f]/.test(value) &&
+    !Array.from(value).some(char => char.charCodeAt(0) < 32 || char.charCodeAt(0) === 127) &&
     measureUtf8(value, MAX_BOOKMARK_LABEL_BYTES).ok;
 }
 
