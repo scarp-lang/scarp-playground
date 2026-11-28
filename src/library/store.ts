@@ -100,7 +100,7 @@ export function changeProjectLibrary(factory: IDBFactory, expected: LibrarySnaps
   });
 }
 
-/** Explicit destructive recovery only; never invoked by ordinary reads. */
+/** Explicit deletion only; never invoked by ordinary reads. */
 export function clearProjectLibrary(factory: IDBFactory, expected: LibrarySnapshot): Promise<Result<LibrarySnapshot>> {
   return transact(factory, 'readwrite', (store, set) => {
     const request = store.get(KEY);

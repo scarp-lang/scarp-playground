@@ -1,7 +1,11 @@
 import { expect, test } from '@playwright/test';
 
 test('saves, reopens, renames and removes a source-only snapshot without replacing ordinary autosave', async ({ page }) => {
-  await page.goto('./#code=' + encodeURIComponent('print("library source");'));
+  await page.goto('./');
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText('print("library source");');
   const stdin = page.getByRole('textbox', { name: /program input/i });
   await stdin.fill('not stored in named snapshot');
   await page.getByRole('button', { name: 'Project library', exact: true }).click();
@@ -11,10 +15,11 @@ test('saves, reopens, renames and removes a source-only snapshot without replaci
   await panel.getByRole('button', { name: 'Save named snapshot' }).click();
   await expect(panel).toContainText('Saved source snapshot "Practice".');
   await page.getByRole('button', { name: 'Save locally' }).click();
-  const editor = page.locator('.monaco-editor textarea.inputarea');
   await editor.focus();
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.insertText('print("separate autosave");');
+  await expect.poll(() => page.evaluate(() => localStorage.getItem('scarp-playground-workspace-v1'))).toContain('separate autosave');
+  await stdin.fill('');
   await page.reload();
   await expect(page.locator('.monaco-editor .view-lines')).toContainText('separate autosave');
   await page.getByRole('button', { name: 'Project library', exact: true }).click();
