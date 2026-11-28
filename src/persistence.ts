@@ -1,9 +1,11 @@
 import { validateWorkspace, type Workspace } from './workspace';
+import { MAX_PORTABLE_WORKSPACE_BYTES } from './portable-workspace';
+import { isUtf8Text } from './utf8';
 
 // Versioned, opt-in browser-only saving. Never store via network requests.
 // Limits apply when loading as well as saving; malformed data is never trusted.
 export const LOCAL_WORKSPACE_KEY = 'scarp-playground-workspace-v1';
-export const MAX_LOCAL_SNAPSHOT_BYTES = 160 * 1024;
+export const MAX_LOCAL_SNAPSHOT_BYTES = MAX_PORTABLE_WORKSPACE_BYTES;
 
 export type SavedLocalWorkspace = { workspace: Workspace; activeFile: string };
 type StorageAdapter = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
@@ -13,7 +15,7 @@ function record(value: unknown): value is Record<string, unknown> {
 }
 
 export function parseLocalWorkspace(raw: string | null): SavedLocalWorkspace | null {
-  if (!raw || new TextEncoder().encode(raw).byteLength > MAX_LOCAL_SNAPSHOT_BYTES) return null;
+  if (!raw || !isUtf8Text(raw, MAX_LOCAL_SNAPSHOT_BYTES)) return null;
   try {
     const data: unknown = JSON.parse(raw);
     if (!record(data) || data.version !== 1 || !record(data.workspace)) return null;
@@ -52,7 +54,11 @@ export function saveLocalWorkspace(
   const error = validateWorkspace(workspace);
   if (error) return error;
   const target = Object.hasOwn(workspace.files, activeFile) ? activeFile : workspace.entry;
-  const serialized = JSON.stringify({ version: 1, workspace, activeFile: target });
+  // Only the validated source map and entrypoint may enter browser storage.
+  // Extra metadata on caller objects, including stdin, is never serialized.
+  const serialized = JSON.stringify({ version: 1, workspace: {
+    entry: workspace.entry, files: Object.fromEntries(Object.entries(workspace.files)),
+  }, activeFile: target });
   if (new TextEncoder().encode(serialized).byteLength > MAX_LOCAL_SNAPSHOT_BYTES) {
     return 'The workspace is too large to save locally.';
   }
