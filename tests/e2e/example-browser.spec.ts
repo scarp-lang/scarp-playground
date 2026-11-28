@@ -22,7 +22,12 @@ test('searches descriptions, explains empty results and clears with button or Es
   await page.goto('./');
   const filter = page.getByRole('searchbox', { name: 'Find an example' });
   const buttons = page.locator('.example-button');
+  // The catalogue is now an asynchronously loaded chunk. Wait for actual
+  // fixture content before measuring the unfiltered registry.
+  await expect(filter).toBeVisible();
+  await expect(buttons.first()).toBeVisible();
   const allCount = await buttons.count();
+  expect(allCount).toBeGreaterThan(0);
 
   await filter.fill('tuple alpha.14');
   await expect(buttons).toHaveCount(1);
