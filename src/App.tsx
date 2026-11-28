@@ -10,6 +10,9 @@ import { ExampleBrowser } from './ExampleBrowser';
 import { SourceExplorer } from './SourceExplorer';
 import { previewNewSource } from './workspace-tree';
 import { ModuleGraphPanel } from './ModuleGraphPanel';
+import { SourceOutlinePanel } from './SourceOutlinePanel';
+import { inspectSourceOutline } from './navigation/outline-client';
+import type { LocatedOutline } from './navigation/outline-protocol';
 import { isUntouchedExampleSession } from './example-session';
 import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
@@ -21,7 +24,7 @@ import { previewSymbolRename, validRenameName, type RenameResult } from './navig
 import { buildRenameDiff } from './navigation/rename-diff';
 import { initialReferenceIndex, stepReferenceIndex } from './navigation/reference-view';
 import { diagnosticNavigationPosition, sourceLocationToEditorRange } from './diagnostics';
-import { ExecutionScope } from './runner/execution-scope';
+import { ExecutionScope, type ActiveExecution } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
@@ -106,6 +109,10 @@ export function App() {
   const [allowPrompts, setAllowPrompts] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
+  const [outlineOpen, setOutlineOpen] = useState(false);
+  const [outlineBusy, setOutlineBusy] = useState(false);
+  const [outlineResult, setOutlineResult] = useState<{ workspace: Workspace; path: string; result: LocatedOutline } | null>(null);
+  const outlineTask = useRef<ActiveExecution | null>(null);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -202,6 +209,42 @@ export function App() {
     if (renameTarget) renameInputRef.current?.focus();
   }, [renameTarget]);
 
+  async function refreshOutline() {
+    if (executionScope.current.running || outlineTask.current) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setRenameBusy(false);
+    const lookup = definitionScope.current.start();
+    if (!lookup) return;
+    outlineTask.current = lookup;
+    setOutlineBusy(true);
+    setOutlineResult(null);
+    const path = activeFile;
+    const snapshot = workspace;
+    try {
+      const result = await inspectSourceOutline(snapshot, path, lookup.controller.signal);
+      const latest = latestSession.current;
+      if (definitionScope.current.isCurrent(lookup) && latest.workspace === snapshot && latest.activeFile === path) {
+        setOutlineResult({ workspace: snapshot, path, result });
+      }
+    } finally {
+      definitionScope.current.finish(lookup);
+      if (outlineTask.current === lookup) {
+        outlineTask.current = null;
+        setOutlineBusy(false);
+      }
+    }
+  }
+
+  function closeOutline() {
+    if (outlineTask.current && definitionScope.current.isCurrent(outlineTask.current)) {
+      definitionScope.current.invalidate();
+    }
+    setOutlineOpen(false);
+    setOutlineResult(null);
+  }
+
   function jumpToSearchHit(hit: ProjectSearchHit) {
     if (!Object.hasOwn(workspace.files, hit.path)) return;
     // Any delayed definition result must not replace explicit text navigation.
@@ -270,6 +313,7 @@ export function App() {
   }
 
   function invalidateExecution() {
+    setOutlineResult(null);
     setFolderPreview(null);
     setFolderMoveOpen(false);
     setQuickOpen(false);
@@ -1538,6 +1582,11 @@ export function App() {
                   invalidateExecution();
                   setFolderMoveOpen(true);
                 }}>Move folder</button>
+              <button type="button" className="button-secondary" aria-expanded={outlineOpen}
+                aria-controls="source-outline-panel" onClick={() => {
+                  if (outlineOpen) closeOutline();
+                  else setOutlineOpen(true);
+                }}>Source outline</button>
               <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
                 aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
                 Module dependencies
@@ -1568,6 +1617,16 @@ export function App() {
 
           {folderMoveOpen && <FolderMovePanel workspace={workspace} onApply={applyFolderMove}
             onClose={() => setFolderMoveOpen(false)} />}
+
+          {outlineOpen && <SourceOutlinePanel path={activeFile}
+            result={outlineResult?.workspace === workspace && outlineResult.path === activeFile ? outlineResult.result : null}
+            busy={outlineBusy} running={running} onRefresh={() => void refreshOutline()}
+            onClose={closeOutline} onSelect={entry => {
+              if (outlineResult?.workspace === workspace && outlineResult.path === activeFile) {
+                jumpToSearchHit({ path: activeFile, line: entry.line, column: entry.column,
+                  preview: entry.name });
+              }
+            }} />}
 
           {moduleGraphOpen && <ModuleGraphPanel workspace={workspace} activeFile={activeFile}
             onNavigate={jumpToSearchHit} onClose={() => setModuleGraphOpen(false)} />}

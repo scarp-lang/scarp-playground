@@ -551,3 +551,19 @@ a { color: inherit; text-decoration: none; }
 .source-explorer-new { flex: none; min-width: 26px; min-height: 26px; border: 1px solid var(--border); border-radius: 5px; }
 .source-explorer-error { color: #e4ae72; font-size: 12px; overflow-wrap: anywhere; }
 :root[data-theme='light'] .source-explorer-error { color: #985c1b; }
+
+/* Compiler-owned source outline. */
+.source-outline-heading h2 { margin: 0 auto 0 0; font-size: 13px; font-weight: 750; }
+.source-outline-filters { margin-top: 8px; align-items: end; }
+.source-outline-filters label { display: grid; gap: 4px; min-width: 0; font-size: 12px; }
+.source-outline-filters input[type="search"], .source-outline-filters select {
+  max-width: 100%; min-width: 0; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 6px; padding: 6px;
+}
+.source-outline-filters .source-outline-public { display: flex; align-items: center; gap: 5px; }
+.source-outline-list { list-style: none; margin: 8px 0 0; padding: 0; display: grid; gap: 4px; max-height: 320px; overflow: auto; }
+.source-outline-list button { display: flex; gap: 4px 10px; flex-wrap: wrap; align-items: baseline; justify-content: space-between; width: 100%; text-align: left; font-size: 12px; padding: 6px; border: 1px solid var(--border); border-radius: 6px; overflow-wrap: anywhere; }
+.source-outline-list button:hover { background: var(--panel-2); border-color: var(--accent); }
+.source-outline-list button span { color: var(--muted); font-size: 11px; }
+.source-outline-error { color: #e4ae72; overflow-wrap: anywhere; font-size: 12px; }
+:root[data-theme='light'] .source-outline-error { color: #985c1b; }
