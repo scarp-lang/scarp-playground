@@ -25,6 +25,7 @@ export const productionCsp = [
 
 export default defineConfig({
   base: '/scarp-playground/',
+  build: { manifest: true },
   plugins: [
     {
       name: 'scarp-production-csp',
