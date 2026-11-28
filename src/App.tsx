@@ -9,6 +9,8 @@ import type { Example } from './examples';
 import { defaultExample } from './default-example';
 const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
 const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
+const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
+import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import { previewNewSource } from './workspace-tree';
 const ModuleGraphPanel = lazy(() => import('./ModuleGraphPanel').then(module => ({ default: module.ModuleGraphPanel })));
 const SourceOutlinePanel = lazy(() => import('./SourceOutlinePanel').then(module => ({ default: module.SourceOutlinePanel })));
@@ -31,6 +33,8 @@ import { ExecutionScope, type ActiveExecution } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
+const TestCasePanel = lazy(() => import('./TestCasePanel').then(module => ({ default: module.TestCasePanel })));
+import { newTestCase, runTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
 import { consoleTranscript, consoleOperationSubtitle, type ConsoleMode } from './runner/transcript';
 import { browserDiagnosticHelp } from './runner/browser-diagnostic-help';
 import { MAX_FILES, MAX_FILE_BYTES, validPath, type Workspace } from './workspace';
@@ -103,6 +107,11 @@ export function App() {
   const acceptedHash = useRef(window.location.hash);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
+  const [testCasesOpen, setTestCasesOpen] = useState(false);
+  const [testCases, setTestCases] = useState<TestCase[]>(() => [newTestCase()]);
+  const [suiteRunning, setSuiteRunning] = useState(false);
+  const [suiteProgress, setSuiteProgress] = useState(0);
+  const [suiteReport, setSuiteReport] = useState<SuiteReport | null>(null);
   const [operation, setOperation] = useState<ConsoleMode>('run');
   const [result, setResult] = useState<(RunResult & { browserStats?: BrowserRunStats | null }) | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -122,6 +131,8 @@ export function App() {
   const inspectionTask = useRef<ActiveExecution | null>(null);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
+  const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
+  const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -337,6 +348,35 @@ export function App() {
       plan.changedFiles.length + ' .srp file(s). Check the program before running.');
   }
 
+  function captureCheckpoint() {
+    const snapshot = captureSourceCheckpoint(workspace, activeFile);
+    if (!snapshot) {
+      setNotice('Fix the source workspace before capturing a checkpoint.');
+      return;
+    }
+    if (sourceCheckpoint && !window.confirm('Replace the previous temporary source checkpoint?')) return;
+    setSourceCheckpoint(snapshot);
+    setNotice('Captured a source-only checkpoint in memory. No input or results were included.');
+  }
+
+  function restoreCheckpoint() {
+    if (!sourceCheckpoint) return;
+    const plan = previewCheckpointRestore(workspace, activeFile, sourceCheckpoint);
+    if (!plan) {
+      setNotice('No valid source changes to restore.');
+      return;
+    }
+    if (!window.confirm('Restore the captured source files and entrypoint? The current sources will be replaced. Program input is unchanged.' +
+      (savingLocally ? ' Your opted-in saved browser copy will also update.' : '') +
+      ' Undo bulk change can reverse this until the next edit.')) return;
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(plan.activeFile);
+    setLastBulkEdit(plan.undo);
+    setEditorSession(previous => previous + 1);
+    setNotice('Restored the source checkpoint. Undo bulk change can restore the previous workspace.');
+  }
+
   function undoLastBulkChange() {
     const original = undoBulkEdit(workspace, lastBulkEdit);
     if (!original || !lastBulkEdit) {
@@ -347,7 +387,7 @@ export function App() {
     const label = lastBulkEdit.label;
     invalidateExecution();
     setWorkspace(original);
-    setActiveFile(current => lastBulkEdit.label === 'file removal' &&
+    setActiveFile(current => (lastBulkEdit.label === 'file removal' || lastBulkEdit.label === 'checkpoint restore') &&
       lastBulkEdit.restoreActiveFile
       ? lastBulkEdit.restoreActiveFile
       : Object.hasOwn(original.files, current)
@@ -379,6 +419,9 @@ export function App() {
     setNavigationTrigger(0);
     executionScope.current.invalidate();
     setRunning(false);
+    setSuiteRunning(false);
+    setSuiteProgress(0);
+    setSuiteReport(null);
     setResult(null);
   }
 
@@ -439,6 +482,47 @@ export function App() {
     }
   }, [workspace, programInput, allowPrompts]);
 
+  async function runSuite() {
+    const execution = executionScope.current.start();
+    if (!execution) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setRenameBusy(false);
+    setNavigationTarget(null);
+    setReferenceResult(null);
+    setSelectedReferenceIndex(-1);
+    setResult(null);
+    setNotice(null);
+    setRunning(true);
+    setSuiteRunning(true);
+    setSuiteProgress(0);
+    setSuiteReport(null);
+    setOperation('run');
+    try {
+      const report = await runTestCases(workspace, testCases, execution.controller.signal,
+        (source, signal, stdin, prompts) => runWorkspace(source, signal, stdin, prompts),
+        completed => {
+          if (executionScope.current.isCurrent(execution)) setSuiteProgress(completed.length);
+        });
+      if (executionScope.current.isCurrent(execution)) setSuiteReport(report);
+    } catch {
+      if (executionScope.current.isCurrent(execution)) setNotice('Test cases could not be completed.');
+    } finally {
+      if (executionScope.current.finish(execution)) {
+        setRunning(false);
+        setSuiteRunning(false);
+      }
+    }
+  }
+
+  function changeTestCases(next: TestCase[]) {
+    if (executionScope.current.running) return;
+    setTestCases(next);
+    setSuiteReport(null);
+    setSuiteProgress(0);
+  }
+
   function jumpToCompilerDiagnostic(location: DiagnosticLocation | null | undefined) {
     const target = diagnosticNavigationPosition(workspace.files, result?.diagnostic, location);
     if (!target) {
@@ -469,6 +553,9 @@ export function App() {
     }
     executionScope.current.invalidate();
     setRunning(false);
+    setSuiteRunning(false);
+    setSuiteProgress(0);
+    setSuiteReport(null);
     setResult(null);
     setReferenceResult(null);
     setSelectedReferenceIndex(-1);
@@ -645,6 +732,9 @@ export function App() {
     // two memory-intensive WASM workers alive simultaneously.
     executionScope.current.invalidate();
     setRunning(false);
+    setSuiteRunning(false);
+    setSuiteProgress(0);
+    setSuiteReport(null);
     setResult(null);
     setRenameTarget(null);
     setRenamePreview(null);
@@ -1165,7 +1255,7 @@ export function App() {
   function downloadActiveSource() {
     const source = workspace.files[activeFile];
     if (source === undefined || !activeStats) {
-      setNotice('No active Scarp source file is available to download.');
+      setNotice('No valid Unicode Scarp source file is available to download.');
       return;
     }
     const url = URL.createObjectURL(new Blob([source], { type: 'text/plain;charset=utf-8' }));
@@ -1381,7 +1471,7 @@ export function App() {
     event.currentTarget.value = '';
     if (!file || sourceImportActive.current) return;
     if (file.size > MAX_PORTABLE_WORKSPACE_BYTES) {
-      setNotice('The selected project exceeds the 160 KiB portable workspace limit.');
+      setNotice('The selected project exceeds the bounded portable JSON size limit.');
       return;
     }
     // Keep whole-project and add-only local imports mutually exclusive.
@@ -1391,7 +1481,7 @@ export function App() {
     sourceImportActive.current = true;
     setImportingSources(true);
     try {
-      const raw = await file.text();
+      const raw = new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer());
       const current = latestSession.current;
       if (current.workspace !== snapshot.workspace ||
           current.activeFile !== snapshot.activeFile ||
@@ -1618,6 +1708,10 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
+                aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
+                Source checkpoint
+              </button>
               <button type="button" className="button-secondary" aria-expanded={explorerOpen}
                 aria-controls="source-explorer-panel" onClick={() => setExplorerOpen(open => !open)}>
                 Source explorer
@@ -1653,7 +1747,7 @@ export function App() {
               </button>
               {running ? (
                 <button type="button" className="button-secondary" onClick={invalidateExecution}>
-                  Stop {operation === 'verify' ? 'verification' : operation === 'check' ? 'check' : 'run'}
+                  Stop {suiteRunning ? 'tests' : operation === 'verify' ? 'verification' : operation === 'check' ? 'check' : 'run'}
                 </button>
               ) : (
                 <button type="button" className="button-primary" onClick={() => void run()}>
@@ -1662,6 +1756,13 @@ export function App() {
               )}
             </div>
           </div>
+
+          {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
+            <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
+            onCapture={captureCheckpoint} onRestore={restoreCheckpoint}
+            onDiscard={() => { setSourceCheckpoint(null); setNotice('Discarded the temporary source checkpoint.'); }}
+            onClose={() => setSourceCheckpointOpen(false)} />
+          </Suspense>}
 
           {explorerOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceExplorer workspace={workspace} activeFile={activeFile}
@@ -2154,7 +2255,7 @@ export function App() {
                 if (!edit.accepted) {
                   // Rejected edits must not replace the buffer or invalidate a valid result.
                   event.currentTarget.value = programInput;
-                  setNotice('Program input is limited to 16 KiB of UTF-8 text. Previous input was kept.');
+                  setNotice('Program input must be valid Unicode within 16 KiB of UTF-8. Previous input was kept.');
                   return;
                 }
                 invalidateExecution();
@@ -2178,6 +2279,20 @@ export function App() {
               read program input.</p>
           </section>
 
+          <div className="test-case-launch">
+            <button type="button" className="button-secondary" aria-expanded={testCasesOpen}
+              aria-controls="test-case-panel" onClick={() => {
+                if (testCasesOpen && suiteRunning) invalidateExecution();
+                setTestCasesOpen(open => !open);
+              }}>Test cases</button>
+          </div>
+          {testCasesOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
+            <TestCasePanel cases={testCases} running={suiteRunning} busy={running}
+            report={suiteReport} progress={suiteProgress} stdin={programInput} allowPrompts={allowPrompts}
+            onChange={changeTestCases} onRun={() => void runSuite()} onStop={invalidateExecution}
+            onClose={() => { if (suiteRunning) invalidateExecution(); setTestCasesOpen(false); }} />
+          </Suspense>}
+
           <section className="console-card" aria-label="Program output">
             <div className="console-toolbar">
               <div><span className="terminal-glyph">›_</span><strong>Output</strong><span className="console-subtitle">{consoleOperationSubtitle(operation)}</span></div>
@@ -2193,7 +2308,7 @@ export function App() {
               </div>
             </div>
             <div className="terminal-output" aria-live="polite">
-              {running && <p className="terminal-muted">{operation === 'verify' ? 'Verifying source without running program statements…' : operation === 'check' ? 'Checking Scarp with the real interpreter…' : 'Loading compiler and executing program…'}</p>}
+              {running && <p className="terminal-muted">{suiteRunning ? 'Running sequential program test cases…' : operation === 'verify' ? 'Verifying source without running program statements…' : operation === 'check' ? 'Checking Scarp with the real interpreter…' : 'Loading compiler and executing program…'}</p>}
               {!running && !result && <p className="terminal-muted">$ Select an example or write code, then click Run code.</p>}
               {result && (
                 <>

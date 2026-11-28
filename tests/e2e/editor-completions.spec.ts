@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('Monaco suggests actual local .srp paths inside import strings', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const input = page.locator('.monaco-editor textarea.inputarea');
   await expect(input).toBeAttached();
   await input.focus();

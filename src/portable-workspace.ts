@@ -1,10 +1,13 @@
-import { validateWorkspace, type Workspace } from './workspace';
+import { MAX_TOTAL_BYTES, validateWorkspace, type Workspace } from './workspace';
+import { isUtf8Text } from './utf8';
 
 // Portable, human-readable source-only format. This file is never uploaded
 // or evaluated; imports must pass the same limits as browser execution.
 export const PORTABLE_WORKSPACE_FORMAT = 'scarp-playground-workspace';
 export const PORTABLE_WORKSPACE_VERSION = 1;
-export const MAX_PORTABLE_WORKSPACE_BYTES = 160 * 1024;
+// JSON escaping can expand each ASCII byte to six characters. Keep all
+// valid bounded source workspaces exportable without weakening source limits.
+export const MAX_PORTABLE_WORKSPACE_BYTES = 6 * MAX_TOTAL_BYTES + 4096;
 
 export type PortableWorkspace = { workspace: Workspace; activeFile: string };
 
@@ -34,7 +37,7 @@ export function serializePortableWorkspace(
 }
 
 export function parsePortableWorkspace(raw: string): PortableWorkspace | null {
-  if (!raw || new TextEncoder().encode(raw).byteLength > MAX_PORTABLE_WORKSPACE_BYTES) return null;
+  if (!raw || !isUtf8Text(raw, MAX_PORTABLE_WORKSPACE_BYTES)) return null;
   try {
     const data: unknown = JSON.parse(raw);
     if (

@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test, type Page } from '@playwright/test';
 
 async function openReplace(page: Page, search: string, replacement: string) {
@@ -25,7 +26,7 @@ test('one-step undo completely restores a plain-text project replacement', async
 
 test('undo restores original sources for every affected imported module', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await openReplace(page, 'twice', 'double');
   await expect(page.getByTestId('replace-preview')).toContainText('2 replacement(s) across 2 file(s)');
   await page.getByRole('button', { name: 'Apply all replacements' }).click();
@@ -40,7 +41,7 @@ test('undo restores original sources for every affected imported module', async 
 
 test('compiler-validated symbol rename has the same one-step undo guarantee', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
   await editor.focus();
