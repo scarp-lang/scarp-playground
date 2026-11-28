@@ -49,7 +49,8 @@ export function validatedRenameResult(value: unknown): RenameResult {
 
   const files = value.files;
   const filePaths = Object.keys(files);
-  const changed = value.changed_files;
+  // Materialize array entries so sparse arrays cannot bypass Array.some.
+  const changed = Array.from(value.changed_files);
   if (filePaths.length < 1 || filePaths.length > 12 ||
       filePaths.some(path => !validPath(path) || typeof files[path] !== 'string') ||
       changed.some(path => typeof path !== 'string' || !validPath(path) ||
@@ -79,7 +80,7 @@ export function validatedRenameResult(value: unknown): RenameResult {
     changes: value.changes as number,
     changed_files: changed as string[],
     edits,
-    files: files as Record<string, string>,
+    files: Object.fromEntries(filePaths.map(path => [path, files[path] as string])),
   };
 }
 
