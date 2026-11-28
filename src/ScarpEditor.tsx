@@ -103,6 +103,7 @@ interface Props {
   dark: boolean;
   diagnostic: CompilerDiagnostic | null | undefined;
   onChange: (path: string, source: string) => void;
+  onCursorMove?: (path: string, line: number, column: number) => void;
   onNavigate: (path: string, line: number, column: number, source: string) => void;
   onFindReferences: (path: string, line: number, column: number, source: string) => void;
   onRename: (path: string, line: number, column: number, source: string) => void;
@@ -116,7 +117,7 @@ interface Props {
   selectedReferenceIndex: number;
 }
 
-export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger, renameTrigger, commentTrigger, wordWrap, referenceSites, selectedReferenceIndex, onRename }: Props) {
+export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigate, onFindReferences, navigationTarget, navigationTrigger, referenceTrigger, renameTrigger, commentTrigger, wordWrap, referenceSites, selectedReferenceIndex, onRename, onCursorMove }: Props) {
   const container = useRef<HTMLDivElement | null>(null);
   const editor = useRef<monaco.editor.IStandaloneCodeEditor | null>(null);
   const models = useRef(new Map<string, monaco.editor.ITextModel>());
@@ -127,6 +128,8 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
   filesRef.current = files;
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onCursorMoveRef = useRef(onCursorMove);
+  onCursorMoveRef.current = onCursorMove;
   const lastNavigationTrigger = useRef(navigationTrigger);
   const lastReferenceTrigger = useRef(referenceTrigger);
   const lastRenameTrigger = useRef(renameTrigger);
@@ -217,6 +220,13 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
         };
       },
     });
+    const cursorListener = instance.onDidChangeCursorPosition(event => {
+      onCursorMoveRef.current?.(activePath.current, event.position.lineNumber, event.position.column);
+    });
+    const initialPosition = instance.getPosition();
+    if (initialPosition) onCursorMoveRef.current?.(
+      activePath.current, initialPosition.lineNumber, initialPosition.column,
+    );
     const listener = instance.onDidChangeModelContent(() => {
       // Immediately hide stale symbol locations before React commits the edit.
       referenceDecorations.current?.clear();
@@ -225,6 +235,7 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
     });
     return () => {
       listener.dispose();
+      cursorListener.dispose();
       completionProvider.dispose();
       referenceDecorations.current?.clear();
       referenceDecorations.current = null;
@@ -265,6 +276,8 @@ export function ScarpEditor({ path, files, dark, diagnostic, onChange, onNavigat
       if (saved) instance.restoreViewState(saved);
     }
     activePath.current = path;
+    const position = instance.getPosition();
+    if (position) onCursorMoveRef.current?.(path, position.lineNumber, position.column);
 
     // Removed workspaces/modules must not leave Monaco models or decorations alive.
     for (const [file, model] of models.current) {

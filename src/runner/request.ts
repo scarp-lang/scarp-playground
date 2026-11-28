@@ -64,8 +64,15 @@ export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRe
       value.mode !== 'rename') return null;
   if (!validPath(value.path) || !Object.hasOwn(workspace.files, value.path) ||
       !Number.isSafeInteger(value.offset) || (value.offset as number) < 0) return null;
-  const byteLength = new TextEncoder().encode(workspace.files[value.path]).byteLength;
-  if ((value.offset as number) > byteLength) return null;
+  const encodedSource = new TextEncoder().encode(workspace.files[value.path]);
+  const byteLength = encodedSource.byteLength;
+  const byteOffset = value.offset as number;
+  if (byteOffset > byteLength ||
+      // UTF-8 continuation bytes cannot begin a Unicode scalar. A forged
+      // navigation/rename offset inside one must never reach the Rust bridge.
+      (byteOffset < byteLength && (encodedSource[byteOffset] & 0xc0) === 0x80)) {
+    return null;
+  }
   // Navigation and Rename are strictly input-free and never acquire prompt
   // capabilities. Reject before the Rename early-return path as well.
   if (Object.hasOwn(value, 'stdin') || Object.hasOwn(value, 'allowPrompts')) return null;

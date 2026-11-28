@@ -15,7 +15,9 @@
     "format:check": "prettier --check .",
     "analyze:bundle": "node scripts/check-bundle.mjs",
     "verify:locks": "node scripts/check-dependency-locks.mjs",
-    "test:locks": "node --test tests/dependency-locks.test.mjs"
+    "test:locks": "node --test tests/dependency-locks.test.mjs",
+    "test:wasm-memory": "node --test tests/wasm-memory-limit.test.mjs",
+    "verify:wasm-memory": "node scripts/check-wasm-memory.mjs public/compiler/scarp_playground_wasm_bg.wasm"
   },
   "dependencies": {
     "monaco-editor": "^0.52.2",
