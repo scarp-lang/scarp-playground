@@ -30,6 +30,9 @@ test('downloads every source with nested paths and excludes ephemeral input', as
 test('source archive remains accessible at narrow viewport widths', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('./');
+  // Wait for the deferred sidebar and editor to settle before scrolling.
+  await expect(page.getByRole('searchbox', { name: 'Find an example' })).toBeVisible();
+  await expect(page.locator('.monaco-editor textarea.inputarea')).toBeAttached();
   const button = page.getByRole('button', { name: 'Download sources ZIP' });
   await button.scrollIntoViewIfNeeded();
   await expect(button).toBeInViewport();
