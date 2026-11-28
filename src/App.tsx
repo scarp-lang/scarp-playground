@@ -52,6 +52,7 @@ import { BrowserRunDetails } from './BrowserRunDetails';
 import type { RunHistoryEntry } from './run-history';
 import type { CapturedRun } from './run-to-test-case';
 import type { OutputBaseline } from './output-baseline';
+import type { PreflightSnapshot } from './project-preflight';
 const RunHistoryPanel = lazy(() => import('./RunHistoryPanel').then(module => ({ default: module.RunHistoryPanel })));
 const TestCasePanel = lazy(() => import('./TestCasePanel').then(module => ({ default: module.TestCasePanel })));
 const InputPresetsPanel = lazy(() => import('./InputPresetsPanel').then(module => ({ default: module.InputPresetsPanel })));
@@ -87,6 +88,7 @@ const ImportRepairPanel = lazy(() => import('./ImportRepairPanel').then(module =
 const SelectiveReplacePanel = lazy(() => import('./SelectiveReplacePanel').then(module => ({ default: module.SelectiveReplacePanel })));
 const SourceFileComparePanel = lazy(() => import('./SourceFileComparePanel').then(module => ({ default: module.SourceFileComparePanel })));
 const WorkspaceBudgetPanel = lazy(() => import('./WorkspaceBudgetPanel').then(module => ({ default: module.WorkspaceBudgetPanel })));
+const ProjectPreflightPanel = lazy(() => import('./ProjectPreflightPanel').then(module => ({ default: module.ProjectPreflightPanel })));
 import type { FolderMovePlan } from './folder-move';
 import type { BatchMovePlan } from './batch-module-move';
 import type { ScaffoldPlan, ScaffoldRequest } from './batch-scaffold';
@@ -196,6 +198,8 @@ export function App() {
   const [selectiveReplaceOpen, setSelectiveReplaceOpen] = useState(false);
   const [sourceFileCompareOpen, setSourceFileCompareOpen] = useState(false);
   const [workspaceBudgetOpen, setWorkspaceBudgetOpen] = useState(false);
+  const [preflightOpen, setPreflightOpen] = useState(false);
+  const [preflightBaseline, setPreflightBaseline] = useState<PreflightSnapshot | null>(null);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
   const [hygieneOpen, setHygieneOpen] = useState(false);
@@ -1941,6 +1945,7 @@ export function App() {
     { id: 'selective-replace', label: 'Selective replace', group: 'Project', description: 'Choose and preview exact literal occurrences across source files', invoke: () => setSelectiveReplaceOpen(true) },
     { id: 'source-file-compare', label: 'Compare Scarp files', group: 'Navigation', description: 'Read-only bounded line comparison of two local source files', invoke: () => setSourceFileCompareOpen(true) },
     { id: 'workspace-budget', label: 'Workspace source budget', group: 'Project', description: 'Measure exact source bytes, import edges, line counts, and browser file quotas', invoke: () => setWorkspaceBudgetOpen(true) },
+    { id: 'project-preflight', label: 'Project preflight', group: 'Project', description: 'Review local import, security and workspace readiness findings', invoke: () => setPreflightOpen(true) },
     { id: 'save', label: 'Save locally', group: 'Project', description: 'Opt into source-only browser storage', shortcut: 'Ctrl+S', invoke: enableLocalSaving },
     { id: 'forget', label: 'Forget saved copy', group: 'Project', description: 'Remove the saved browser copy after confirmation', disabled: !savingLocally, invoke: forgetLocalSaving },
     { id: 'export', label: 'Export project JSON', group: 'Project', description: 'Download a portable source workspace', invoke: exportWorkspace },
@@ -2321,6 +2326,13 @@ export function App() {
             <ModuleImpactPanel workspace={workspace} activeFile={activeFile}
               onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
               onClose={() => setModuleImpactOpen(false)} />
+          </Suspense>}
+
+          {preflightOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading project preflight…</p>}>
+            <ProjectPreflightPanel workspace={workspace}
+              baseline={preflightBaseline} onBaselineChange={setPreflightBaseline}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setPreflightOpen(false)} />
           </Suspense>}
 
           {workspaceBudgetOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source budget…</p>}>
