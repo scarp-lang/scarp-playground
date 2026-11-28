@@ -265,14 +265,15 @@ export function planSourceHygieneCleanup(workspace: Workspace): HygienePlan {
     let state: LexicalState = 'code';
     let containsTriple = false;
     let trimmed = 0;
-    const changed = lines.map(line => {
+    const changed: Line[] = [];
+    for (const line of lines) {
       const context = contextOfLine(line.body, state);
       containsTriple ||= context.containsTriple;
       state = nextLineState(context);
       const trailing = context.protectsTrailingSpace ? line.body : line.body.replace(/[ \t]+$/, '');
       if (trailing !== line.body) trimmed++;
-      return { ...line, body: trailing };
-    });
+      changed.push({ ...line, body: trailing });
+    }
     const endings = new Set(changed.map(line => line.newline).filter(Boolean));
     let rewritten = containsTriple || endings.size <= 1
       ? changed.map(line => line.body + line.newline).join('')
