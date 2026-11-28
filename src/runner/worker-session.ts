@@ -48,13 +48,13 @@ export function invokeCompilerWorker<Request extends { id: number }, Result>(
   return new Promise(resolve => {
     let worker: Worker | undefined;
     let finished = false;
-    let deadline: ReturnType<typeof setTimeout> | undefined;
+    const timer: { handle?: ReturnType<typeof setTimeout> } = {};
     let releaseSlot: () => void = () => {};
 
     const complete = (answer: Result): void => {
       if (finished) return;
       finished = true;
-      if (deadline !== undefined) clearTimeout(deadline);
+      if (timer.handle !== undefined) clearTimeout(timer.handle);
       signal?.removeEventListener('abort', abort);
       // Browser Worker.terminate() is specified to be synchronous, but a
       // broken test double must not prevent releasing the global slot.
@@ -81,7 +81,7 @@ export function invokeCompilerWorker<Request extends { id: number }, Result>(
       return;
     }
 
-    deadline = setTimeout(() => complete(failure(errors.timeout)), RUN_TIMEOUT_MS);
+    timer.handle = setTimeout(() => complete(failure(errors.timeout)), RUN_TIMEOUT_MS);
     activeWorker.onerror = event => {
       event.preventDefault();
       complete(failure(errors.crashed));
