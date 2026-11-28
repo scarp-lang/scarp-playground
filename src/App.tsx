@@ -79,9 +79,11 @@ import { previewModuleMove, type ModuleMovePlan } from './module-move';
 const FolderMovePanel = lazy(() => import('./FolderMovePanel').then(module => ({ default: module.FolderMovePanel })));
 const BatchModuleMovePanel = lazy(() => import('./BatchModuleMovePanel').then(module => ({ default: module.BatchModuleMovePanel })));
 const ImportRepairPanel = lazy(() => import('./ImportRepairPanel').then(module => ({ default: module.ImportRepairPanel })));
+const SelectiveReplacePanel = lazy(() => import('./SelectiveReplacePanel').then(module => ({ default: module.SelectiveReplacePanel })));
 import type { FolderMovePlan } from './folder-move';
 import type { BatchMovePlan } from './batch-module-move';
 import type { ImportRepairPlan } from './import-repair';
+import type { SelectivePlan, SelectiveSearch } from './selective-replace';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
@@ -178,6 +180,7 @@ export function App() {
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [batchMoveOpen, setBatchMoveOpen] = useState(false);
   const [importRepairOpen, setImportRepairOpen] = useState(false);
+  const [selectiveReplaceOpen, setSelectiveReplaceOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
   const [hygieneOpen, setHygieneOpen] = useState(false);
@@ -1368,6 +1371,33 @@ export function App() {
       plan.verifiedReferences.length + ' local imports. Undo bulk change can restore the original sources.');
   }
 
+  async function applySelectiveReplace(
+    snapshot: Workspace, options: SelectiveSearch,
+    plan: Extract<SelectivePlan, { ok: true }>,
+  ) {
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('The selective replacement preview is stale. Review the workspace again.');
+      return;
+    }
+    const { verifySelectiveUndo } = await import('./selective-replace');
+    if (currentWorkspace.current !== snapshot) {
+      setNotice('Source changed while verifying selective replacement. No changes were applied.');
+      return;
+    }
+    const undo = verifySelectiveUndo(snapshot, options, plan);
+    if (!undo) {
+      setNotice('The selected replacements could not be reverified. No files changed.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setLastBulkEdit(undo);
+    setEditorSession(previous => previous + 1);
+    setSelectiveReplaceOpen(false);
+    setNotice('Changed ' + plan.replacementCount +
+      ' explicitly selected literal match(es). Undo bulk change restores the old text.');
+  }
+
   async function applyImportRepair(snapshot: Workspace, plan: Extract<ImportRepairPlan, { ok: true }>) {
     if (workspace !== snapshot) {
       setNotice('The import repair preview is stale. Review the current source again.');
@@ -1852,6 +1882,7 @@ export function App() {
     { id: 'impact', label: 'Module change impact', group: 'Navigation', description: 'Inspect possible downstream changes without compiler execution', invoke: () => setModuleImpactOpen(true) },
     { id: 'batch-move', label: 'Batch source file rename', group: 'Project', description: 'Simultaneously relocate Scarp files and rebase local imports', invoke: () => setBatchMoveOpen(true) },
     { id: 'repair-imports', label: 'Repair missing imports', group: 'Project', description: 'Preview explicit replacements for missing local .srp import paths', invoke: () => setImportRepairOpen(true) },
+    { id: 'selective-replace', label: 'Selective replace', group: 'Project', description: 'Choose and preview exact literal occurrences across source files', invoke: () => setSelectiveReplaceOpen(true) },
     { id: 'save', label: 'Save locally', group: 'Project', description: 'Opt into source-only browser storage', shortcut: 'Ctrl+S', invoke: enableLocalSaving },
     { id: 'forget', label: 'Forget saved copy', group: 'Project', description: 'Remove the saved browser copy after confirmation', disabled: !savingLocally, invoke: forgetLocalSaving },
     { id: 'export', label: 'Export project JSON', group: 'Project', description: 'Download a portable source workspace', invoke: exportWorkspace },
@@ -2225,6 +2256,12 @@ export function App() {
             <ModuleImpactPanel workspace={workspace} activeFile={activeFile}
               onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
               onClose={() => setModuleImpactOpen(false)} />
+          </Suspense>}
+
+          {selectiveReplaceOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading selective replacements…</p>}>
+            <SelectiveReplacePanel workspace={workspace} onApply={applySelectiveReplace}
+              onNavigate={(path, line, column) => jumpToSearchHit({ path, line, column, preview: '' })}
+              onClose={() => setSelectiveReplaceOpen(false)} />
           </Suspense>}
 
           {importRepairOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading import repair…</p>}>

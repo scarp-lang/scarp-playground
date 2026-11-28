@@ -10,7 +10,7 @@ export type BulkEditUndo = {
   after: Workspace;
   label: 'project-wide replacement' | 'symbol rename' | 'file move' | 'file removal' |
     'file duplication' | 'source import' | 'folder move' | 'checkpoint restore' |
-    'source cleanup' | 'batch module move' | 'import repair';
+    'source cleanup' | 'batch module move' | 'import repair' | 'selective replacement';
   restoreActiveFile?: string;
 };
 
