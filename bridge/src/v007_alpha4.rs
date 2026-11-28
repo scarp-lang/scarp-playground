@@ -63,3 +63,25 @@ bind items = keep(blank(), 2);"#;
         assert_eq!(result["stderr"], "", "{result}");
     }
 }
+
+#[test]
+fn bounded_number_theory_matches_exact_output() {
+    assert_workspace(
+        BTreeMap::from([("main.srp", include_str!("../tests/fixtures/v007_alpha4/bigint_number_theory.srp"))]),
+        include_str!("../tests/fixtures/v007_alpha4/bigint_number_theory.stdout"),
+    );
+}
+
+#[test]
+fn invalid_number_theory_domains_discard_output() {
+    for expression in ["bigint_fibonacci(-1)", "bigint_binomial(5,6)", "bigint_permutation(5,-1)", "bigint_mod_inverse(bigint(\"2\"),bigint(\"4\"))"] {
+        let source = format!("print(\"pending\"); print({expression});");
+        let payload = json!({"entry":"main.srp","files":{"main.srp":source}}).to_string();
+        for reply in [check_request(&payload), execute_request(&payload)] {
+            let result: Value = serde_json::from_str(&reply).unwrap();
+            assert_eq!(result["ok"], false, "{result}");
+            assert_eq!(result["stdout"], "", "{result}");
+            assert_eq!(result["stderr"], "", "{result}");
+        }
+    }
+}

@@ -12,3 +12,7 @@ The bridge uses the published Rust interpreter, not the experimental x86-64 ELF6
 | context | Contextual inference across imported generic functions |
 
 The Rust bridge verifies, checks and executes each fixture; browser tests exercise the three single-file fixtures with actual WASM. Missing generic context remains an error. The fixed 2,048 decimal digit, 256 KiB limb reservation, 200,000 logical work, and 64-frame call limits remain unchanged. The browser does not expose file-backed BigInt CLI arithmetic, filesystem access, native object emission or a linker. This integration is experimental until its exact-head CI passes; successful tests are not proof of a hardened sandbox.
+
+## Editor and example browser
+
+Five learning workspaces expose the three upstream fixtures, two-module context inference and a small number theory exercise adapted from upstream tests. Fifteen static completion hints use published BigInt signatures, with matching Monaco highlighting. No browser quota or host filesystem access changes. Browser tests open the actual example picker and verify the selected source executes with the real WASM interpreter.

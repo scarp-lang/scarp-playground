@@ -49,6 +49,12 @@ monaco.languages.setMonarchTokensProvider('scarp', {
     'bigint_to_text', 'bigint_from_radix', 'bigint_to_radix', 'bigint_and',
     'bigint_or', 'bigint_xor', 'bigint_not', 'bigint_shl', 'bigint_shr',
     'bigint_pow_mod', 'bigint_divmod',
+    'bigint_pow_big', 'bigint_pow_mod_big', 'bigint_factorial',
+    'bigint_fibonacci', 'bigint_binomial', 'bigint_permutation',
+    'bigint_next_prime', 'bigint_is_perfect_square', 'bigint_is_power_of_two',
+    'bigint_reverse', 'bigint_is_palindrome', 'bigint_min',
+    'bigint_max', 'bigint_mod_inverse', 'bigint_is_prime',
+
     'decimal', 'decimal_abs', 'decimal_from_integer', 'decimal_to_integer',
     'decimal_to_text', 'decimal_round', 'decimal_format', 'decimal_div_rounded',
     'input_decimal',
