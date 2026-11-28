@@ -115,7 +115,7 @@ describe('Scarp source-comment task discovery', () => {
   it('uses one-based Monaco UTF-16 columns after supplementary Unicode characters', () => {
     const report = scan('print("😀"); // TODO: emoji position');
     expect(report.tasks[0]).toMatchObject({
-      path: 'main.srp', line: 1, column: 16,
+      path: 'main.srp', line: 1, column: 17,
     });
   });
 
