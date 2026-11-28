@@ -3,6 +3,7 @@ import { captureLibraryProject, libraryNameKey, MAX_LIBRARY_NAME, MAX_LIBRARY_PR
   projectBytes, projectMatchesEditor, validLibraryName, type LibraryMutation, type LibraryProject } from './library/model';
 import { changeProjectLibrary, clearProjectLibrary, readProjectLibrary, type LibrarySnapshot } from './library/store';
 import type { Workspace } from './workspace';
+import { LibraryBackupControls } from './LibraryBackupControls';
 
 type Props = {
   workspace: Workspace;
@@ -119,7 +120,7 @@ export function ProjectLibraryPanel({ workspace, activeFile, onOpen, onClose }: 
     <div className="project-search-bar library-heading">
       <h2>Local project library</h2>
       <button type="button" disabled={busy} onClick={() => void refresh()}>Refresh library</button>
-      <button type="button" onClick={onClose}>Close library</button>
+      <button type="button" disabled={busy} onClick={onClose}>Close library</button>
     </div>
     <p className="project-replace-help">
       Save named source snapshots on this device. They are separate from the ordinary autosaved workspace,
@@ -171,6 +172,9 @@ export function ProjectLibraryPanel({ workspace, activeFile, onOpen, onClose }: 
               'Renamed the saved source snapshot.', rename.trim())}>Rename saved snapshot</button>
         </div>
       </section>}
+      <LibraryBackupControls snapshot={snapshot} busy={busy}
+        onBusy={value => { pending.current = value; setBusy(value); }}
+        onRestore={value => { setSnapshot(value); setSelected(''); setRename(''); }} />
       {projects.length > 0 && <button type="button" disabled={busy} onClick={() => void clear()}>Delete all named snapshots</button>}
     </>}
   </section>;
