@@ -1,0 +1,31 @@
+.input-presets-panel { padding: 15px; }
+.input-presets-heading { flex: 1 1 240px; }
+.input-presets-heading h2 { font-size: 16px; margin: 0 0 5px; }
+.input-presets-heading p { font-size: 11px; color: var(--muted); line-height: 1.6; margin: 0; }
+.input-presets-quota { display: flex; flex-wrap: wrap; gap: 8px; margin: 13px 0; }
+.input-presets-quota span { border: 1px solid var(--border); background: var(--panel-2);
+  padding: 6px 9px; border-radius: 7px; font-size: 11px; }
+.input-presets-capture, .input-presets-select { display: flex; flex-wrap: wrap; align-items: center;
+  gap: 9px; margin: 14px 0; }
+.input-presets-capture label, .input-presets-select label, .input-presets-editor label {
+  font-size: 11px; font-weight: 650; color: var(--muted); }
+.input-presets-capture input, .input-presets-select select, .input-presets-editor input,
+.input-presets-editor textarea { border: 1px solid var(--border);
+  border-radius: 7px; background: var(--panel-2); padding: 8px 9px; color: var(--text);
+  font-size: 12px; min-width: 0; }
+.input-presets-capture input, .input-presets-select select { flex: 1 1 180px; }
+.input-presets-actions { display: flex; gap: 8px; flex-wrap: wrap; margin: 11px 0; }
+.input-presets-actions button { border: 1px solid var(--border); background: var(--panel-2);
+  color: var(--text); border-radius: 7px; font-size: 12px; padding: 9px; }
+.input-presets-actions button:disabled { opacity: .55; }
+.input-presets-preview { border: 1px solid var(--border); border-radius: 8px;
+  padding: 12px; background: var(--panel-2); }
+.input-presets-preview h3, .input-presets-editor h3 { margin: 0 0 6px; font-size: 13px; }
+.input-presets-preview p, .input-presets-note { color: var(--muted); font-size: 11px; line-height: 1.5; }
+.input-presets-editor { display: grid; gap: 9px; border: 1px solid var(--border);
+  padding: 12px; border-radius: 8px; margin: 13px 0; }
+.input-presets-editor textarea { width: 100%; box-sizing: border-box; resize: vertical; min-height: 100px; }
+.input-presets-prompt-checkbox { display: flex; gap: 9px; align-items: center; }
+.input-presets-prompt-checkbox input { flex: none; }
+.input-presets-note { display: block; margin: 14px 0 0; }
+@media(max-width: 520px) { .input-presets-capture label, .input-presets-select label { flex: 1 0 100%; } }
