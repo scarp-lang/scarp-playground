@@ -1,7 +1,15 @@
-import { MAX_CASE_NAME_LENGTH, MAX_TEST_CASES, MAX_EXPECTED_OUTPUT_BYTES, newTestCase, validateTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
-
+import { useEffect, useState } from 'react';
+import {
+  MAX_CASE_NAME_LENGTH, MAX_TEST_CASES, MAX_EXPECTED_OUTPUT_BYTES,
+  newTestCase, validateTestCases, type TestCase, type SuiteReport,
+} from './runner/test-cases';
 import { MAX_PROGRAM_INPUT_BYTES } from './runner/limits';
 import { TestCaseFileControls } from './TestCaseFileControls';
+import {
+  previewRunAsTestCase, type CapturedRun, type RunCapturePlan,
+} from './run-to-test-case';
+import type { Workspace } from './workspace';
+import './test-case-capture.css';
 
 type Props = {
   cases: TestCase[];
@@ -11,15 +19,22 @@ type Props = {
   progress: number;
   stdin: string;
   allowPrompts: boolean;
+  workspace: Workspace;
+  capturedRun: CapturedRun | null;
   onChange: (cases: TestCase[]) => void;
   onRun: () => void;
   onStop: () => void;
   onClose: () => void;
 };
 
-export function TestCasePanel({ cases, running, busy, report, progress, stdin, allowPrompts,
-  onChange, onRun, onStop, onClose }: Props) {
+export function TestCasePanel({
+  cases, running, busy, report, progress, stdin, allowPrompts,
+  workspace, capturedRun, onChange, onRun, onStop, onClose,
+}: Props) {
   const validation = validateTestCases(cases);
+  const [capture, setCapture] = useState<RunCapturePlan | null>(null);
+  useEffect(() => { setCapture(null); }, [workspace, cases, capturedRun]);
+
   function change(index: number, next: TestCase) {
     onChange(cases.map((item, at) => at === index ? next : item));
   }
@@ -29,6 +44,27 @@ export function TestCasePanel({ cases, running, busy, report, progress, stdin, a
     while (used.has('Case ' + number)) number++;
     onChange([...cases, newTestCase('Case ' + number, stdin, allowPrompts)]);
   }
+
+  function previewCapture() {
+    if (busy) return;
+    setCapture(previewRunAsTestCase(workspace, cases, capturedRun));
+  }
+
+  function applyCapture() {
+    if (busy || !capture?.ok) return;
+    const current = previewRunAsTestCase(workspace, cases, capturedRun);
+    if (!current.ok || JSON.stringify(current.cases) !== JSON.stringify(capture.cases)) {
+      setCapture({ ok: false,
+        error: 'The Run result or test definitions changed during review. Preview again.' });
+      return;
+    }
+    if (!window.confirm('Add a test case containing the exact captured input and expected ' +
+      'compiler output or error code? A case may contain sensitive input. ' +
+      'It stays only in this tab unless you explicitly export test cases.')) return;
+    onChange(current.cases);
+    setCapture(null);
+  }
+
   return (
     <section id="test-case-panel" className="project-search test-case-panel" aria-label="Program test cases">
       <div className="project-search-bar test-case-heading">
@@ -41,6 +77,41 @@ export function TestCasePanel({ cases, running, busy, report, progress, stdin, a
         Cases are temporary unless you explicitly export them. Each uses the existing browser execution limits.
       </p>
       <TestCaseFileControls cases={cases} busy={busy} onReplace={onChange} />
+      <div className="test-case-capture" aria-label="Capture last program run">
+        <div className="test-case-capture-heading">
+          <h3>Capture a regression from Run</h3>
+          <p>Turn the last successful Run or compiler-coded error into an exact test
+            expectation. Source files and input must still match the captured execution.</p>
+        </div>
+        <button type="button" disabled={busy || !capturedRun ||
+            cases.length >= MAX_TEST_CASES}
+          onClick={previewCapture}>Preview last Run as test case</button>
+        {capture && !capture.ok && <p role="alert">{capture.error}</p>}
+        {capture?.ok && <section className="test-case-capture-review"
+          aria-label="Captured Run preview">
+          <p><strong>{capture.preview.name}</strong> · {capture.preview.kind} ·
+            {' '}{capture.preview.sourceFiles} source files ·
+            {' '}{capture.preview.inputBytes} input bytes ·
+            {' '}{capture.preview.expectedBytes} expected bytes</p>
+          {capture.preview.promptsAllowed &&
+            <p>Prompt functions were enabled for this captured run.</p>}
+          <details>
+            <summary>Inspect captured input excerpt (may be sensitive)</summary>
+            <pre>{capture.preview.inputExcerpt || '(empty input)'}</pre>
+          </details>
+          <details>
+            <summary>Inspect expected output / diagnostic excerpt</summary>
+            <pre>{capture.preview.expectedExcerpt || '(empty output)'}</pre>
+          </details>
+          <div className="test-case-actions">
+            <button type="button" className="button-primary" disabled={busy}
+              onClick={applyCapture}>Add reviewed captured test</button>
+            <button type="button" onClick={() => setCapture(null)}>Cancel capture</button>
+          </div>
+          <p>Only test definitions are updated. Nothing is automatically persisted,
+            shared, executed, or inserted into Scarp source.</p>
+        </section>}
+      </div>
       <div className="test-case-list">
         {cases.map((item, index) => (
           <fieldset key={index} className="test-case-item" disabled={busy}>

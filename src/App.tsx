@@ -49,6 +49,7 @@ import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
 import type { RunHistoryEntry } from './run-history';
+import type { CapturedRun } from './run-to-test-case';
 const RunHistoryPanel = lazy(() => import('./RunHistoryPanel').then(module => ({ default: module.RunHistoryPanel })));
 const TestCasePanel = lazy(() => import('./TestCasePanel').then(module => ({ default: module.TestCasePanel })));
 const InputPresetsPanel = lazy(() => import('./InputPresetsPanel').then(module => ({ default: module.InputPresetsPanel })));
@@ -150,6 +151,7 @@ export function App() {
   const [running, setRunning] = useState(false);
   const [runHistoryOpen, setRunHistoryOpen] = useState(false);
   const [runHistory, setRunHistory] = useState<RunHistoryEntry[]>([]);
+  const [capturedRun, setCapturedRun] = useState<CapturedRun | null>(null);
   const [challengeOpen, setChallengeOpen] = useState(false);
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
   const [suiteKind, setSuiteKind] = useState<'manual' | 'challenge'>('manual');
@@ -581,6 +583,7 @@ export function App() {
     setSuiteProgress(0);
     setSuiteReport(null);
     setResult(null);
+    setCapturedRun(null);
   }
 
   // Component teardown must also stop an in-flight browser worker.
@@ -603,6 +606,7 @@ export function App() {
     setRunning(true);
     setOperation(mode);
     setResult(null);
+    setCapturedRun(null);
     // A new compiler result must not inherit a previous cursor target.
     setNavigationTarget(null);
     setNotice(null);
@@ -618,6 +622,17 @@ export function App() {
       if (!executionScope.current.isCurrent(execution)) return;
       const stats = describeBrowserRun(mode, response, started, performance.now());
       setResult({ ...response, browserStats: stats });
+      if (mode === 'run') {
+        try {
+          const { makeCapturedRun } = await import('./run-to-test-case');
+          if (executionScope.current.isCurrent(execution)) {
+            setCapturedRun(makeCapturedRun(workspace, programInput, allowPrompts, response));
+          }
+        } catch {
+          // Regression capture is optional; never turn a valid compiler result
+          // into a failure because its UI helper chunk is unavailable.
+        }
+      }
       // History is optional UI data. Keep its bounded snapshot model out of
       // startup JS and never allow an optional chunk to invalidate a Run.
       try {
@@ -2801,6 +2816,7 @@ export function App() {
           {testCasesOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <TestCasePanel cases={testCases} running={suiteRunning && suiteKind === 'manual'} busy={running}
             report={suiteKind === 'manual' ? suiteReport : null} progress={suiteProgress} stdin={programInput} allowPrompts={allowPrompts}
+            workspace={workspace} capturedRun={capturedRun}
             onChange={changeTestCases} onRun={() => void runSuite()} onStop={invalidateExecution}
             onClose={() => { if (suiteRunning && suiteKind === 'manual') invalidateExecution(); setTestCasesOpen(false); }} />
           </Suspense>}
