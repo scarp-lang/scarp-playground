@@ -1,0 +1,31 @@
+import { readFile } from 'node:fs/promises';
+import { expect, test } from '@playwright/test';
+
+test('shows first exact mismatch and downloads summary-only and detailed reports', async ({ page }) => {
+  await page.goto('./#code=' + encodeURIComponent('print("secret output");'));
+  await page.getByRole('button', { name: 'Test cases', exact: true }).click();
+  const panel = page.getByRole('region', { name: 'Program test cases' });
+  await panel.getByLabel('Expected stdout').fill('secret output');
+  await panel.getByLabel('Test stdin').fill('private test input');
+  await panel.getByRole('button', { name: 'Run test cases' }).click();
+  const results = panel.getByRole('region', { name: 'Test case results' });
+  await expect(results).toContainText('1 failed', { timeout: 30_000 });
+  await results.getByText('Inspect exact output differences (1)').click();
+  const diff = results.getByRole('region', { name: 'stdout difference' });
+  await expect(diff).toContainText('end of output');
+  await expect(diff).toContainText('U+000A');
+  const pending = page.waitForEvent('download');
+  page.once('dialog', dialog => dialog.accept());
+  await results.getByRole('button', { name: 'Download JSON report' }).click();
+  const summary = await readFile(await (await pending).path(), 'utf8');
+  expect(JSON.parse(summary).counts.failed).toBe(1);
+  expect(summary).not.toContain('secret output');
+  expect(summary).not.toContain('private test input');
+  await results.getByLabel('Include bounded output previews and diagnostic messages').check();
+  const xml = page.waitForEvent('download');
+  page.once('dialog', dialog => dialog.accept());
+  await results.getByRole('button', { name: 'Download JUnit XML' }).click();
+  const detailed = await readFile(await (await xml).path(), 'utf8');
+  expect(detailed).toContain('<system-out>secret output');
+  expect(detailed).not.toContain('private test input');
+});

@@ -1,3 +1,5 @@
+import { OutputDifferenceView } from './OutputDifferenceView';
+import { TestReportControls } from './TestReportControls';
 import { useMemo, useState } from 'react';
 import { challenges, filterChallenges, levels, tracks, type Challenge } from './challenges/model';
 import type { SuiteReport } from './runner/test-cases';
@@ -92,11 +94,13 @@ export function ChallengePanel({ active, busy, running, progress, report,
           {visibleReport.error && <p role="status" className="test-case-error">{visibleReport.error}</p>}
           {visibleReport.results.map(item => <article className="test-case-result" key={item.name}>
             <strong>{item.name} — {item.status}</strong><p>{item.message}</p>
+            {item.differences?.length ? <OutputDifferenceView differences={item.differences} /> : null}
             {(item.stdout || item.stderr) && <details><summary>Actual captured output</summary>
               <ChallengeOutput label="Actual stdout" value={item.stdout} />
               <ChallengeOutput label="Actual stderr" value={item.stderr} />
             </details>}
           </article>)}
+          <TestReportControls report={visibleReport} suiteName={challenge.title} />
         </section>}
       </article>
     </>}
