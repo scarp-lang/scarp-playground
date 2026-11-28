@@ -217,7 +217,7 @@ export async function compareWorkspaceIntegrity(
     files.filter(file => file.status === status).length;
   const entryChanged = previous.entry !== actual.entry;
   return { ok: true, value: {
-    matches: previous.workspaceSha256 === actual.workspaceSha256 &&
+    ok: true, matches: previous.workspaceSha256 === actual.workspaceSha256 &&
       !entryChanged && files.every(file => file.status === 'same'),
     expectedRoot: previous.workspaceSha256, actualRoot: actual.workspaceSha256,
     expectedEntry: previous.entry, actualEntry: actual.entry, entryChanged,
