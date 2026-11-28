@@ -18,12 +18,12 @@ export function inspectSourceOutline(workspace: Workspace, path: string, signal?
   return new Promise(resolve => {
     let worker: Worker | undefined;
     let done = false;
-    let deadline: ReturnType<typeof setTimeout> | undefined;
+    const timer: { deadline?: ReturnType<typeof setTimeout> } = {};
     let release = () => {};
     const complete = (result: LocatedOutline) => {
       if (done) return;
       done = true;
-      if (deadline !== undefined) clearTimeout(deadline);
+      if (timer.deadline !== undefined) clearTimeout(timer.deadline);
       signal?.removeEventListener('abort', onAbort);
       worker?.terminate();
       release();
@@ -39,7 +39,7 @@ export function inspectSourceOutline(workspace: Workspace, path: string, signal?
     }
     signal?.addEventListener('abort', onAbort, { once: true });
     if (signal?.aborted) { onAbort(); return; }
-    deadline = setTimeout(() => complete(failed('Source outline exceeded the 12-second browser limit.')), RUN_TIMEOUT_MS);
+    timer.deadline = setTimeout(() => complete(failed('Source outline exceeded the 12-second browser limit.')), RUN_TIMEOUT_MS);
     worker.onerror = event => { event.preventDefault(); complete(failed('The source outline worker failed to load or crashed.')); };
     worker.onmessageerror = () => complete(failed('The source outline worker sent an unreadable response.'));
     worker.onmessage = (event: MessageEvent<OutlineResponse>) => {

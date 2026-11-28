@@ -1,3 +1,5 @@
+import { defaultExample } from './default-example';
+
 export type Example = {
   title: string;
   description: string;
@@ -10,14 +12,7 @@ export type Example = {
 };
 
 export const examples: Example[] = [
-  {
-    title: 'Hello, Scarp',
-    description: 'Output your first text',
-    entry: 'main.srp',
-    files: {
-      'main.srp': '// From the official Scarp compiler examples/hello.srp\nprint("Hello from Scarp!");\n',
-    },
-  },
+  defaultExample,
   {
     title: 'Bindings & arithmetic',
     description: 'Immutable values and expressions',
