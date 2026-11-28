@@ -8,6 +8,8 @@ const ScarpEditor = lazy(() =>
 import { examples } from './examples';
 import { ExampleBrowser } from './ExampleBrowser';
 import { SourceExplorer } from './SourceExplorer';
+import { SourceCheckpointPanel } from './SourceCheckpointPanel';
+import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import { previewNewSource } from './workspace-tree';
 import { ModuleGraphPanel } from './ModuleGraphPanel';
 import { isUntouchedExampleSession } from './example-session';
@@ -108,6 +110,8 @@ export function App() {
   const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
+  const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
+  const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -249,6 +253,35 @@ export function App() {
       plan.changedFiles.length + ' .srp file(s). Check the program before running.');
   }
 
+  function captureCheckpoint() {
+    const snapshot = captureSourceCheckpoint(workspace, activeFile);
+    if (!snapshot) {
+      setNotice('Fix the source workspace before capturing a checkpoint.');
+      return;
+    }
+    if (sourceCheckpoint && !window.confirm('Replace the previous temporary source checkpoint?')) return;
+    setSourceCheckpoint(snapshot);
+    setNotice('Captured a source-only checkpoint in memory. No input or results were included.');
+  }
+
+  function restoreCheckpoint() {
+    if (!sourceCheckpoint) return;
+    const plan = previewCheckpointRestore(workspace, activeFile, sourceCheckpoint);
+    if (!plan) {
+      setNotice('No valid source changes to restore.');
+      return;
+    }
+    if (!window.confirm('Restore the captured source files and entrypoint? The current sources will be replaced. Program input is unchanged.' +
+      (savingLocally ? ' Your opted-in saved browser copy will also update.' : '') +
+      ' Undo bulk change can reverse this until the next edit.')) return;
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(plan.activeFile);
+    setLastBulkEdit(plan.undo);
+    setEditorSession(previous => previous + 1);
+    setNotice('Restored the source checkpoint. Undo bulk change can restore the previous workspace.');
+  }
+
   function undoLastBulkChange() {
     const original = undoBulkEdit(workspace, lastBulkEdit);
     if (!original || !lastBulkEdit) {
@@ -259,7 +292,7 @@ export function App() {
     const label = lastBulkEdit.label;
     invalidateExecution();
     setWorkspace(original);
-    setActiveFile(current => lastBulkEdit.label === 'file removal' &&
+    setActiveFile(current => (lastBulkEdit.label === 'file removal' || lastBulkEdit.label === 'checkpoint restore') &&
       lastBulkEdit.restoreActiveFile
       ? lastBulkEdit.restoreActiveFile
       : Object.hasOwn(original.files, current)
@@ -1528,6 +1561,10 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
+                aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
+                Source checkpoint
+              </button>
               <button type="button" className="button-secondary" aria-expanded={explorerOpen}
                 aria-controls="source-explorer-panel" onClick={() => setExplorerOpen(open => !open)}>
                 Source explorer
@@ -1562,6 +1599,11 @@ export function App() {
               )}
             </div>
           </div>
+
+          {sourceCheckpointOpen && <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
+            onCapture={captureCheckpoint} onRestore={restoreCheckpoint}
+            onDiscard={() => { setSourceCheckpoint(null); setNotice('Discarded the temporary source checkpoint.'); }}
+            onClose={() => setSourceCheckpointOpen(false)} />}
 
           {explorerOpen && <SourceExplorer workspace={workspace} activeFile={activeFile}
             onOpen={openExplorerSource} onCreate={createSource} onClose={() => setExplorerOpen(false)} />}

@@ -227,6 +227,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Source checkpoint** captures a temporary source-only workspace, compares bounded line changes and restores the exact snapshot with undo. See [source checkpoints](docs/source-checkpoints.md).
+
 - **Import sources ZIP** restores canonical uncompressed Playground source exports with strict byte validation and entrypoint review. See [source archive](docs/source-archive.md).
 
 - **Source explorer** offers nested folder navigation, literal path filtering, source byte counts and validated undoable module creation. See [source explorer](docs/source-explorer.md).
