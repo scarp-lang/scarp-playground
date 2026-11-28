@@ -6,25 +6,33 @@ const cases = [
     source: 'funcra f<T,T>(a:T)->T{return a;}',
     code: 'E0085',
     guidance: 'Declare each generic type parameter once',
+    hasCompilerHint: false,
   },
   {
     source: 'funcra f<T>(a:T,b:T)->T{return a;} f(1,2.0);',
     code: 'E0086',
     guidance: 'identity::<integer>(7)',
+    hasCompilerHint: true,
   },
 ] as const;
 
-for (const { source, code, guidance } of cases) {
-  test('generic diagnostic preserves original compiler hint: ' + code, async ({ page }) => {
+for (const { source, code, guidance, hasCompilerHint } of cases) {
+  test('generic diagnostic preserves compiler hint provenance: ' + code, async ({ page }) => {
     await page.goto('./#code=' + encodeURIComponent(source));
     await page.getByRole('button', { name: 'Verify code' }).click();
     await expect(page.locator('.error-title')).toContainText(code, { timeout: 30_000 });
     await expect(page.locator('.browser-diagnostic-help')).toContainText(guidance);
     await expect(page.locator('.stdout')).toHaveCount(0);
     const hint = page.locator('.compiler-diagnostic-help');
-    await expect(hint.locator('summary')).toBeVisible();
-    await hint.locator('summary').click();
-    await expect(hint.locator('.error-help')).toBeVisible();
+    if (hasCompilerHint) {
+      await expect(hint.locator('summary')).toBeVisible();
+      await hint.locator('summary').click();
+      await expect(hint.locator('.error-help')).toContainText('supply matching arguments');
+    } else {
+      await expect(hint).toHaveCount(0);
+      await expect(page.locator('.error-help')).toHaveCount(0);
+      await expect(page.locator('.diagnostic-related')).toContainText('the first declaration is here');
+    }
 
     const pending = page.waitForEvent('download');
     await page.getByRole('button', { name: 'Download result' }).click();
@@ -34,6 +42,11 @@ for (const { source, code, guidance } of cases) {
     expect(report).toContain(code);
     expect(report).toContain('Playground guidance:');
     expect(report).toContain(guidance);
-    expect(report).toContain('Original compiler hint:');
+    if (hasCompilerHint) {
+      expect(report).toContain('Original compiler hint:');
+      expect(report).toContain('supply matching arguments');
+    } else {
+      expect(report).not.toContain('Original compiler hint:');
+    }
   });
 }
