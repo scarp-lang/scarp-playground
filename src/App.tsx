@@ -19,6 +19,7 @@ const AdvancedSourceSearchPanel = lazy(() => import('./AdvancedSourceSearchPanel
 const SourceNotesPanel = lazy(() => import('./SourceNotesPanel').then(module => ({ default: module.SourceNotesPanel })));
 const OutputSearchPanel = lazy(() => import('./OutputSearchPanel').then(module => ({ default: module.OutputSearchPanel })));
 const OutputTablePanel = lazy(() => import('./OutputTablePanel').then(module => ({ default: module.OutputTablePanel })));
+const OutputBaselinePanel = lazy(() => import('./OutputBaselinePanel').then(module => ({ default: module.OutputBaselinePanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import type { SourceTimeline } from './source-timeline';
 import type { WorkspaceIntegrityManifest } from './workspace-integrity';
@@ -50,6 +51,7 @@ import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats
 import { BrowserRunDetails } from './BrowserRunDetails';
 import type { RunHistoryEntry } from './run-history';
 import type { CapturedRun } from './run-to-test-case';
+import type { OutputBaseline } from './output-baseline';
 const RunHistoryPanel = lazy(() => import('./RunHistoryPanel').then(module => ({ default: module.RunHistoryPanel })));
 const TestCasePanel = lazy(() => import('./TestCasePanel').then(module => ({ default: module.TestCasePanel })));
 const InputPresetsPanel = lazy(() => import('./InputPresetsPanel').then(module => ({ default: module.InputPresetsPanel })));
@@ -169,6 +171,8 @@ export function App() {
   const [result, setResult] = useState<(RunResult & { browserStats?: BrowserRunStats | null }) | null>(null);
   const [outputSearchOpen, setOutputSearchOpen] = useState(false);
   const [outputTableOpen, setOutputTableOpen] = useState(false);
+  const [outputBaselineOpen, setOutputBaselineOpen] = useState(false);
+  const [outputBaseline, setOutputBaseline] = useState<OutputBaseline | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   // Runtime input is intentionally ephemeral: never saved or placed in shared links.
   const [programInput, setProgramInput] = useState('');
@@ -1958,6 +1962,7 @@ export function App() {
     { id: 'copy-result', label: 'Copy result', group: 'Output', description: 'Copy captured output or diagnostics', disabled: !transcriptAvailable, invoke: () => void copyConsoleResult() },
     { id: 'find-output', label: 'Find in output', group: 'Output', description: 'Search captured stdout and stderr without rerunning source', disabled: !result || (!result.stdout && !result.stderr), invoke: () => setOutputSearchOpen(true) },
     { id: 'inspect-output-table', label: 'Inspect output table', group: 'Output', description: 'Inspect captured JSON, CSV, TSV or JSON lines locally', disabled: !result || (!result.stdout && !result.stderr), invoke: () => setOutputTableOpen(true) },
+    { id: 'compare-run-output', label: 'Compare Run output', group: 'Output', description: 'Pin output and compare later compiler Run results in tab memory', invoke: () => setOutputBaselineOpen(true) },
     { id: 'download-result', label: 'Download result', group: 'Output', description: 'Download a local output transcript', disabled: !transcriptAvailable, invoke: downloadConsoleResult },
     { id: 'clear-result', label: 'Clear output', group: 'Output', description: 'Clear result and cancel any active operation', invoke: invalidateExecution },
     { id: 'theme', label: dark ? 'Switch to light theme' : 'Switch to dark theme', group: 'View', description: 'Toggle the workspace appearance', invoke: () => setDark(value => !value) },
@@ -2881,6 +2886,10 @@ export function App() {
                   disabled={!result || (!result.stdout && !result.stderr)}>
                   Inspect table
                 </button>
+                <button type="button" onClick={() => setOutputBaselineOpen(open => !open)}
+                  aria-expanded={outputBaselineOpen} aria-controls="output-baseline-panel">
+                  Compare output
+                </button>
                 <button type="button" onClick={() => void copyConsoleResult()}
                   disabled={!transcriptAvailable}
                   title="Copy the current output or diagnostic; no source files or stdin">Copy result</button>
@@ -2890,6 +2899,13 @@ export function App() {
                 <button type="button" onClick={invalidateExecution}>Clear</button>
               </div>
             </div>
+            {outputBaselineOpen && <Suspense fallback={
+              <p className="project-search-status" role="status">Loading output comparison…</p>
+            }>
+              <OutputBaselinePanel latest={operation === 'run' ? result : null}
+                baseline={outputBaseline} onBaselineChange={setOutputBaseline}
+                onClose={() => setOutputBaselineOpen(false)} />
+            </Suspense>}
             {result && outputTableOpen && <Suspense fallback={
               <p className="project-search-status" role="status">Loading structured output…</p>
             }>
