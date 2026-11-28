@@ -34,6 +34,34 @@ if (extras.length) {
   process.exitCode = 1;
 }
 
+// Verify the actual static import closure, not only the entry chunk. A
+// shared vendor chunk must not hide initial bytes from the existing gate.
+const manifest = JSON.parse(readFileSync('dist/.vite/manifest.json', 'utf8'));
+const initial = new Set();
+const visitStatic = (key) => {
+  if (initial.has(key)) return;
+  const entry = manifest[key];
+  if (!entry) throw new Error('Unknown Vite manifest dependency: ' + key);
+  initial.add(key);
+  for (const dependency of entry.imports ?? []) visitStatic(dependency);
+};
+visitStatic('index.html');
+const initialFiles = [...new Set([...initial].map(key => manifest[key].file)
+  .filter(file => file.endsWith('.js')))];
+const initialBytes = initialFiles.reduce((sum, file) => sum + readFileSync(join('dist', file)).length, 0);
+process.stdout.write('Initial static JavaScript closure: ' + initialBytes + ' bytes across ' + initialFiles.length + ' chunks.\n');
+if (initialBytes > 400_000) {
+  process.stderr.write('Initial static JavaScript closure exceeds 400,000 bytes.\n');
+  process.exitCode = 1;
+}
+for (const component of ['ExampleBrowser', 'SourceExplorer', 'ModuleGraphPanel', 'FolderMovePanel', 'SourceFolderPreview']) {
+  const key = 'src/' + component + '.tsx';
+  if (!manifest[key]?.isDynamicEntry || initial.has(key)) {
+    process.stderr.write('Optional workspace tool must remain a dynamic entry: ' + component + '\n');
+    process.exitCode = 1;
+  }
+}
+
 // GitHub Pages cannot set CSP response headers. Require a production-only
 // meta CSP in emitted HTML before the first executable script, and reject any
 // accidental reintroduction of inline JavaScript or unrestricted eval.
