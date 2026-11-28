@@ -10,7 +10,9 @@ import { defaultExample } from './default-example';
 const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
 const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
 const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
+const SourceTimelinePanel = lazy(() => import('./SourceTimelinePanel').then(module => ({ default: module.SourceTimelinePanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
+import { emptySourceTimeline, previewTimelineRestore, type SourceTimeline } from './source-timeline';
 import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
 const ProjectLibraryPanel = lazy(() => import('./ProjectLibraryPanel').then(module => ({ default: module.ProjectLibraryPanel })));
@@ -141,6 +143,8 @@ export function App() {
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
+  const [timelineOpen, setTimelineOpen] = useState(false);
+  const [sourceTimeline, setSourceTimeline] = useState<SourceTimeline>(emptySourceTimeline);
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -357,6 +361,25 @@ export function App() {
     setEditorSession(previous => previous + 1);
     setNotice('Replaced ' + plan.changes + ' literal text occurrence(s) in ' +
       plan.changedFiles.length + ' .srp file(s). Check the program before running.');
+  }
+
+  function restoreTimelineItem(snapshot: Workspace, id: number) {
+    if (workspace !== snapshot) {
+      setNotice('The source timeline restore became stale. Review the current snapshot again.');
+      return;
+    }
+    const plan = previewTimelineRestore(sourceTimeline, id, workspace, activeFile);
+    if (!plan) {
+      setNotice('The selected timeline snapshot could not be safely restored.');
+      return;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(plan.activeFile);
+    setLastBulkEdit(plan.undo);
+    setEditorSession(previous => previous + 1);
+    setTimelineOpen(false);
+    setNotice('Restored a named source timeline snapshot. Undo bulk change can reverse it.');
   }
 
   function captureCheckpoint() {
@@ -1644,6 +1667,7 @@ export function App() {
     { id: 'stop', label: 'Stop execution', group: 'Execution', description: 'Cancel the active compiler operation', disabled: !running, invoke: invalidateExecution },
     { id: 'challenges', label: 'Learning challenges', group: 'Execution', description: 'Practice with public cases and reference solutions', invoke: () => setChallengeOpen(true) },
     { id: 'checkpoint', label: 'Source checkpoint', group: 'Project', description: 'Review temporary source changes and restore a checkpoint', invoke: () => setSourceCheckpointOpen(true) },
+    { id: 'timeline', label: 'Source snapshot timeline', group: 'Project', description: 'Compare named source-only snapshots and restore a reviewed version', invoke: () => setTimelineOpen(true) },
     { id: 'library', label: 'Project library', group: 'Project', description: 'Open named local source snapshots', invoke: () => setLibraryOpen(true) },
     { id: 'outline', label: 'Source outline', group: 'Navigation', description: 'Inspect declarations with the Scarp parser', invoke: () => setOutlineOpen(true) },
     { id: 'inspection', label: 'Compiler module inspection', group: 'Navigation', description: 'Inspect resolved modules and signatures', invoke: () => setInspectionOpen(true) },
@@ -1829,6 +1853,10 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={timelineOpen}
+                aria-controls="source-timeline-panel" onClick={() => setTimelineOpen(open => !open)}>
+                Source timeline
+              </button>
               <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
                 aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
                 Source checkpoint
@@ -1881,6 +1909,12 @@ export function App() {
               )}
             </div>
           </div>
+
+          {timelineOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source timeline…</p>}>
+            <SourceTimelinePanel workspace={workspace} activeFile={activeFile}
+              timeline={sourceTimeline} onChange={setSourceTimeline}
+              onRestore={restoreTimelineItem} onClose={() => setTimelineOpen(false)} />
+          </Suspense>}
 
           {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
