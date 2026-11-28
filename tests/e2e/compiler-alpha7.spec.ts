@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('alpha.7 executes the exact published Unicode conditional fixture in WASM', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Conditional values \+ Unicode escapes/ }).click();
+  await loadExample(page, /Conditional values \+ Unicode escapes/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('नमस्ते 👋 7\n', { timeout: 30_000 });
   await expect(page.locator('.error-panel')).toHaveCount(0);

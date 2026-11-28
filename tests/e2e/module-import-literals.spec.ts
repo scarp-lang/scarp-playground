@@ -1,9 +1,10 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 for (const quote of ['raw', 'multiline'] as const) {
   test('rename actual ' + quote + ' import while preserving verbatim text', async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('button', { name: /Import a module/ }).click();
+    await loadExample(page, /Import a module/);
     const delimiter = quote === 'raw' ? ['r"', '"'] : ['"""', '"""'];
     const source = [
       'import ' + delimiter[0] + 'math.srp' + delimiter[1] + ' as math;',
