@@ -31,7 +31,9 @@ for (const { source, code, guidance, hasCompilerHint } of cases) {
     } else {
       await expect(hint).toHaveCount(0);
       await expect(page.locator('.error-help')).toHaveCount(0);
-      await expect(page.locator('.diagnostic-related')).toContainText('the first declaration is here');
+      // The parser rejects duplicate parameters before the resolver can attach a related span.
+      await expect(page.locator('.diagnostic-related')).toHaveCount(0);
+      await expect(page.locator('.error-panel')).toContainText('duplicate type parameter');
     }
 
     const pending = page.waitForEvent('download');
