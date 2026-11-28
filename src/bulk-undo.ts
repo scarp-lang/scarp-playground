@@ -9,7 +9,7 @@ export type BulkEditUndo = {
   before: Workspace;
   after: Workspace;
   label: 'project-wide replacement' | 'symbol rename' | 'file move' | 'file removal' |
-    'file duplication' | 'source import' | 'folder move';
+    'file duplication' | 'source import' | 'folder move' | 'checkpoint restore';
   restoreActiveFile?: string;
 };
 
@@ -36,7 +36,8 @@ export function createBulkEditUndo(
           expected.workspace.files[path] !== after.files[path])) return null;
     return { before, after, label, restoreActiveFile: folder.activeFile };
   }
-  if (folder) return null;
+  // Checkpoint restoration constructs its token in the dedicated planner.
+  if (folder || label === 'checkpoint restore') return null;
   if (label === 'source import') {
     // No existing path, entrypoint or source may change in an add-only batch.
     if (moved || removed || duplicated || before.entry !== after.entry ||
