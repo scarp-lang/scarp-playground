@@ -532,3 +532,22 @@ a { color: inherit; text-decoration: none; }
 .folder-move-diffs strong { overflow-wrap: anywhere; }
 .folder-move-diffs pre { max-width: 100%; overflow: auto; white-space: pre; background: var(--panel-2); padding: 6px; margin: 5px 0; }
 .folder-move-review > button { justify-self: start; }
+
+/* Nested virtual source navigation. Folder indentation is bounded visually. */
+.source-explorer-heading h2 { font-size: 13px; font-weight: 750; margin: 0 auto 0 0; }
+.source-explorer-filter, .source-explorer-create { margin-top: 10px; }
+.source-explorer-scroll { max-height: 360px; overflow: auto; margin-top: 10px; min-width: 0; }
+.source-explorer-tree { list-style: none; margin: 0; padding: 0; min-width: 0; display: grid; gap: 3px; }
+.source-explorer-tree .source-explorer-tree { padding-left: 10px; border-left: 1px solid var(--border); margin-left: 5px; }
+.source-explorer-folder-row { display: flex; gap: 4px; align-items: center; min-width: 0; }
+.source-explorer-file, .source-explorer-folder {
+  display: flex; gap: 6px; align-items: center; min-width: 0; width: 100%; padding: 6px;
+  text-align: left; font-size: 12px; border: 1px solid transparent; border-radius: 6px;
+}
+.source-explorer-file[aria-current='true'] { background: var(--panel-2); border-color: var(--accent); }
+.source-explorer-file:hover, .source-explorer-folder:hover { background: var(--panel-2); }
+.source-explorer-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.source-explorer-size, .source-explorer-active-folder { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.source-explorer-new { flex: none; min-width: 26px; min-height: 26px; border: 1px solid var(--border); border-radius: 5px; }
+.source-explorer-error { color: #e4ae72; font-size: 12px; overflow-wrap: anywhere; }
+:root[data-theme='light'] .source-explorer-error { color: #985c1b; }

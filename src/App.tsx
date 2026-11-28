@@ -7,6 +7,8 @@ const ScarpEditor = lazy(() =>
 );
 import { examples } from './examples';
 import { ExampleBrowser } from './ExampleBrowser';
+import { SourceExplorer } from './SourceExplorer';
+import { previewNewSource } from './workspace-tree';
 import { ModuleGraphPanel } from './ModuleGraphPanel';
 import { isUntouchedExampleSession } from './example-session';
 import compilerCompatibility from '../compiler-compatibility.json';
@@ -105,6 +107,7 @@ export function App() {
   const [searchOpen, setSearchOpen] = useState(false);
   const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
+  const [explorerOpen, setExplorerOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -867,24 +870,38 @@ export function App() {
     setResult(null);
   }
 
+  function createSource(path: string): string | null {
+    const plan = previewNewSource(workspace, path);
+    if (!plan.ok) { setNotice(plan.error); return plan.error; }
+    const undo = createBulkEditUndo(workspace, plan.workspace, 'source import');
+    if (!undo) {
+      const error = 'Could not safely add the source. No files were changed.';
+      setNotice(error);
+      return error;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(path);
+    setLastBulkEdit(undo);
+    setNotice('Added ' + path + '. Imports can refer to this file by relative path.');
+    return null;
+  }
+
+  function openExplorerSource(path: string) {
+    if (!Object.hasOwn(workspace.files, path)) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setActiveFile(path);
+  }
+
   function addFile() {
     if (files.length >= MAX_FILES) {
       setNotice('This preview supports up to ' + MAX_FILES + ' files.');
       return;
     }
     const name = window.prompt('New relative .srp path (for example lib/math.srp)');
-    if (name === null) return;
-    if (!validPath(name) || Object.hasOwn(workspace.files, name)) {
-      setNotice('Choose a unique relative .srp path with letters, numbers, hyphens or underscores.');
-      return;
-    }
-    invalidateExecution();
-    setWorkspace((previous) => ({
-      ...previous,
-      files: { ...previous.files, [name]: '// New Scarp module\n' },
-    }));
-    setActiveFile(name);
-    setNotice('Added ' + name + '. Imports can refer to this file by relative path.');
+    if (name !== null) createSource(name);
   }
 
   function beginFileDuplicate() {
@@ -1473,6 +1490,10 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={explorerOpen}
+                aria-controls="source-explorer-panel" onClick={() => setExplorerOpen(open => !open)}>
+                Source explorer
+              </button>
               <button type="button" className="button-secondary" aria-expanded={folderMoveOpen}
                 aria-controls="folder-move-panel" onClick={() => {
                   if (folderMoveOpen) { setFolderMoveOpen(false); return; }
@@ -1503,6 +1524,9 @@ export function App() {
               )}
             </div>
           </div>
+
+          {explorerOpen && <SourceExplorer workspace={workspace} activeFile={activeFile}
+            onOpen={openExplorerSource} onCreate={createSource} onClose={() => setExplorerOpen(false)} />}
 
           {folderMoveOpen && <FolderMovePanel workspace={workspace} onApply={applyFolderMove}
             onClose={() => setFolderMoveOpen(false)} />}
