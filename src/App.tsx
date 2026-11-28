@@ -10,7 +10,9 @@ import { defaultExample } from './default-example';
 const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
 const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
 const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
+const SourceNotesPanel = lazy(() => import('./SourceNotesPanel').then(module => ({ default: module.SourceNotesPanel })));
 import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
+import { emptySourceNotes, type SourceNotes } from './source-notes';
 import { previewNewSource } from './workspace-tree';
 import type { LibraryProject } from './library/model';
 const ProjectLibraryPanel = lazy(() => import('./ProjectLibraryPanel').then(module => ({ default: module.ProjectLibraryPanel })));
@@ -141,6 +143,8 @@ export function App() {
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
   const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
+  const [sourceNotesOpen, setSourceNotesOpen] = useState(false);
+  const [sourceNotes, setSourceNotes] = useState<SourceNotes>(emptySourceNotes);
   const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
   const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
@@ -1644,6 +1648,7 @@ export function App() {
     { id: 'stop', label: 'Stop execution', group: 'Execution', description: 'Cancel the active compiler operation', disabled: !running, invoke: invalidateExecution },
     { id: 'challenges', label: 'Learning challenges', group: 'Execution', description: 'Practice with public cases and reference solutions', invoke: () => setChallengeOpen(true) },
     { id: 'checkpoint', label: 'Source checkpoint', group: 'Project', description: 'Review temporary source changes and restore a checkpoint', invoke: () => setSourceCheckpointOpen(true) },
+    { id: 'source-notes', label: 'Session source notes', group: 'Project', description: 'Write private notes at source locations, including orphan detection', invoke: () => setSourceNotesOpen(true) },
     { id: 'library', label: 'Project library', group: 'Project', description: 'Open named local source snapshots', invoke: () => setLibraryOpen(true) },
     { id: 'outline', label: 'Source outline', group: 'Navigation', description: 'Inspect declarations with the Scarp parser', invoke: () => setOutlineOpen(true) },
     { id: 'inspection', label: 'Compiler module inspection', group: 'Navigation', description: 'Inspect resolved modules and signatures', invoke: () => setInspectionOpen(true) },
@@ -1829,6 +1834,10 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={sourceNotesOpen}
+                aria-controls="source-notes-panel" onClick={() => setSourceNotesOpen(open => !open)}>
+                Source notes
+              </button>
               <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
                 aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
                 Source checkpoint
@@ -1881,6 +1890,13 @@ export function App() {
               )}
             </div>
           </div>
+
+          {sourceNotesOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading source notes…</p>}>
+            <SourceNotesPanel workspace={workspace} activeFile={activeFile}
+              notes={sourceNotes} onChange={setSourceNotes}
+              onNavigate={point => jumpToSearchHit({ ...point, preview: '' })}
+              onClose={() => setSourceNotesOpen(false)} />
+          </Suspense>}
 
           {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
