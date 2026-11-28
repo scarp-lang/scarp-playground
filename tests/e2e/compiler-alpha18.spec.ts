@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // The real published Rust/WASM bridge runs these exact official fixtures in
@@ -23,7 +24,7 @@ const published = [
 for (const fixture of published) {
   test(fixture.version + ' verifies, checks and executes: ' + fixture.title, async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('button', { name: fixture.title }).click();
+    await loadExample(page, fixture.title);
     await page.getByRole('button', { name: 'Verify code' }).click();
     await expect(page.locator('.terminal-output')).toContainText(
       'Static verification passed', { timeout: 30_000 },

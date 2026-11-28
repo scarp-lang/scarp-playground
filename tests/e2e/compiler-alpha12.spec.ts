@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 const published: Array<{ title: string; stdout: string }> = [
@@ -21,9 +22,7 @@ const published: Array<{ title: string; stdout: string }> = [
 for (const fixture of published) {
   test('alpha.12 runs published source: ' + fixture.title, async ({ page }) => {
     await page.goto('./');
-    await page.locator('.example-button').filter({
-      has: page.getByText(fixture.title, { exact: true }),
-    }).click();
+    await loadExample(page, fixture.title);
     await page.getByRole('button', { name: 'Verify code' }).click();
     await expect(page.locator('.terminal-output')).toContainText(
       'Static verification passed', { timeout: 30_000 },

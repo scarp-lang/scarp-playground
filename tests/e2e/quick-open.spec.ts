@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('Ctrl/Cmd+P opens file search from Monaco and navigates an imported module', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
   await editor.focus();
@@ -25,7 +26,7 @@ test('Ctrl/Cmd+P opens file search from Monaco and navigates an imported module'
 
 test('ArrowDown and ArrowUp navigate results without changing sources', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Quick open' }).click();
   const dialog = page.getByRole('dialog', { name: 'Quick open Scarp file' });
   const input = dialog.getByRole('combobox', { name: 'Find .srp file' });
@@ -53,7 +54,7 @@ test('ArrowDown and ArrowUp navigate results without changing sources', async ({
 
 test('unmatched search and Escape close without switching active files', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Quick open' }).click();
   const dialog = page.getByRole('dialog', { name: 'Quick open Scarp file' });
   const input = dialog.getByRole('combobox', { name: 'Find .srp file' });
@@ -71,7 +72,7 @@ test('unmatched search and Escape close without switching active files', async (
 test('quick-open search and file choices stay accessible on a narrow viewport', async ({ page }) => {
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const button = page.getByRole('button', { name: 'Quick open' });
   await button.scrollIntoViewIfNeeded();
   await button.click();

@@ -3,9 +3,9 @@ import type { Page } from '@playwright/test';
 
 async function delayProjectRead(page: Page) {
   await page.addInitScript(() => {
-    const original = File.prototype.text;
+    const original = File.prototype.arrayBuffer;
     const state = window as Window & { releaseProjectRead?: () => void };
-    File.prototype.text = async function () {
+    File.prototype.arrayBuffer = async function () {
       if (this.name === 'temporary-project.json') {
         await new Promise<void>(resolve => { state.releaseProjectRead = resolve; });
       }

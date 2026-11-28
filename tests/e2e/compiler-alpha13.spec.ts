@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // Real worker/WASM execution in Chromium, Firefox and WebKit. The output is
@@ -24,7 +25,7 @@ const published: Array<{ title: string; stdout: string }> = [
 for (const fixture of published) {
   test('alpha.13 verifies and executes published source: ' + fixture.title, async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('button', { name: new RegExp(fixture.title, 'i') }).click();
+    await loadExample(page, new RegExp(fixture.title, 'i'));
     await page.getByRole('button', { name: 'Verify code' }).click();
     await expect(page.locator('.terminal-output')).toContainText(
       'Static verification passed', { timeout: 30_000 },
@@ -43,7 +44,7 @@ test('alpha.13 preserves atomic failures and recovers with another disposable wo
   await expect(page.locator('.error-title')).toContainText('E0082', { timeout: 30_000 });
   await expect(page.locator('.stdout')).toHaveCount(0);
   await page.goto('./');
-  await page.getByRole('button', { name: 'Ordered map snapshots' }).click();
+  await loadExample(page, 'Ordered map snapshots');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText("[list: 1, 2, 3]\n[list: \"one\", \"two\", \"three\"]\n[list: 2, 3]\n[list: \"TWO\", \"three\"]\n3 2\n", { timeout: 30_000 });
 });

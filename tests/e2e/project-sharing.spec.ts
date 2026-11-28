@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('sharing a full project restores modules and active tab without replacing a saved copy', async ({ page }) => {
@@ -16,7 +17,7 @@ test('sharing a full project restores modules and active tab without replacing a
 
   await page.goto('./');
   await page.getByRole('button', { name: 'Save locally' }).click();
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await page.getByRole('button', { name: /Share/ }).click();
   await expect(page.locator('.notice')).toContainText('shareable project link');
@@ -38,7 +39,7 @@ test('sharing a full project restores modules and active tab without replacing a
 
 test('a same-document project fragment replaces only the temporary editor', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const payload = {
     format: 'scarp-playground-workspace',
     version: 1,

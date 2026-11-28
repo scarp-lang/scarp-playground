@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('clicking a compiler error focuses the exact token in an imported module', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
