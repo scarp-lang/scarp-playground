@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('literal replacement previews every change, then atomically updates and runs code', async ({ page }) => {
@@ -23,7 +24,7 @@ test('literal replacement previews every change, then atomically updates and run
 
 test('project replace can update real imported modules without invoking compiler during preview', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Find in project' }).click();
   await page.getByRole('searchbox', { name: 'Search text in project' }).fill('twice');
   await page.getByRole('textbox', { name: 'Replacement text (literal)' }).fill('double');

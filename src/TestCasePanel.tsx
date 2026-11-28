@@ -1,6 +1,7 @@
 import { MAX_CASE_NAME_LENGTH, MAX_TEST_CASES, MAX_EXPECTED_OUTPUT_BYTES, newTestCase, validateTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
 
 import { MAX_PROGRAM_INPUT_BYTES } from './runner/limits';
+import { TestCaseFileControls } from './TestCaseFileControls';
 
 type Props = {
   cases: TestCase[];
@@ -37,8 +38,9 @@ export function TestCasePanel({ cases, running, busy, report, progress, stdin, a
       <p className="project-replace-help">
         Run the current entrypoint separately for each case with its own buffered input.
         Compare exact stdout and stderr (including final line breaks), or require a compiler error code.
-        Cases are temporary and are never saved or shared. Each uses the existing browser execution limits.
+        Cases are temporary unless you explicitly export them. Each uses the existing browser execution limits.
       </p>
+      <TestCaseFileControls cases={cases} busy={busy} onReplace={onChange} />
       <div className="test-case-list">
         {cases.map((item, index) => (
           <fieldset key={index} className="test-case-item" disabled={busy}>

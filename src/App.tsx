@@ -9,8 +9,17 @@ import type { Example } from './examples';
 import { defaultExample } from './default-example';
 const ExampleBrowser = lazy(() => import('./ExampleBrowser').then(module => ({ default: module.ExampleBrowser })));
 const SourceExplorer = lazy(() => import('./SourceExplorer').then(module => ({ default: module.SourceExplorer })));
+const SourceCheckpointPanel = lazy(() => import('./SourceCheckpointPanel').then(module => ({ default: module.SourceCheckpointPanel })));
+import { captureSourceCheckpoint, previewCheckpointRestore, type SourceCheckpoint } from './source-checkpoint';
 import { previewNewSource } from './workspace-tree';
+import type { LibraryProject } from './library/model';
+const ProjectLibraryPanel = lazy(() => import('./ProjectLibraryPanel').then(module => ({ default: module.ProjectLibraryPanel })));
 const ModuleGraphPanel = lazy(() => import('./ModuleGraphPanel').then(module => ({ default: module.ModuleGraphPanel })));
+const SourceOutlinePanel = lazy(() => import('./SourceOutlinePanel').then(module => ({ default: module.SourceOutlinePanel })));
+import { inspectSourceOutline } from './navigation/outline-client';
+import type { LocatedOutline } from './navigation/outline-protocol';
+import type { LocatedInspection } from './navigation/inspection-protocol';
+const ModuleInspectionPanel = lazy(() => import('./ModuleInspectionPanel').then(module => ({ default: module.ModuleInspectionPanel })));
 
 import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
@@ -22,7 +31,7 @@ import { previewSymbolRename, validRenameName, type RenameResult } from './navig
 import { buildRenameDiff } from './navigation/rename-diff';
 import { initialReferenceIndex, stepReferenceIndex } from './navigation/reference-view';
 import { diagnosticNavigationPosition, sourceLocationToEditorRange } from './diagnostics';
-import { ExecutionScope } from './runner/execution-scope';
+import { ExecutionScope, type ActiveExecution } from './runner/execution-scope';
 import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
@@ -119,8 +128,19 @@ export function App() {
   const [allowPrompts, setAllowPrompts] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
+  const [outlineOpen, setOutlineOpen] = useState(false);
+  const [outlineBusy, setOutlineBusy] = useState(false);
+  const [outlineResult, setOutlineResult] = useState<{ workspace: Workspace; path: string; result: LocatedOutline } | null>(null);
+  const outlineTask = useRef<ActiveExecution | null>(null);
+  const [inspectionOpen, setInspectionOpen] = useState(false);
+  const [inspectionBusy, setInspectionBusy] = useState(false);
+  const [inspectionResult, setInspectionResult] = useState<{ workspace: Workspace; result: LocatedInspection } | null>(null);
+  const inspectionTask = useRef<ActiveExecution | null>(null);
   const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [explorerOpen, setExplorerOpen] = useState(false);
+  const [sourceCheckpointOpen, setSourceCheckpointOpen] = useState(false);
+  const [sourceCheckpoint, setSourceCheckpoint] = useState<SourceCheckpoint | null>(null);
+  const [libraryOpen, setLibraryOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -215,6 +235,80 @@ export function App() {
     if (renameTarget) renameInputRef.current?.focus();
   }, [renameTarget]);
 
+  async function refreshInspection() {
+    if (executionScope.current.running || inspectionTask.current) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setRenameBusy(false);
+    const lookup = definitionScope.current.start();
+    if (!lookup) return;
+    inspectionTask.current = lookup;
+    setInspectionBusy(true);
+    setInspectionResult(null);
+    const snapshot = workspace;
+    try {
+      const { inspectWorkspace } = await import('./navigation/inspection-client');
+      if (!definitionScope.current.isCurrent(lookup)) return;
+      const result = await inspectWorkspace(snapshot, lookup.controller.signal);
+      if (definitionScope.current.isCurrent(lookup) && latestSession.current.workspace === snapshot) {
+        setInspectionResult({ workspace: snapshot, result });
+      }
+    } catch {
+      if (definitionScope.current.isCurrent(lookup)) setInspectionResult({
+        workspace: snapshot, result: { ok: false, error: 'Unable to load module inspection.' },
+      });
+    } finally {
+      definitionScope.current.finish(lookup);
+      if (inspectionTask.current === lookup) {
+        inspectionTask.current = null;
+        setInspectionBusy(false);
+      }
+    }
+  }
+
+  function closeInspection() {
+    if (inspectionTask.current && definitionScope.current.isCurrent(inspectionTask.current)) definitionScope.current.invalidate();
+    setInspectionOpen(false);
+    setInspectionResult(null);
+  }
+
+  async function refreshOutline() {
+    if (executionScope.current.running || outlineTask.current) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setRenameBusy(false);
+    const lookup = definitionScope.current.start();
+    if (!lookup) return;
+    outlineTask.current = lookup;
+    setOutlineBusy(true);
+    setOutlineResult(null);
+    const path = activeFile;
+    const snapshot = workspace;
+    try {
+      const result = await inspectSourceOutline(snapshot, path, lookup.controller.signal);
+      const latest = latestSession.current;
+      if (definitionScope.current.isCurrent(lookup) && latest.workspace === snapshot && latest.activeFile === path) {
+        setOutlineResult({ workspace: snapshot, path, result });
+      }
+    } finally {
+      definitionScope.current.finish(lookup);
+      if (outlineTask.current === lookup) {
+        outlineTask.current = null;
+        setOutlineBusy(false);
+      }
+    }
+  }
+
+  function closeOutline() {
+    if (outlineTask.current && definitionScope.current.isCurrent(outlineTask.current)) {
+      definitionScope.current.invalidate();
+    }
+    setOutlineOpen(false);
+    setOutlineResult(null);
+  }
+
   function jumpToSearchHit(hit: ProjectSearchHit) {
     if (!Object.hasOwn(workspace.files, hit.path)) return;
     // Any delayed definition result must not replace explicit text navigation.
@@ -262,6 +356,35 @@ export function App() {
       plan.changedFiles.length + ' .srp file(s). Check the program before running.');
   }
 
+  function captureCheckpoint() {
+    const snapshot = captureSourceCheckpoint(workspace, activeFile);
+    if (!snapshot) {
+      setNotice('Fix the source workspace before capturing a checkpoint.');
+      return;
+    }
+    if (sourceCheckpoint && !window.confirm('Replace the previous temporary source checkpoint?')) return;
+    setSourceCheckpoint(snapshot);
+    setNotice('Captured a source-only checkpoint in memory. No input or results were included.');
+  }
+
+  function restoreCheckpoint() {
+    if (!sourceCheckpoint) return;
+    const plan = previewCheckpointRestore(workspace, activeFile, sourceCheckpoint);
+    if (!plan) {
+      setNotice('No valid source changes to restore.');
+      return;
+    }
+    if (!window.confirm('Restore the captured source files and entrypoint? The current sources will be replaced. Program input is unchanged.' +
+      (savingLocally ? ' Your opted-in saved browser copy will also update.' : '') +
+      ' Undo bulk change can reverse this until the next edit.')) return;
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(plan.activeFile);
+    setLastBulkEdit(plan.undo);
+    setEditorSession(previous => previous + 1);
+    setNotice('Restored the source checkpoint. Undo bulk change can restore the previous workspace.');
+  }
+
   function undoLastBulkChange() {
     const original = undoBulkEdit(workspace, lastBulkEdit);
     if (!original || !lastBulkEdit) {
@@ -272,7 +395,7 @@ export function App() {
     const label = lastBulkEdit.label;
     invalidateExecution();
     setWorkspace(original);
-    setActiveFile(current => lastBulkEdit.label === 'file removal' &&
+    setActiveFile(current => (lastBulkEdit.label === 'file removal' || lastBulkEdit.label === 'checkpoint restore') &&
       lastBulkEdit.restoreActiveFile
       ? lastBulkEdit.restoreActiveFile
       : Object.hasOwn(original.files, current)
@@ -283,6 +406,8 @@ export function App() {
   }
 
   function invalidateExecution() {
+    setOutlineResult(null);
+    setInspectionResult(null);
     setFolderPreview(null);
     setFolderMoveOpen(false);
     setQuickOpen(false);
@@ -894,6 +1019,26 @@ export function App() {
     return true;
   }
 
+  function openLibraryProject(project: LibraryProject): boolean {
+    if (!window.confirm('Open named source snapshot "' + project.name +
+      '"? Current source edits and program input will be replaced. The separate saved browser copy will be preserved.')) return false;
+    if (!preserveSavedSourceBeforeSwitch()) return false;
+    const next = { entry: project.workspace.entry, files: { ...project.workspace.files } };
+    invalidateExecution();
+    setSavingLocally(false);
+    setWorkspace(next);
+    setCheckpoint({ workspace: next, stdin: '', recoverable: false });
+    setProgramInput('');
+    setAllowPrompts(false);
+    setEditorSession(number => number + 1);
+    setActiveFile(project.activeFile);
+    setLastBulkEdit(null);
+    setNotice('Opened a copy of the named snapshot. Editing will not change the library until you explicitly replace it.');
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    acceptedHash.current = '';
+    return true;
+  }
+
   function loadChallenge(challenge: Challenge) {
     if (running || !window.confirm(
       'Load the starter for "' + challenge.title + '"? Current source and program input will be replaced. Your saved browser copy will be preserved.',
@@ -1167,7 +1312,7 @@ export function App() {
   function downloadActiveSource() {
     const source = workspace.files[activeFile];
     if (source === undefined || !activeStats) {
-      setNotice('No active Scarp source file is available to download.');
+      setNotice('No valid Unicode Scarp source file is available to download.');
       return;
     }
     const url = URL.createObjectURL(new Blob([source], { type: 'text/plain;charset=utf-8' }));
@@ -1384,7 +1529,7 @@ export function App() {
     event.currentTarget.value = '';
     if (!file || sourceImportActive.current) return;
     if (file.size > MAX_PORTABLE_WORKSPACE_BYTES) {
-      setNotice('The selected project exceeds the 160 KiB portable workspace limit.');
+      setNotice('The selected project exceeds the bounded portable JSON size limit.');
       return;
     }
     // Keep whole-project and add-only local imports mutually exclusive.
@@ -1394,7 +1539,7 @@ export function App() {
     sourceImportActive.current = true;
     setImportingSources(true);
     try {
-      const raw = await file.text();
+      const raw = new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer());
       const current = latestSession.current;
       if (current.workspace !== snapshot.workspace ||
           current.activeFile !== snapshot.activeFile ||
@@ -1622,6 +1767,14 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={sourceCheckpointOpen}
+                aria-controls="source-checkpoint-panel" onClick={() => setSourceCheckpointOpen(open => !open)}>
+                Source checkpoint
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={libraryOpen}
+                aria-controls="project-library-panel" onClick={() => setLibraryOpen(open => !open)}>
+                Project library
+              </button>
               <button type="button" className="button-secondary" aria-expanded={explorerOpen}
                 aria-controls="source-explorer-panel" onClick={() => setExplorerOpen(open => !open)}>
                 Source explorer
@@ -1632,6 +1785,16 @@ export function App() {
                   invalidateExecution();
                   setFolderMoveOpen(true);
                 }}>Move folder</button>
+              <button type="button" className="button-secondary" aria-expanded={outlineOpen}
+                aria-controls="source-outline-panel" onClick={() => {
+                  if (outlineOpen) closeOutline();
+                  else setOutlineOpen(true);
+                }}>Source outline</button>
+              <button type="button" className="button-secondary" aria-expanded={inspectionOpen}
+                aria-controls="module-inspection-panel" onClick={() => {
+                  if (inspectionOpen) closeInspection();
+                  else setInspectionOpen(true);
+                }}>Compiler inspection</button>
               <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
                 aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
                 Module dependencies
@@ -1657,6 +1820,18 @@ export function App() {
             </div>
           </div>
 
+          {sourceCheckpointOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
+            <SourceCheckpointPanel workspace={workspace} snapshot={sourceCheckpoint}
+            onCapture={captureCheckpoint} onRestore={restoreCheckpoint}
+            onDiscard={() => { setSourceCheckpoint(null); setNotice('Discarded the temporary source checkpoint.'); }}
+            onClose={() => setSourceCheckpointOpen(false)} />
+          </Suspense>}
+
+          {libraryOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading project library…</p>}>
+            <ProjectLibraryPanel workspace={workspace} activeFile={activeFile}
+              onOpen={openLibraryProject} onClose={() => setLibraryOpen(false)} />
+          </Suspense>}
+
           {explorerOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <SourceExplorer workspace={workspace} activeFile={activeFile}
             onOpen={openExplorerSource} onCreate={createSource} onClose={() => setExplorerOpen(false)} />
@@ -1665,6 +1840,26 @@ export function App() {
           {folderMoveOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <FolderMovePanel workspace={workspace} onApply={applyFolderMove}
             onClose={() => setFolderMoveOpen(false)} />
+          </Suspense>}
+
+          {outlineOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
+            <SourceOutlinePanel path={activeFile}
+            result={outlineResult?.workspace === workspace && outlineResult.path === activeFile ? outlineResult.result : null}
+            busy={outlineBusy} running={running} onRefresh={() => void refreshOutline()}
+            onClose={closeOutline} onSelect={entry => {
+              if (outlineResult?.workspace === workspace && outlineResult.path === activeFile) {
+                jumpToSearchHit({ path: activeFile, line: entry.line, column: entry.column,
+                  preview: entry.name });
+              }
+            }} />
+          </Suspense>}
+
+          {inspectionOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading module inspection…</p>}>
+            <ModuleInspectionPanel result={inspectionResult?.workspace === workspace ? inspectionResult.result : null}
+              running={running} busy={inspectionBusy} onRefresh={() => void refreshInspection()}
+              onClose={closeInspection} onNavigate={site => {
+                if (inspectionResult?.workspace === workspace) jumpToSearchHit({ ...site, preview: '' });
+              }} />
           </Suspense>}
 
           {moduleGraphOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
@@ -2128,7 +2323,7 @@ export function App() {
                 if (!edit.accepted) {
                   // Rejected edits must not replace the buffer or invalidate a valid result.
                   event.currentTarget.value = programInput;
-                  setNotice('Program input is limited to 16 KiB of UTF-8 text. Previous input was kept.');
+                  setNotice('Program input must be valid Unicode within 16 KiB of UTF-8. Previous input was kept.');
                   return;
                 }
                 invalidateExecution();

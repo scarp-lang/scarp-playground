@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // Output is sourced from the compiler repository's examples/*.stdout fixtures.
@@ -28,7 +29,7 @@ const cases = [
 for (const { title, expected } of cases) {
   test('official beginner fixture: ' + title, async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('button', { name: new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')) }).click();
+    await loadExample(page, new RegExp(title.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     await page.getByRole('button', { name: 'Run code' }).click();
     await expect(page.locator('.stdout')).toHaveText(expected, { timeout: 30_000 });
     await expect(page.locator('.result-status.success')).toBeVisible();

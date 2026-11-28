@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('alpha.6 runs the official Unicode read_line fixture with its supplied stdin', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Program input/ }).click();
+  await loadExample(page, /Program input/);
   const input = page.getByRole('textbox', { name: 'Program input (stdin)' });
   await expect(input).toHaveValue('संस्कार\nfirst line\nlast line\n');
   await page.getByRole('button', { name: 'Run code' }).click();
@@ -34,12 +35,12 @@ test('alpha.6 check mode refuses an input read even if buffer is populated', asy
 
 test('alpha.6 executes tuple values and Unicode text conversions in WASM', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Tuple values/ }).click();
+  await loadExample(page, /Tuple values/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText(
     '(7, "नमस्ते")\n7 नमस्ते\n(42,) 42\n', { timeout: 30_000 },
   );
-  await page.getByRole('button', { name: /Text conversions/ }).click();
+  await loadExample(page, /Text conversions/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('42 125.0\n', { timeout: 30_000 });
 });

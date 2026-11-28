@@ -41,3 +41,9 @@ export type ReferencesResponse = { id: number; references: import('../navigation
 export type RenameRequest = { id: number; workspace: Workspace; mode: 'rename';
   path: string; offset: number; new_name: string };
 export type RenameResponse = { id: number; rename: import('../navigation/rename').RenameResult };
+
+export type OutlineRequest = { id: number; workspace: Workspace; mode: 'outline'; path: string };
+export type OutlineResponse = { id: number; outline: import('../navigation/outline-protocol').OutlineResult };
+
+export type InspectionRequest = { id: number; workspace: Workspace; mode: 'inspect' };
+export type InspectionResponse = { id: number; inspection: import('../navigation/inspection-protocol').InspectionResult };

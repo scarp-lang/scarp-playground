@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 for (const [label, stdout] of [
@@ -8,7 +9,7 @@ for (const [label, stdout] of [
 ] as const) {
   test('v0.0.7-alpha.1: ' + label, async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('button', { name: new RegExp(label) }).click();
+    await loadExample(page, new RegExp(label));
     await page.getByRole('button', { name: 'Verify code' }).click();
     await expect(page.locator('.terminal-output')).toContainText('Static verification passed', { timeout: 30_000 });
     await expect(page.locator('.stdout')).toHaveCount(0);
