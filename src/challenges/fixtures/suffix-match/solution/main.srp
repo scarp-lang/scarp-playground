@@ -1,0 +1,3 @@
+bind text = read_line();
+bind suffix = read_line();
+print(text_ends_with(text, suffix));

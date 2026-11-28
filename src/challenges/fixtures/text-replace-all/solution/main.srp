@@ -1,0 +1,4 @@
+bind text = read_line();
+bind search = read_line();
+bind replacement = read_line();
+print(text_replace(text, search, replacement));

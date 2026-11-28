@@ -1,0 +1,4 @@
+import "lib/math.srp" as math;
+bind a = text_to_integer(read_line());
+bind b = text_to_integer(read_line());
+print(math.distance(a, b));

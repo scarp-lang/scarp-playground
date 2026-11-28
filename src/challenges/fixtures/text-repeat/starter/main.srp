@@ -1,0 +1,4 @@
+bind value = read_line();
+bind count = text_to_integer(read_line());
+// TODO: repeat the string.
+print(value);

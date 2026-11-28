@@ -1,0 +1,4 @@
+bind first = [array: text_to_integer(read_line()), text_to_integer(read_line())];
+bind second = [array: text_to_integer(read_line()), text_to_integer(read_line())];
+// TODO: concatenate and traverse all elements.
+repeat array_len(first) as index { print(first[index]); }

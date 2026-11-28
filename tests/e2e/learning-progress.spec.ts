@@ -16,7 +16,7 @@ test('records only an explicitly selected completed challenge attempt and rememb
   await panel.getByRole('button', { name: 'Run challenge cases' }).click();
   await expect(panel.getByRole('region', { name: 'Challenge results' })).toContainText('3 of 3 passed', { timeout: 45_000 });
   await progress.getByRole('button', { name: 'Record practice attempt' }).click();
-  await expect(progress).toContainText('1 of 25 challenges completed');
+  await expect(progress).toContainText('1 of 53 challenges completed');
   await expect(progress.getByRole('button', { name: 'Attempt recorded' })).toBeDisabled();
   await panel.getByRole('button', { name: 'Close challenges' }).click();
   await page.getByRole('button', { name: 'Learning challenges', exact: true }).click();
@@ -24,8 +24,8 @@ test('records only an explicitly selected completed challenge attempt and rememb
   await page.reload();
   await page.getByRole('button', { name: 'Learning challenges', exact: true }).click();
   await progress.getByRole('button', { name: 'View saved progress' }).click();
-  await expect(progress).toContainText('1 of 25 challenges completed');
+  await expect(progress).toContainText('1 of 53 challenges completed');
   page.once('dialog', dialog => dialog.accept());
   await progress.getByRole('button', { name: 'Clear learning progress' }).click();
-  await expect(progress).toContainText('0 of 25 challenges completed');
+  await expect(progress).toContainText('0 of 53 challenges completed');
 });

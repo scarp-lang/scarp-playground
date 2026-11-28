@@ -1,0 +1,7 @@
+bind year = text_to_integer(read_line());
+// TODO: century years need special handling.
+if year % 4 == 0 {
+    print("leap");
+} else {
+    print("common");
+}

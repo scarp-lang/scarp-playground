@@ -4,7 +4,7 @@ test('practice a challenge through the pinned interpreter without replacing manu
   await page.goto('./');
   await page.getByRole('button', { name: 'Learning challenges', exact: true }).click();
   const panel = page.getByRole('region', { name: 'Learning challenges' });
-  await expect(panel.getByText('25 of 25 challenges')).toBeVisible();
+  await expect(panel.getByText('53 of 53 challenges')).toBeVisible();
   await panel.getByLabel('Choose challenge').selectOption('echo-name');
   page.once('dialog', dialog => dialog.accept());
   await panel.getByRole('button', { name: 'Load starter' }).click();

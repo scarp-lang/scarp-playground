@@ -1,0 +1,4 @@
+bind first = bigint(read_line());
+bind second = bigint(read_line());
+// TODO: add the exact values.
+print(first);

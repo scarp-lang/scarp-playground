@@ -1,0 +1,3 @@
+bind left = text_to_integer(read_line());
+bind right = text_to_integer(read_line());
+print(integer_abs(left - right));

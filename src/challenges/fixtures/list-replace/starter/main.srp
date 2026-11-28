@@ -1,0 +1,5 @@
+bind original = [list: text_to_integer(read_line()), text_to_integer(read_line())];
+bind replacement = text_to_integer(read_line());
+// TODO: update the second element persistently.
+print(original[1]);
+print(original[1]);

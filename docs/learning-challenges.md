@@ -1,7 +1,7 @@
 # Learning challenges
 
-Open **Learning challenges** below the editor. The catalogue includes 25 exercises
-and 85 public input/output cases covering seven topics. Select a topic, difficulty
+Open **Learning challenges** below the editor. The catalogue includes 53 exercises
+and 183 public input/output cases covering seven topics. Select a topic, difficulty
 or search term; load a starter workspace, edit the code, and run its cases.
 Each case runs independently through the real pinned Scarp interpreter.
 

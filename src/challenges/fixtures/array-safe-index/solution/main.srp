@@ -1,0 +1,3 @@
+bind values = [array: text_to_integer(read_line()), text_to_integer(read_line()), text_to_integer(read_line())];
+bind index = text_to_integer(read_line());
+print(array_get_or(values, index, -1));

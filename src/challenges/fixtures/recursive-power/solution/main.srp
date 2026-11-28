@@ -1,0 +1,7 @@
+pure funcra power(base: integer, exponent: integer) -> integer {
+    if exponent == 0 { return 1; }
+    return base * power(base, exponent - 1);
+}
+bind base = text_to_integer(read_line());
+bind exponent = text_to_integer(read_line());
+print(power(base, exponent));

@@ -1,0 +1,8 @@
+bind value = text_to_integer(read_line());
+bind lower = text_to_integer(read_line());
+bind upper = text_to_integer(read_line());
+if value >= lower and value <= upper {
+    print("inside");
+} else {
+    print("outside");
+}

@@ -1,0 +1,5 @@
+bind text = read_line();
+bind search = read_line();
+bind replacement = read_line();
+// TODO: replace each occurrence.
+print(text);

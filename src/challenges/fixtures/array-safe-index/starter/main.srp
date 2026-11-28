@@ -1,0 +1,4 @@
+bind values = [array: text_to_integer(read_line()), text_to_integer(read_line()), text_to_integer(read_line())];
+bind index = text_to_integer(read_line());
+// TODO: return the selected element or fallback.
+print(-1);

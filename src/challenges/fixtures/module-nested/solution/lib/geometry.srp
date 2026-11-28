@@ -1,0 +1,4 @@
+import "scale.srp" as scale;
+pub pure funcra double_area(width: integer, height: integer) -> integer {
+    return scale.double(width * height);
+}

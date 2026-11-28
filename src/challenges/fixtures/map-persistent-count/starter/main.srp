@@ -1,0 +1,7 @@
+bind base: map<string, integer> = [map: "alpha": 1, "beta": 2];
+bind key = read_line();
+bind increment = text_to_integer(read_line());
+bind old = map_get_or(base, key, 0);
+// TODO: create a changed map with the increment.
+print(old);
+print(old);
