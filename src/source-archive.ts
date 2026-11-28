@@ -28,6 +28,33 @@ type ArchiveEntry = {
   offset: number;
 };
 
+// Virtual editor paths may be valid on Linux but unsafe or ambiguous when
+// extracted by Windows or a case-insensitive filesystem. Do not rename or
+// merge these paths silently; the JSON export remains available.
+export function sourceArchiveProblem(workspace: Workspace): string | null {
+  const failure = validateWorkspace(workspace);
+  if (failure) return failure;
+  const prefixes = new Map<string, string>();
+  for (const path of Object.keys(workspace.files).sort()) {
+    const parts = path.split('/');
+    let prefix = '';
+    for (const part of parts) {
+      const stem = part.split('.')[0];
+      if (/^(?:con|prn|aux|nul|com[1-9]|lpt[1-9])$/i.test(stem)) {
+        return 'The path ' + path + ' contains a reserved Windows device name.';
+      }
+      prefix += (prefix ? '/' : '') + part;
+      const folded = prefix.toLowerCase();
+      const previous = prefixes.get(folded);
+      if (previous !== undefined && previous !== prefix) {
+        return 'Paths differ only by letter case: ' + previous + ' and ' + prefix + '.';
+      }
+      prefixes.set(folded, prefix);
+    }
+  }
+  return null;
+}
+
 /**
  * Encode a deterministic, classic ZIP archive with stored (uncompressed)
  * UTF-8 .srp files. All paths and bytes must first pass the same workspace
@@ -37,7 +64,7 @@ type ArchiveEntry = {
  * Workspace caps make ZIP64, compression and data descriptors unnecessary.
  */
 export function createSourceArchive(workspace: Workspace): Uint8Array<ArrayBuffer> | null {
-  if (validateWorkspace(workspace)) return null;
+  if (sourceArchiveProblem(workspace)) return null;
   const encoder = new TextEncoder();
   const entries: ArchiveEntry[] = [];
   let centralStart = 0;

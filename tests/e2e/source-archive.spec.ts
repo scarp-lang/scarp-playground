@@ -38,3 +38,22 @@ test('source archive remains accessible at narrow viewport widths', async ({ pag
   await button.click();
   expect((await pending).suggestedFilename()).toBe('scarp-sources.zip');
 });
+
+
+test('reports nonportable path collisions without changing the workspace', async ({ page }) => {
+  const payload = {
+    format: 'scarp-playground-workspace', version: 1,
+    workspace: { entry: 'main.srp', files: { 'main.srp': '', 'Lib/a.srp': '', 'lib/b.srp': '' } },
+    activeFile: 'main.srp',
+  };
+  await page.goto('./#project=' + encodeURIComponent(JSON.stringify(payload)));
+  await page.getByRole('button', { name: 'Download sources ZIP' }).click();
+  await expect(page.locator('.notice')).toContainText('differ only by letter case');
+  await expect(page.getByRole('tab', { name: /Lib\/a.srp/ })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /lib\/b.srp/ })).toBeVisible();
+  const pending = page.waitForEvent('download');
+  await page.getByRole('button', { name: 'Export project', exact: true }).click();
+  const download = await pending;
+  const result = JSON.parse(await readFile(await download.path(), 'utf8'));
+  expect(result.workspace.files).toEqual(payload.workspace.files);
+});

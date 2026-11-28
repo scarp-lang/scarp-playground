@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createSourceArchive } from '../src/source-archive';
+import { createSourceArchive, sourceArchiveProblem } from '../src/source-archive';
 import { readStoredZip } from './support/read-stored-zip';
 import { MAX_FILE_BYTES, MAX_TOTAL_BYTES, type Workspace } from '../src/workspace';
 
@@ -62,5 +62,37 @@ describe('source-only ZIP export', () => {
     const workspace = Object.freeze({ entry: long, files: Object.freeze({ [long]: 'print(42);' }) });
     expect([...readStoredZip(createSourceArchive(workspace)!).keys()]).toEqual([long]);
     expect(workspace.files[long]).toBe('print(42);');
+  });
+});
+
+
+describe('portable ZIP path admission', () => {
+  it('refuses reserved Windows device names at any directory level', () => {
+    for (const name of ['CON.srp', 'aux.srp', 'NUL/file.srp', 'COM1/file.srp', 'folder/LPT9.srp', 'prn.srp']) {
+      const workspace = { entry: name, files: { [name]: '' } };
+      expect(sourceArchiveProblem(workspace)).toContain('reserved Windows device name');
+      expect(createSourceArchive(workspace)).toBeNull();
+    }
+    for (const name of ['console.srp', 'com0.srp', 'lpt10.srp', 'normal/auxiliary.srp']) {
+      const workspace = { entry: name, files: { [name]: '' } };
+      expect(sourceArchiveProblem(workspace)).toBeNull();
+      expect(createSourceArchive(workspace)).not.toBeNull();
+    }
+  });
+
+  it('refuses ambiguous casing in filenames or nested directory prefixes', () => {
+    for (const [first, second] of [
+      ['a.srp', 'A.srp'],
+      ['Lib/a.srp', 'lib/b.srp'],
+      ['src/Types/a.srp', 'src/types/b.srp'],
+      ['lib/math.srp', 'lib/Math.srp'],
+    ]) {
+      const workspace = { entry: first, files: { [first]: '', [second]: '' } };
+      expect(sourceArchiveProblem(workspace)).toContain('differ only by letter case');
+      expect(createSourceArchive(workspace)).toBeNull();
+    }
+    const workspace = { entry: 'lib/a.srp', files: { 'lib/a.srp': '', 'lib/b.srp': '', 'other/A.srp': '' } };
+    expect(sourceArchiveProblem(workspace)).toBeNull();
+    expect(readStoredZip(createSourceArchive(workspace)!).size).toBe(3);
   });
 });

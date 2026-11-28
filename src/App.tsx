@@ -29,7 +29,7 @@ import { makeWorkspaceShareUrl, readSharedWorkspace } from './share-workspace';
 import { MAX_SEARCH_QUERY, searchProjectFiles, type ProjectSearchHit } from './project-search';
 import { previewProjectReplace, MAX_REPLACEMENT_LENGTH, type ReplacePlan } from './project-replace';
 import { scarpFileStats } from './source-file';
-import { createSourceArchive } from './source-archive';
+import { createSourceArchive, sourceArchiveProblem } from './source-archive';
 import { previewSourceImport } from './source-import';
 import { QuickOpenFiles } from './QuickOpenFiles';
 import { quickOpenPosition } from './quick-open';
@@ -1105,6 +1105,11 @@ export function App() {
   }
 
   function exportSourceArchive() {
+    const problem = sourceArchiveProblem(workspace);
+    if (problem) {
+      setNotice('Cannot export a portable ZIP: ' + problem + ' Use Export project for JSON instead.');
+      return;
+    }
     const bytes = createSourceArchive(workspace);
     if (!bytes) {
       setNotice('The source archive requires valid workspace paths and source sizes.');
