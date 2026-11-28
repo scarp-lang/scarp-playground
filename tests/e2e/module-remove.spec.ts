@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('cannot remove an imported Scarp module and shows the blocking import location', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await page.getByRole('button', { name: 'Remove file' }).click();
   const review = page.getByRole('region', { name: 'Review Scarp module removal' });
@@ -38,7 +39,7 @@ test('removes an unused module with explicit review and restores it using undo',
 
 test('deleting the entrypoint selects a surviving module and undo restores the entry', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /main.srp/ }).click();
   await page.getByRole('button', { name: 'Remove file' }).click();
   const review = page.getByRole('region', { name: 'Review Scarp module removal' });

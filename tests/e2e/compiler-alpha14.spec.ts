@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 // Exact output from the annotated upstream alpha.14 .stdout fixtures.
@@ -16,7 +17,7 @@ const published = [
 for (const fixture of published) {
   test('alpha.14 verifies and executes official fixture: ' + fixture.title, async ({ page }) => {
     await page.goto('./');
-    await page.getByRole('button', { name: fixture.title }).click();
+    await loadExample(page, fixture.title);
     await page.getByRole('button', { name: 'Verify code' }).click();
     await expect(page.locator('.terminal-output')).toContainText(
       'Static verification passed', { timeout: 30_000 },
@@ -37,7 +38,7 @@ test('alpha.14 identifies a missing destructuring comma without partial stdout',
   );
   await expect(page.locator('.stdout')).toHaveCount(0);
   await page.goto('./');
-  await page.getByRole('button', { name: 'Nested pattern matching' }).click();
+  await loadExample(page, 'Nested pattern matching');
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('12\n30\n13\n', { timeout: 30_000 });
 });

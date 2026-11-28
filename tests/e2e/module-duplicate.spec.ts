@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('duplicates an imported library without changing its caller and supports undo', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await page.getByRole('button', { name: 'Duplicate file' }).click();
   const path = page.getByRole('textbox', { name: 'New copy .srp path' });
@@ -32,7 +33,7 @@ test('duplicates an imported library without changing its caller and supports un
 
 test('copying the entrypoint into a subfolder rebases the imported module and executes', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /main.srp/ }).click();
   await page.getByRole('button', { name: 'Duplicate file' }).click();
   const path = page.getByRole('textbox', { name: 'New copy .srp path' });
@@ -60,7 +61,7 @@ test('copying the entrypoint into a subfolder rebases the imported module and ex
 
 test('changing the duplicate destination, cancelling, and editing reject stale plans', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Duplicate file' }).click();
   const path = page.getByRole('textbox', { name: 'New copy .srp path' });
   await path.fill('math.srp');

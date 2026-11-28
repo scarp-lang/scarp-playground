@@ -227,6 +227,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Compact example picker** searches the official catalogue and uses a native dropdown with a separate Load example action; selecting an option never replaces editor source by itself.
+
 - **Program test cases** runs up to eight independent input/output or diagnostic-code assertions sequentially against the real WASM interpreter. See [test cases](docs/program-test-cases.md).
 
 - **Source checkpoint** captures a temporary source-only workspace, compares bounded line changes and restores the exact snapshot with undo. See [source checkpoints](docs/source-checkpoints.md).

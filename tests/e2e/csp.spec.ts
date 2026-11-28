@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 type CspObservations = Window & { __scarpCspViolations?: string[] };
@@ -47,7 +48,7 @@ test('production CSP permits real Scarp WASM and Monaco but blocks inline JavaSc
 
 test('CSP keeps multi-file imports and actual compiler diagnostics working', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
   await page.goto('./#code=' + encodeURIComponent('print(unknown_variable);'));

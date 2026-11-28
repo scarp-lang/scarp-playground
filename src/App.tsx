@@ -1166,7 +1166,7 @@ export function App() {
   function downloadActiveSource() {
     const source = workspace.files[activeFile];
     if (source === undefined || !activeStats) {
-      setNotice('No active Scarp source file is available to download.');
+      setNotice('No valid Unicode Scarp source file is available to download.');
       return;
     }
     const url = URL.createObjectURL(new Blob([source], { type: 'text/plain;charset=utf-8' }));
@@ -1382,7 +1382,7 @@ export function App() {
     event.currentTarget.value = '';
     if (!file || sourceImportActive.current) return;
     if (file.size > MAX_PORTABLE_WORKSPACE_BYTES) {
-      setNotice('The selected project exceeds the 160 KiB portable workspace limit.');
+      setNotice('The selected project exceeds the bounded portable JSON size limit.');
       return;
     }
     // Keep whole-project and add-only local imports mutually exclusive.
@@ -1392,7 +1392,7 @@ export function App() {
     sourceImportActive.current = true;
     setImportingSources(true);
     try {
-      const raw = await file.text();
+      const raw = new TextDecoder('utf-8', { fatal: true }).decode(await file.arrayBuffer());
       const current = latestSession.current;
       if (current.workspace !== snapshot.workspace ||
           current.activeFile !== snapshot.activeFile ||
@@ -2136,7 +2136,7 @@ export function App() {
                 if (!edit.accepted) {
                   // Rejected edits must not replace the buffer or invalidate a valid result.
                   event.currentTarget.value = programInput;
-                  setNotice('Program input is limited to 16 KiB of UTF-8 text. Previous input was kept.');
+                  setNotice('Program input must be valid Unicode within 16 KiB of UTF-8. Previous input was kept.');
                   return;
                 }
                 invalidateExecution();

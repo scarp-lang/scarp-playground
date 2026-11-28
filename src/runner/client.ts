@@ -1,4 +1,5 @@
 import { validateWorkspace, type Workspace } from '../workspace';
+import { measureUtf8 } from '../utf8';
 import type { RunResponse, RunResult } from './types';
 import { decodeWorkerResult, decodeSilentResult } from './protocol';
 import { claimCompilerWorker } from './worker-slot';
@@ -19,10 +20,12 @@ function evaluateWorkspace(
   if (problem) {
     return Promise.resolve({ ok: false, stdout: '', stderr: '', error: problem });
   }
-  if (new TextEncoder().encode(stdin).byteLength > MAX_PROGRAM_INPUT_BYTES) {
+  const input = measureUtf8(stdin, MAX_PROGRAM_INPUT_BYTES);
+  if (!input.ok) {
     return Promise.resolve({
       ok: false, stdout: '', stderr: '',
-      error: 'Program input exceeds the 16 KiB browser limit.',
+      error: input.reason === 'invalid-unicode' ? 'Program input contains invalid Unicode.' :
+        'Program input exceeds the 16 KiB browser limit.',
     });
   }
   return new Promise((resolve) => {

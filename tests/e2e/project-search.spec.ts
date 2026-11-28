@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('project search navigates to a real module and leaves compiler execution usable', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Find in project' }).click();
   const search = page.getByRole('searchbox', { name: 'Search text in project' });
   await expect(search).toBeFocused();
