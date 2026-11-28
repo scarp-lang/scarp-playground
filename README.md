@@ -21,7 +21,7 @@ site; no application server evaluates user source.
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
 | Scarp compiler | **v0.0.7-alpha.3** (published prerelease) |
-| Pinned compiler revision | `638dc4c227f34f1c660be66834bcc0cbdb22dec8` |
+| Pinned compiler revision | `44a3bb0a91e67570e46ce058a3f6211f8e5db0f5` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
