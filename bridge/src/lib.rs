@@ -650,6 +650,8 @@ mod v007_alpha1;
 
 #[cfg(test)]
 mod v007_alpha2;
+#[cfg(test)]
+mod v007_alpha3;
 
 #[cfg(test)]
 mod bigint_capacity;

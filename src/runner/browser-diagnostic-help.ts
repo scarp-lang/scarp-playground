@@ -22,6 +22,9 @@ const browserHelp = new Map<string, string>([
   ['E0058', 'Reduce supplied input or the number of reads. The browser allows 16 KiB of buffered UTF-8 input and at most 128 reads; no host stdin is available.'],
   ['E0061', 'Reuse immutable tuples or reduce new tuple construction. The browser has a 1 MiB cumulative tuple payload budget; this diagnostic may also indicate failed allocation.'],
   ['E0064', 'Reuse immutable arrays or reduce new array construction. The browser has a 1 MiB cumulative array payload budget; this diagnostic may also indicate failed allocation.'],
+  ['E0085', 'Declare each generic type parameter once after the function name, for example pure funcra identity<T>(value: T) -> T. Use Numeric or Comparable only where required; a generic body must be valid for its declared constraint.'],
+  ['E0086', 'Use explicit type arguments such as identity::<integer>(7), pass consistently typed arguments, or add a binding type to guide inference. Numeric accepts integer, float, decimal and bigint; Comparable also accepts recursively comparable tuples.'],
+  ['E0087', 'Reduce distinct generic instantiations or simplify nested types. Keep recursive type arguments unchanged when possible. Specialization is a compile-time limit, independent of browser runtime steps; this code does not identify which compiler budget was reached.'],
 ]);
 
 export function browserDiagnosticHelp(code: string | null | undefined, mode: ConsoleMode): string | null {
