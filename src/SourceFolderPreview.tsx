@@ -23,10 +23,10 @@ export function SourceFolderPreview({ workspace, ignored, kind = 'folder', onApp
         <button type="button" onClick={onCancel}>{isArchive ? 'Cancel ZIP import' : 'Cancel folder import'}</button>
       </div>
       <p className="project-search-status">
-        {paths.length} .srp files · {size} UTF-8 bytes{!isArchive && ' · ' + ignored + ' non-source files ignored'}
+        {paths.length} .srp files · {size} UTF-8 bytes{' · ' + ignored + ' non-source files ignored'}
       </p>
       <p className="project-replace-help">
-        Relative paths are preserved. {isArchive ? 'Only canonical uncompressed Playground source exports are accepted.' : 'Only source text is imported; manifests and other files are ignored.'}
+        Relative paths are preserved. {isArchive ? 'Stored and supported compressed source entries are validated before import.' : 'Only source text is imported; manifests and other files are ignored.'}
         The current project is unchanged until you confirm replacement. Nothing runs automatically.
       </p>
       <label className="source-folder-entry">

@@ -10,7 +10,7 @@ entrypoint, active editor tab, browser storage, program input, captured
 output, diagnostics, host paths or additional metadata.
 Source itself can contain sensitive text; inspect it before sharing.
 Use **Export project** (JSON) if you need to restore the exact entrypoint
-and selected tab to the Playground. Use **Import sources ZIP** to restore a canonical Playground export. Choose the entrypoint explicitly; the ZIP contains no editor-session metadata.
+and selected tab to the Playground. Use **Import sources ZIP** to restore a canonical Playground export or compatible ordinary ZIP. Choose the entrypoint explicitly; the ZIP contains no editor-session metadata.
 
 The archive is produced locally without a new package or network request.
 Files must pass the existing virtual workspace path and byte limits.
@@ -23,11 +23,6 @@ corruption but does not authenticate a file.
 
 ## Import validation
 
-Only the exact canonical uncompressed ZIP format emitted by Playground is
-accepted. Arbitrary ZIPs, compressed/encrypted data, ZIP64, extra fields,
-comments, symlinks, non-source entries and mismatched central directories
-are rejected. The bounded reader checks source sizes, safe paths, strict
-UTF-8, checksums and canonical byte equality. It never extracts files to
-the host filesystem or executes code. Review all files and select an
-entrypoint before confirming replacement. Existing saved browser copies
-are preserved. Use folder import or project JSON for other sources.
+The canonical reader remains unchanged. Ordinary classic ZIP files may also contain stored or raw-DEFLATE sources, directory entries, bounded comments and well-formed metadata fields. Compressed source support depends on the browser's native DecompressionStream; unsupported browsers get an explicit error and may use a stored ZIP or folder import. Non-source regular files are counted but never decompressed or imported.
+
+The reader caps raw archives at 512 KiB and directory entries at 256, and retains the existing 12-file, 64 KiB per-source and 128 KiB aggregate limits. Central and local paths, methods, sizes, descriptors and offsets must agree; local ranges must be contiguous and non-overlapping. Unsafe relative paths, case collisions, special files, encryption, ZIP64 and alternate Unicode path fields are rejected. Every source is decoded strictly as UTF-8 and checked against its CRC and declared size. Decompression is cancelled on excess output. No files are extracted to the host filesystem, and no code runs automatically. Review and choose an entrypoint before confirming replacement. Existing saved browser copies are preserved.
