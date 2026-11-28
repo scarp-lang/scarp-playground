@@ -104,7 +104,8 @@ export function previewRunAsTestCase(
     }
     expected = { kind: 'output', stdout: response.stdout, stderr: response.stderr };
     expectedPreview = response.stdout || response.stderr;
-  } else if (response.diagnostic && /^E[0-9]{4}$/.test(response.diagnostic.code)) {
+  } else if (response.diagnostic && typeof response.diagnostic.code === 'string' &&
+      /^E[0-9]{4}$/.test(response.diagnostic.code)) {
     expected = { kind: 'diagnostic', code: response.diagnostic.code };
     expectedPreview = response.diagnostic.code + ': ' + response.diagnostic.message;
   } else {
