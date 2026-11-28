@@ -1,0 +1,5 @@
+bind value = text_to_integer(read_line());
+bind lower = text_to_integer(read_line());
+bind upper = text_to_integer(read_line());
+// TODO: check both bounds.
+print("outside");

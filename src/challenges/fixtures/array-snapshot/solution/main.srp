@@ -1,0 +1,6 @@
+bind original = [array: text_to_integer(read_line()), text_to_integer(read_line()), text_to_integer(read_line())];
+bind index = text_to_integer(read_line());
+bind replacement = text_to_integer(read_line());
+bind updated = array_set(original, index, replacement);
+print(original[index]);
+print(updated[index]);

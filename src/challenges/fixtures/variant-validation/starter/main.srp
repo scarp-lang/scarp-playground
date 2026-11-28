@@ -1,0 +1,10 @@
+variant Submission { Accepted(string), Rejected(string) }
+pure funcra submit(title: string) -> variant Submission {
+    // TODO: reject an empty title.
+    return new Submission::Accepted(title);
+}
+bind result = submit(read_line());
+match on result {
+    case Accepted(value) { print(value); }
+    case Rejected(message) { print(message); }
+}

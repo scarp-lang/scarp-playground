@@ -1,0 +1,4 @@
+pub pure funcra distance(a: integer, b: integer) -> integer {
+    // TODO: return nonnegative distance.
+    return a - b;
+}

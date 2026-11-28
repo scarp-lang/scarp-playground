@@ -1,0 +1,5 @@
+bind original = [list: text_to_integer(read_line()), text_to_integer(read_line())];
+bind replacement = text_to_integer(read_line());
+bind updated = list_set(original, 1, replacement);
+print(original[1]);
+print(updated[1]);

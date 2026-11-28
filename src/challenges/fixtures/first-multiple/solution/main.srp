@@ -1,0 +1,6 @@
+var candidate = text_to_integer(read_line());
+bind divisor = text_to_integer(read_line());
+while candidate % divisor != 0 {
+    candidate += 1;
+}
+print(candidate);

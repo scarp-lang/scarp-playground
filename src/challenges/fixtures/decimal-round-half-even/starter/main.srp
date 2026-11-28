@@ -1,0 +1,3 @@
+bind value = decimal(read_line());
+// TODO: use two digits and half-even rounding.
+print(value);

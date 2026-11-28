@@ -1,0 +1,3 @@
+bind value = read_line();
+bind count = text_to_integer(read_line());
+print(text_repeat(value, count));

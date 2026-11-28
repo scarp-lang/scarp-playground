@@ -1,0 +1,4 @@
+var number = text_to_integer(read_line());
+var total = 0;
+// TODO: consume decimal digits.
+print(total);

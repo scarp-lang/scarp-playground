@@ -1,0 +1,7 @@
+record Order { price: integer, quantity: integer }
+pure funcra total(order: record Order) -> integer {
+    // TODO: multiply the two fields.
+    return order->price;
+}
+bind order = new Order { price: text_to_integer(read_line()), quantity: text_to_integer(read_line()) };
+print(total(order));

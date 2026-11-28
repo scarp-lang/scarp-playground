@@ -1,0 +1,4 @@
+var candidate = text_to_integer(read_line());
+bind divisor = text_to_integer(read_line());
+// TODO: search the next matching number.
+print(candidate);

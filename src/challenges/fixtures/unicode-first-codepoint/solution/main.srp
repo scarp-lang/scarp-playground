@@ -1,0 +1,2 @@
+bind value = read_line();
+print(text_codepoint(value, 0));

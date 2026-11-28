@@ -1,0 +1,4 @@
+bind first = text_to_integer(read_line());
+bind second = text_to_integer(read_line());
+bind third = text_to_integer(read_line());
+print(integer_lcm(first, second, third));

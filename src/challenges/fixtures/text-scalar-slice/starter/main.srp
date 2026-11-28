@@ -1,0 +1,5 @@
+bind text = read_line();
+bind start = text_to_integer(read_line());
+bind count = text_to_integer(read_line());
+// TODO: extract the selected scalar range.
+print(text);

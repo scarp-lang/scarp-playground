@@ -1,0 +1,6 @@
+bind first = [array: text_to_integer(read_line()), text_to_integer(read_line())];
+bind second = [array: text_to_integer(read_line()), text_to_integer(read_line())];
+bind combined: array<integer, 4> = array_concat(first, second);
+repeat array_len(combined) as index {
+    print(combined[index]);
+}

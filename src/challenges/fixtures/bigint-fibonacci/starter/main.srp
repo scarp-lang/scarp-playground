@@ -1,0 +1,5 @@
+bind n = text_to_integer(read_line());
+var current = bigint("0");
+var next = bigint("1");
+// TODO: advance n times.
+print(current);

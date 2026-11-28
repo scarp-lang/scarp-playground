@@ -1,0 +1,3 @@
+pub pure funcra double(value: integer) -> integer {
+    return value * 2;
+}

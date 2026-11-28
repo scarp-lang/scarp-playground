@@ -1,0 +1,9 @@
+bind n = text_to_integer(read_line());
+var current = bigint("0");
+var next = bigint("1");
+repeat n as index {
+    bind combined = current + next;
+    current = next;
+    next = combined;
+}
+print(current);

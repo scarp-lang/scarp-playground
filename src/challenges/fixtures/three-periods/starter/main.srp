@@ -1,0 +1,5 @@
+bind first = text_to_integer(read_line());
+bind second = text_to_integer(read_line());
+bind third = text_to_integer(read_line());
+// TODO: compute the common period.
+print(first);

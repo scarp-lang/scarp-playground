@@ -1,0 +1,3 @@
+bind value = read_line();
+// TODO: inspect the first Unicode scalar.
+print(0);

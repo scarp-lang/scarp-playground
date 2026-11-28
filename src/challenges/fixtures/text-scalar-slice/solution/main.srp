@@ -1,0 +1,4 @@
+bind text = read_line();
+bind start = text_to_integer(read_line());
+bind count = text_to_integer(read_line());
+print(text_slice(text, start, count));

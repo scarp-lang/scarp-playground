@@ -1,0 +1,6 @@
+record Order { price: integer, quantity: integer }
+pure funcra total(order: record Order) -> integer {
+    return order->price * order->quantity;
+}
+bind order = new Order { price: text_to_integer(read_line()), quantity: text_to_integer(read_line()) };
+print(total(order));

@@ -1,0 +1,2 @@
+bind value = decimal(read_line());
+print(decimal_format(value, 2, "half_even"));

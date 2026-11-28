@@ -1,0 +1,4 @@
+bind left = decimal(read_line());
+bind right = decimal(read_line());
+// TODO: calculate their mean.
+print(decimal_format(left, 2, "half_even"));

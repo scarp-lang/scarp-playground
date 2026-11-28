@@ -1,0 +1,4 @@
+import "../lib/geometry.srp" as geometry;
+bind width = text_to_integer(read_line());
+bind height = text_to_integer(read_line());
+print(geometry.double_area(width, height));

@@ -1,0 +1,11 @@
+pure funcra clamp(value: integer, lower: integer, upper: integer) -> integer
+    needs lower <= upper;
+    ensures result >= lower and result <= upper;
+{
+    // TODO: return a value inside the interval.
+    return lower;
+}
+bind value = text_to_integer(read_line());
+bind lower = text_to_integer(read_line());
+bind upper = text_to_integer(read_line());
+print(clamp(value, lower, upper));

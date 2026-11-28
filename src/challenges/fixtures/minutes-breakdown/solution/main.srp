@@ -1,0 +1,5 @@
+bind minutes = text_to_integer(read_line());
+bind hours = minutes / 60;
+bind remainder = minutes % 60;
+print(hours);
+print(remainder);

@@ -1,0 +1,4 @@
+bind minutes = text_to_integer(read_line());
+// TODO: compute hours and remainder.
+print(0);
+print(minutes);

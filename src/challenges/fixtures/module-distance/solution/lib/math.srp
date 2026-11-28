@@ -1,0 +1,3 @@
+pub pure funcra distance(a: integer, b: integer) -> integer {
+    return integer_abs(a - b);
+}

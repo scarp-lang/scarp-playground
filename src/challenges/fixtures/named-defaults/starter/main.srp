@@ -1,0 +1,9 @@
+pure funcra adjust(base: integer, left: integer = 2, right: integer = 3) -> integer {
+    return base + left + right;
+}
+bind base = text_to_integer(read_line());
+bind left = text_to_integer(read_line());
+bind right = text_to_integer(read_line());
+// TODO: make one default and one named-argument call.
+print(adjust(base));
+print(adjust(base));

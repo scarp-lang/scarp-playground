@@ -5,9 +5,9 @@ import { validateTestCases } from '../src/runner/test-cases';
 
 describe('learning catalogue', () => {
   it('registers every exercise and validates both workspaces and all public cases', () => {
-    expect(challenges.length).toBeGreaterThanOrEqual(25);
+    expect(challenges.length).toBeGreaterThanOrEqual(53);
     expect(new Set(challenges.map(item => item.id)).size).toBe(challenges.length);
-    expect(challenges.reduce((total, item) => total + item.cases.length, 0)).toBeGreaterThanOrEqual(85);
+    expect(challenges.reduce((total, item) => total + item.cases.length, 0)).toBeGreaterThanOrEqual(183);
     for (const item of challenges) {
       expect(validateWorkspace(item.starter)).toBeNull();
       expect(validateWorkspace(item.solution)).toBeNull();
@@ -20,7 +20,7 @@ describe('learning catalogue', () => {
 
   it('filters by case-insensitive query, track and difficulty', () => {
     expect(filterChallenges(challenges, '  ECHO ', '', '').map(item => item.id)).toEqual(['echo-name']);
-    expect(filterChallenges(challenges, '', 'Modules', 'advanced').map(item => item.id)).toEqual(['module-generic']);
+    expect(filterChallenges(challenges, '', 'Modules', 'advanced').map(item => item.id)).toEqual(['module-generic', 'module-nested']);
     expect(filterChallenges(challenges, 'nonexistent challenge', '', '')).toEqual([]);
   });
 
