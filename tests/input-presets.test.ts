@@ -91,7 +91,7 @@ describe('bounded, ephemeral buffered input presets', () => {
   it('requires an explicit boolean prompt permission', () => {
     for (const value of ['true', 1, null, undefined]) {
       expect(createInputPreset(emptyInputPresetLibrary(), 'Wrong', 'input',
-        value as boolean).ok).toBe(false);
+        value as unknown as boolean).ok).toBe(false);
     }
   });
 
