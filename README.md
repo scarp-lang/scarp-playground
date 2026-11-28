@@ -20,12 +20,14 @@ site; no application server evaluates user source.
 | --- | --- |
 | Playground live website | Unreleased development preview from `main` |
 | Latest published Playground tag | **v0.0.2** (alpha pre-release) |
-| Scarp compiler | **v0.0.7-alpha.3** (published prerelease) |
-| Pinned compiler revision | `638dc4c227f34f1c660be66834bcc0cbdb22dec8` |
+| Scarp compiler | **v0.0.7-alpha.4** (published prerelease) |
+| Pinned compiler revision | `e620bdcb512fbe909b08f1b4cc625865e4cdf339` |
 | Execution mode | Browser Rust/WebAssembly in a disposable Web Worker |
 | Source format | UTF-8 .srp, in-memory imports relative to the file |
 | Native compilation | **Not supported** by this preview |
 | Backend execution service | **None** |
+
+The [v0.0.7-alpha.4 integration](docs/compiler-v007-alpha4.md) covers contextual nested generics, recursive calls, nested aggregate values and bounded BigInt operations in the interpreter. Native ELF64 and file-backed BigInt CLI operations remain host-only. Existing browser quotas are unchanged.
 
 The [v0.0.7-alpha.3 integration](docs/compiler-v007-alpha3.md) adds interpreter coverage for generic functions, contextual inference, generic Option and Result payloads, and bounded string operators. Native object emission remains outside the browser.
 

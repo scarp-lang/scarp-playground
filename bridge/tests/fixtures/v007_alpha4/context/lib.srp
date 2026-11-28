@@ -1,0 +1,2 @@
+pub pure funcra blank<T>() -> list<T> { return [list: <T>]; }
+pub pure funcra keep<T, U>(items: list<T>, tag: U) -> list<T> { return items; }
