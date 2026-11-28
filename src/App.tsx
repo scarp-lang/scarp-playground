@@ -52,6 +52,8 @@ import { decodeSourceFolder, MAX_FOLDER_SELECTION_ENTRIES, planFolderSelection }
 const SourceFolderPreview = lazy(() => import('./SourceFolderPreview').then(module => ({ default: module.SourceFolderPreview })));
 import { QuickOpenFiles } from './QuickOpenFiles';
 import type { WorkspaceCommand } from './command-palette';
+import { DEFAULT_EDITOR_PREFERENCES, readEditorPreferences, writeEditorPreferences, type EditorPreferences } from './editor-preferences';
+const EditorPreferencesPanel = lazy(() => import('./EditorPreferencesPanel').then(module => ({ default: module.EditorPreferencesPanel })));
 const CommandPalette = lazy(() => import('./CommandPalette').then(module => ({ default: module.CommandPalette })));
 import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
@@ -189,7 +191,19 @@ export function App() {
   const [referenceTrigger, setReferenceTrigger] = useState(0);
   const [renameTrigger, setRenameTrigger] = useState(0);
   const [commentTrigger, setCommentTrigger] = useState(0);
-  const [wordWrap, setWordWrap] = useState(false);
+  const [editorPreferences, setEditorPreferences] = useState<EditorPreferences>(() => {
+    try { return readEditorPreferences(window.localStorage); }
+    catch { return { ...DEFAULT_EDITOR_PREFERENCES }; }
+  });
+  const [preferencesOpen, setPreferencesOpen] = useState(false);
+  const wordWrap = editorPreferences.wordWrap;
+  function applyEditorPreferences(next: EditorPreferences) {
+    setEditorPreferences(next);
+    let saved = false;
+    try { saved = writeEditorPreferences(window.localStorage, next); } catch { /* session-only */ }
+    setNotice(saved ? 'Editor preferences updated on this browser.' : 'Editor preferences updated for this session; browser storage is unavailable.');
+  }
+  function toggleWordWrap() { applyEditorPreferences({ ...editorPreferences, wordWrap: !wordWrap }); }
   const [renameTarget, setRenameTarget] = useState<{
     snapshot: Workspace; path: string; offset: number;
   } | null>(null);
@@ -802,7 +816,7 @@ export function App() {
       if (event.shiftKey && key === 'p') {
         event.preventDefault();
         event.stopPropagation();
-        if (!event.repeat) { setQuickOpen(false); setPaletteOpen(open => !open); }
+        if (!event.repeat) { setQuickOpen(false); setPreferencesOpen(false); setPaletteOpen(open => !open); }
         return;
       }
       if (event.shiftKey || (key !== 'p' && key !== 'g')) return;
@@ -811,6 +825,7 @@ export function App() {
       event.stopPropagation();
       if (!event.repeat) {
         setPaletteOpen(false);
+        setPreferencesOpen(false);
         setQuickOpenPrefill(key === 'g' ? ':' : '');
         setQuickOpen(true);
       }
@@ -821,7 +836,7 @@ export function App() {
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
-      if (paletteOpen || event.defaultPrevented) return;
+      if (paletteOpen || preferencesOpen || event.defaultPrevented) return;
       if ((event.ctrlKey || event.metaKey) && event.shiftKey &&
           event.key.toLowerCase() === 'f') {
         event.preventDefault();
@@ -839,7 +854,7 @@ export function App() {
     };
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [run, workspace, activeFile, savingLocally, paletteOpen]);
+  }, [run, workspace, activeFile, savingLocally, paletteOpen, preferencesOpen]);
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? 'dark' : 'light';
@@ -1666,7 +1681,7 @@ export function App() {
     { id: 'folder-move', label: 'Move source folder', group: 'Project', description: 'Preview an import-aware folder relocation', invoke: () => { invalidateExecution(); setFolderMoveOpen(true); } },
     { id: 'source-copy', label: 'Copy active source', group: 'Editor', description: 'Copy the active file to the clipboard', invoke: () => void copyActiveSource() },
     { id: 'source-download', label: 'Download active source', group: 'Editor', description: 'Download the current .srp file', invoke: downloadActiveSource },
-    { id: 'wrap', label: wordWrap ? 'Disable word wrap' : 'Enable word wrap', group: 'Editor', description: 'Change visual wrapping without altering source', invoke: () => setWordWrap(value => !value) },
+    { id: 'wrap', label: wordWrap ? 'Disable word wrap' : 'Enable word wrap', group: 'Editor', description: 'Change visual wrapping without altering source', invoke: toggleWordWrap },
     { id: 'entry', label: 'Set active file as entrypoint', group: 'Editor', description: 'Change the execution entry file', disabled: workspace.entry === activeFile, invoke: () => { invalidateExecution(); setWorkspace(previous => ({ ...previous, entry: activeFile })); } },
     { id: 'duplicate', label: 'Duplicate active file', group: 'Editor', description: 'Review a copied module with rebased imports', disabled: files.length >= MAX_FILES, invoke: beginFileDuplicate },
     { id: 'rename', label: 'Rename active file', group: 'Editor', description: 'Preview moving a module and updating imports', invoke: beginFileMove },
@@ -1674,11 +1689,17 @@ export function App() {
     { id: 'copy-result', label: 'Copy result', group: 'Output', description: 'Copy captured output or diagnostics', disabled: !transcriptAvailable, invoke: () => void copyConsoleResult() },
     { id: 'download-result', label: 'Download result', group: 'Output', description: 'Download a local output transcript', disabled: !transcriptAvailable, invoke: downloadConsoleResult },
     { id: 'clear-result', label: 'Clear output', group: 'Output', description: 'Clear result and cancel any active operation', invoke: invalidateExecution },
+    { id: 'preferences', label: 'Editor preferences', group: 'View', description: 'Customize font size, indentation, minimap and editor height', invoke: () => setPreferencesOpen(true) },
     { id: 'theme', label: dark ? 'Switch to light theme' : 'Switch to dark theme', group: 'View', description: 'Toggle the workspace appearance', invoke: () => setDark(value => !value) },
   ] : [];
 
   return (
     <div className="app-shell min-h-screen">
+      {preferencesOpen && <Suspense fallback={<p role="status">Loading editor preferences…</p>}>
+        <EditorPreferencesPanel preferences={editorPreferences} onApply={next => {
+          applyEditorPreferences(next); setPreferencesOpen(false);
+        }} onClose={() => setPreferencesOpen(false)} />
+      </Suspense>}
       {paletteOpen && <Suspense fallback={<p role="status">Loading command palette…</p>}>
         <CommandPalette commands={commands} onClose={() => setPaletteOpen(false)}
           onInvoke={id => {
@@ -1723,7 +1744,8 @@ export function App() {
         </div>
         <nav className="header-actions" aria-label="Project links">
           <button type="button" className="button-secondary command-launch" aria-keyshortcuts="Control+Shift+P Meta+Shift+P"
-            onClick={() => { setQuickOpen(false); setPaletteOpen(true); }}>Commands</button>
+            onClick={() => { setQuickOpen(false); setPreferencesOpen(false); setPaletteOpen(true); }}>Commands</button>
+          <button type="button" className="button-secondary command-launch" onClick={() => { setQuickOpen(false); setPaletteOpen(false); setPreferencesOpen(true); }}>Editor preferences</button>
           <a href="https://scarp-lang.github.io/scarp-docs/" target="_blank" rel="noreferrer">Docs ↗</a>
           <a href="https://github.com/scarp-lang/scarp-by-example" target="_blank" rel="noreferrer">Examples ↗</a>
           <a href="https://github.com/scarp-lang/scarp-playground" target="_blank" rel="noreferrer">GitHub ↗</a>
@@ -2303,7 +2325,7 @@ export function App() {
                 </button>
               </section>
             )}
-            <div className="editor-body">
+            <div className="editor-body" data-editor-height={editorPreferences.height}>
               <Suspense
                 fallback={
                   <div className="editor-loading" role="status">
@@ -2313,7 +2335,7 @@ export function App() {
               >
                 <ScarpEditor key={editorSession} path={activeFile} files={workspace.files} dark={dark} diagnostic={diagnostic} onChange={changeSource} onNavigate={navigateToDefinition} onFindReferences={locateReferences} onRename={beginRename} navigationTarget={navigationTarget}
                   navigationTrigger={navigationTrigger} referenceTrigger={referenceTrigger} renameTrigger={renameTrigger}
-                  commentTrigger={commentTrigger} wordWrap={wordWrap}
+                  commentTrigger={commentTrigger} preferences={editorPreferences}
                   referenceSites={referenceResult?.sites ?? null}
                   selectedReferenceIndex={selectedReferenceIndex} />
               </Suspense>
@@ -2337,7 +2359,7 @@ export function App() {
                   Comment / uncomment
                 </button>
                 <button type="button" aria-pressed={wordWrap}
-                  onClick={() => setWordWrap(previous => !previous)}
+                  onClick={toggleWordWrap}
                   title="Wrap long source lines visually without changing the code">
                   {wordWrap ? 'Disable word wrap' : 'Enable word wrap'}
                 </button>
