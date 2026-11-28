@@ -36,9 +36,11 @@ import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
 const TestCasePanel = lazy(() => import('./TestCasePanel').then(module => ({ default: module.TestCasePanel })));
+const InputPresetsPanel = lazy(() => import('./InputPresetsPanel').then(module => ({ default: module.InputPresetsPanel })));
 import type { Challenge } from './challenges/model';
 const ChallengePanel = lazy(() => import('./ChallengePanel').then(module => ({ default: module.ChallengePanel })));
 import { newTestCase, runTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
+import { emptyInputPresetLibrary, type InputPresetLibrary } from './input-presets';
 import { consoleTranscript, consoleOperationSubtitle, type ConsoleMode } from './runner/transcript';
 import { browserDiagnosticHelp } from './runner/browser-diagnostic-help';
 import { MAX_FILES, MAX_FILE_BYTES, validPath, type Workspace } from './workspace';
@@ -117,6 +119,8 @@ export function App() {
   const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
   const [suiteKind, setSuiteKind] = useState<'manual' | 'challenge'>('manual');
   const [testCasesOpen, setTestCasesOpen] = useState(false);
+  const [inputPresetsOpen, setInputPresetsOpen] = useState(false);
+  const [inputPresets, setInputPresets] = useState<InputPresetLibrary>(emptyInputPresetLibrary);
   const [testCases, setTestCases] = useState<TestCase[]>(() => [newTestCase()]);
   const [suiteRunning, setSuiteRunning] = useState(false);
   const [suiteProgress, setSuiteProgress] = useState(0);
@@ -1648,6 +1652,7 @@ export function App() {
     { id: 'outline', label: 'Source outline', group: 'Navigation', description: 'Inspect declarations with the Scarp parser', invoke: () => setOutlineOpen(true) },
     { id: 'inspection', label: 'Compiler module inspection', group: 'Navigation', description: 'Inspect resolved modules and signatures', invoke: () => setInspectionOpen(true) },
     { id: 'tests', label: 'Open test cases', group: 'Execution', description: 'Configure and run independent input/output cases', invoke: () => setTestCasesOpen(true) },
+    { id: 'input-presets', label: 'Buffered input presets', group: 'Execution', description: 'Capture or load source-independent Run input configurations', invoke: () => setInputPresetsOpen(true) },
     { id: 'quick-open', label: 'Quick open file', group: 'Navigation', description: 'Search workspace source paths', shortcut: 'Ctrl+P', invoke: () => { setQuickOpenPrefill(''); setQuickOpen(true); } },
     { id: 'go-line', label: 'Go to line', group: 'Navigation', description: 'Jump to a line and column in the active file', shortcut: 'Ctrl+G', invoke: () => { setQuickOpenPrefill(':'); setQuickOpen(true); } },
     { id: 'search', label: 'Find in project', group: 'Navigation', description: 'Search or replace text across all source files', shortcut: 'Ctrl+Shift+F', invoke: () => { setReplacePreview(null); setSearchOpen(true); } },
@@ -2415,6 +2420,8 @@ export function App() {
                 if (challengeOpen && suiteRunning && suiteKind === 'challenge') invalidateExecution();
                 setChallengeOpen(open => !open);
               }}>Learning challenges</button>
+            <button type="button" className="button-secondary" aria-expanded={inputPresetsOpen}
+              aria-controls="input-presets-panel" onClick={() => setInputPresetsOpen(open => !open)}>Input presets</button>
             <button type="button" className="button-secondary" aria-expanded={testCasesOpen}
               aria-controls="test-case-panel" onClick={() => {
                 if (testCasesOpen && suiteRunning && suiteKind === 'manual') invalidateExecution();
@@ -2427,6 +2434,17 @@ export function App() {
               onLoad={loadChallenge} onRun={() => void runSuite('challenge')} onStop={invalidateExecution}
               onClose={() => { if (suiteRunning && suiteKind === 'challenge') invalidateExecution(); setChallengeOpen(false); }} />
           </Suspense>}
+          {inputPresetsOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading input presets…</p>}>
+            <InputPresetsPanel workspace={workspace} currentInput={programInput}
+              currentAllowPrompts={allowPrompts} library={inputPresets}
+              onChange={setInputPresets} onLoad={(input, prompts) => {
+                setProgramInput(input);
+                setAllowPrompts(prompts);
+                setInputPresetsOpen(false);
+                setNotice('Loaded a buffered input preset. Run code explicitly to execute.');
+              }} onClose={() => setInputPresetsOpen(false)} />
+          </Suspense>}
+
           {testCasesOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
             <TestCasePanel cases={testCases} running={suiteRunning && suiteKind === 'manual'} busy={running}
             report={suiteKind === 'manual' ? suiteReport : null} progress={suiteProgress} stdin={programInput} allowPrompts={allowPrompts}
