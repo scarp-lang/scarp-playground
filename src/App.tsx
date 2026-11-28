@@ -7,6 +7,8 @@ const ScarpEditor = lazy(() =>
 );
 import { examples } from './examples';
 import { ExampleBrowser } from './ExampleBrowser';
+import { SourceExplorer } from './SourceExplorer';
+import { previewNewSource } from './workspace-tree';
 import { ModuleGraphPanel } from './ModuleGraphPanel';
 import { isUntouchedExampleSession } from './example-session';
 import compilerCompatibility from '../compiler-compatibility.json';
@@ -37,6 +39,8 @@ import { SourceFolderPreview } from './SourceFolderPreview';
 import { QuickOpenFiles } from './QuickOpenFiles';
 import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
+import { FolderMovePanel } from './FolderMovePanel';
+import type { FolderMovePlan } from './folder-move';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
@@ -102,6 +106,8 @@ export function App() {
   const [allowPrompts, setAllowPrompts] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
+  const [folderMoveOpen, setFolderMoveOpen] = useState(false);
+  const [explorerOpen, setExplorerOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -264,6 +270,7 @@ export function App() {
 
   function invalidateExecution() {
     setFolderPreview(null);
+    setFolderMoveOpen(false);
     setQuickOpen(false);
     setFileDuplicate(null);
     setFileDuplicatePlan(null);
@@ -863,24 +870,38 @@ export function App() {
     setResult(null);
   }
 
+  function createSource(path: string): string | null {
+    const plan = previewNewSource(workspace, path);
+    if (!plan.ok) { setNotice(plan.error); return plan.error; }
+    const undo = createBulkEditUndo(workspace, plan.workspace, 'source import');
+    if (!undo) {
+      const error = 'Could not safely add the source. No files were changed.';
+      setNotice(error);
+      return error;
+    }
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(path);
+    setLastBulkEdit(undo);
+    setNotice('Added ' + path + '. Imports can refer to this file by relative path.');
+    return null;
+  }
+
+  function openExplorerSource(path: string) {
+    if (!Object.hasOwn(workspace.files, path)) return;
+    definitionScope.current.invalidate();
+    setRenameTarget(null);
+    setRenamePreview(null);
+    setActiveFile(path);
+  }
+
   function addFile() {
     if (files.length >= MAX_FILES) {
       setNotice('This preview supports up to ' + MAX_FILES + ' files.');
       return;
     }
     const name = window.prompt('New relative .srp path (for example lib/math.srp)');
-    if (name === null) return;
-    if (!validPath(name) || Object.hasOwn(workspace.files, name)) {
-      setNotice('Choose a unique relative .srp path with letters, numbers, hyphens or underscores.');
-      return;
-    }
-    invalidateExecution();
-    setWorkspace((previous) => ({
-      ...previous,
-      files: { ...previous.files, [name]: '// New Scarp module\n' },
-    }));
-    setActiveFile(name);
-    setNotice('Added ' + name + '. Imports can refer to this file by relative path.');
+    if (name !== null) createSource(name);
   }
 
   function beginFileDuplicate() {
@@ -937,6 +958,28 @@ export function App() {
     setEditorSession(previous => previous + 1);
     setNotice('Duplicated ' + from + ' into ' + to + ', rebasing ' +
       rewrittenImports + ' import path(s). Use Check code to validate the copy.');
+  }
+
+  function applyFolderMove(snapshot: Workspace, plan: Extract<FolderMovePlan, { ok: true }>) {
+    if (snapshot !== workspace) {
+      setFolderMoveOpen(false);
+      setNotice('Folder move preview became stale. Preview the current source again.');
+      return;
+    }
+    const token = createBulkEditUndo(workspace, plan.workspace, 'folder move', undefined, undefined, undefined,
+      { from: plan.from, to: plan.to, activeFile });
+    if (!token) {
+      setNotice('Cannot safely apply this folder move. No source files were changed.');
+      return;
+    }
+    const nextActive = plan.paths.find(path => path.from === activeFile)?.to ?? activeFile;
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(nextActive);
+    setLastBulkEdit(token);
+    setEditorSession(previous => previous + 1);
+    setNotice('Moved ' + plan.paths.length + ' source files and rewrote ' +
+      plan.rewrittenImports + ' import path(s). Undo bulk change can restore the project.');
   }
 
   function beginFileMove() {
@@ -1447,6 +1490,16 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={explorerOpen}
+                aria-controls="source-explorer-panel" onClick={() => setExplorerOpen(open => !open)}>
+                Source explorer
+              </button>
+              <button type="button" className="button-secondary" aria-expanded={folderMoveOpen}
+                aria-controls="folder-move-panel" onClick={() => {
+                  if (folderMoveOpen) { setFolderMoveOpen(false); return; }
+                  invalidateExecution();
+                  setFolderMoveOpen(true);
+                }}>Move folder</button>
               <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
                 aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
                 Module dependencies
@@ -1471,6 +1524,12 @@ export function App() {
               )}
             </div>
           </div>
+
+          {explorerOpen && <SourceExplorer workspace={workspace} activeFile={activeFile}
+            onOpen={openExplorerSource} onCreate={createSource} onClose={() => setExplorerOpen(false)} />}
+
+          {folderMoveOpen && <FolderMovePanel workspace={workspace} onApply={applyFolderMove}
+            onClose={() => setFolderMoveOpen(false)} />}
 
           {moduleGraphOpen && <ModuleGraphPanel workspace={workspace} activeFile={activeFile}
             onNavigate={jumpToSearchHit} onClose={() => setModuleGraphOpen(false)} />}

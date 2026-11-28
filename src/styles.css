@@ -512,3 +512,42 @@ a { color: inherit; text-decoration: none; }
 .source-folder-files { list-style: none; display: grid; gap: 6px; max-height: 220px; overflow: auto; padding: 0; margin: 10px 0; }
 .source-folder-files li { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 6px 12px; overflow-wrap: anywhere; font-size: 12px; border-bottom: 1px solid var(--border); padding: 6px 0; }
 .source-folder-files li > span:last-child { color: var(--muted); font-size: 11px; }
+
+/* Complete import/path preview for simultaneous virtual folder moves. */
+.folder-move-heading { justify-content: space-between; }
+.folder-move-heading h2 { font-size: 13px; font-weight: 750; margin: 0; }
+.folder-move-form { display: flex; flex-wrap: wrap; gap: 9px; align-items: end; margin-top: 10px; }
+.folder-move-form label { display: grid; flex: 1 1 150px; gap: 5px; font-size: 12px; min-width: 0; }
+.folder-move-form input, .folder-move-form select {
+  min-width: 0; max-width: 100%; color: var(--text); background: var(--panel-2);
+  border: 1px solid var(--border); border-radius: 7px; padding: 8px;
+}
+.folder-move-review { margin-top: 12px; display: grid; gap: 8px; font-size: 12px; min-width: 0; }
+.folder-move-error { font-size: 12px; color: #e4ae72; overflow-wrap: anywhere; }
+:root[data-theme='light'] .folder-move-error { color: #985c1b; }
+.folder-move-paths { list-style: none; padding: 0; margin: 0; display: grid; gap: 4px; max-height: 180px; overflow: auto; }
+.folder-move-paths li { display: flex; flex-wrap: wrap; gap: 6px; overflow-wrap: anywhere; padding: 5px; border: 1px solid var(--border); border-radius: 5px; }
+.folder-move-diffs { display: grid; gap: 6px; max-height: 270px; overflow: auto; min-width: 0; }
+.folder-move-diffs article { min-width: 0; border: 1px solid var(--border); border-radius: 5px; padding: 6px; }
+.folder-move-diffs strong { overflow-wrap: anywhere; }
+.folder-move-diffs pre { max-width: 100%; overflow: auto; white-space: pre; background: var(--panel-2); padding: 6px; margin: 5px 0; }
+.folder-move-review > button { justify-self: start; }
+
+/* Nested virtual source navigation. Folder indentation is bounded visually. */
+.source-explorer-heading h2 { font-size: 13px; font-weight: 750; margin: 0 auto 0 0; }
+.source-explorer-filter, .source-explorer-create { margin-top: 10px; }
+.source-explorer-scroll { max-height: 360px; overflow: auto; margin-top: 10px; min-width: 0; }
+.source-explorer-tree { list-style: none; margin: 0; padding: 0; min-width: 0; display: grid; gap: 3px; }
+.source-explorer-tree .source-explorer-tree { padding-left: 10px; border-left: 1px solid var(--border); margin-left: 5px; }
+.source-explorer-folder-row { display: flex; gap: 4px; align-items: center; min-width: 0; }
+.source-explorer-file, .source-explorer-folder {
+  display: flex; gap: 6px; align-items: center; min-width: 0; width: 100%; padding: 6px;
+  text-align: left; font-size: 12px; border: 1px solid transparent; border-radius: 6px;
+}
+.source-explorer-file[aria-current='true'] { background: var(--panel-2); border-color: var(--accent); }
+.source-explorer-file:hover, .source-explorer-folder:hover { background: var(--panel-2); }
+.source-explorer-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.source-explorer-size, .source-explorer-active-folder { color: var(--muted); font-size: 10px; white-space: nowrap; }
+.source-explorer-new { flex: none; min-width: 26px; min-height: 26px; border: 1px solid var(--border); border-radius: 5px; }
+.source-explorer-error { color: #e4ae72; font-size: 12px; overflow-wrap: anywhere; }
+:root[data-theme='light'] .source-explorer-error { color: #985c1b; }
