@@ -6,6 +6,8 @@ use serde_json::{json, Value};
 use std::collections::BTreeMap;
 use wasm_bindgen::prelude::*;
 
+mod outline;
+
 const MAX_FILES: usize = 12;
 const MAX_FILE_BYTES: usize = 64 * 1024;
 const MAX_TOTAL_BYTES: usize = 128 * 1024;
@@ -617,6 +619,12 @@ pub fn definition(request_json: &str) -> String {
 #[wasm_bindgen]
 pub fn references(request_json: &str) -> String {
     references_request(request_json)
+}
+
+/// Parse the selected source file for actual declaration token spans.
+#[wasm_bindgen]
+pub fn source_outline(request_json: &str) -> String {
+    outline::request(request_json)
 }
 
 /// Compute a bounded, compiler-verified rename preview without running code.

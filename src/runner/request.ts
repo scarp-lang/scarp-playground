@@ -3,14 +3,14 @@ import { MAX_PROGRAM_INPUT_BYTES } from './limits';
 import { isUtf8Text } from '../utf8';
 import type {
   RunRequest, RunResponse, DefinitionRequest, DefinitionResponse,
-  ReferencesRequest, ReferencesResponse, RenameRequest, RenameResponse,
+  ReferencesRequest, ReferencesResponse, RenameRequest, RenameResponse, OutlineRequest, OutlineResponse,
 } from './types';
 import { validRenameName } from '../navigation/rename';
 
 export type CompilerWorkerRequest =
-  RunRequest | DefinitionRequest | ReferencesRequest | RenameRequest;
+  RunRequest | DefinitionRequest | ReferencesRequest | RenameRequest | OutlineRequest;
 export type CompilerWorkerResponse =
-  RunResponse | DefinitionResponse | ReferencesResponse | RenameResponse;
+  RunResponse | DefinitionResponse | ReferencesResponse | RenameResponse | OutlineResponse;
 
 function record(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -49,6 +49,13 @@ export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRe
       ? null : { id: 1, workspace, mode: value.mode };
   }
 
+  if (value.mode === 'outline') {
+    if (!validPath(value.path) || !Object.hasOwn(workspace.files, value.path) ||
+        Object.hasOwn(value, 'stdin') || Object.hasOwn(value, 'allowPrompts') ||
+        Object.hasOwn(value, 'offset') || Object.hasOwn(value, 'new_name')) return null;
+    return { id: 1, workspace, mode: 'outline', path: value.path };
+  }
+
   if (value.mode !== 'definition' && value.mode !== 'references' &&
       value.mode !== 'rename') return null;
   if (!validPath(value.path) || !Object.hasOwn(workspace.files, value.path) ||
@@ -77,6 +84,7 @@ export function validatedCompilerWorkerRequest(value: unknown): CompilerWorkerRe
 export function rejectedCompilerWorkerRequest(value: unknown): CompilerWorkerResponse | null {
   if (!record(value) || value.id !== 1) return null;
   const error = 'Invalid Scarp compiler worker request.';
+  if (value.mode === 'outline') return { id: 1, outline: { ok: false, error } };
   if (value.mode === 'definition') return { id: 1, definition: { ok: false, error } };
   if (value.mode === 'references') return { id: 1, references: { ok: false, error } };
   if (value.mode === 'rename') return { id: 1, rename: { ok: false, error } };
