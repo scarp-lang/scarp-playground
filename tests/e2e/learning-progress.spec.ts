@@ -1,0 +1,31 @@
+import { expect, test } from '@playwright/test';
+
+test('records only an explicitly selected completed challenge attempt and remembers metadata', async ({ page }) => {
+  await page.goto('./');
+  await page.getByRole('button', { name: 'Learning challenges', exact: true }).click();
+  const panel = page.getByRole('region', { name: 'Learning challenges' });
+  const progress = panel.getByRole('region', { name: 'Local learning progress' });
+  await expect(progress.getByRole('button', { name: 'Record practice attempt' })).toBeDisabled();
+  await panel.getByLabel('Choose challenge').selectOption('echo-name');
+  page.once('dialog', dialog => dialog.accept());
+  await panel.getByRole('button', { name: 'Load starter' }).click();
+  const editor = page.locator('.monaco-editor textarea.inputarea');
+  await editor.focus();
+  await page.keyboard.press('ControlOrMeta+A');
+  await page.keyboard.insertText('print(read_line());');
+  await panel.getByRole('button', { name: 'Run challenge cases' }).click();
+  await expect(panel.getByRole('region', { name: 'Challenge results' })).toContainText('3 of 3 passed', { timeout: 45_000 });
+  await progress.getByRole('button', { name: 'Record practice attempt' }).click();
+  await expect(progress).toContainText('1 of 25 challenges completed');
+  await expect(progress.getByRole('button', { name: 'Attempt recorded' })).toBeDisabled();
+  await panel.getByRole('button', { name: 'Close challenges' }).click();
+  await page.getByRole('button', { name: 'Learning challenges', exact: true }).click();
+  await expect(progress.getByRole('button', { name: 'Attempt recorded' })).toBeDisabled();
+  await page.reload();
+  await page.getByRole('button', { name: 'Learning challenges', exact: true }).click();
+  await progress.getByRole('button', { name: 'View saved progress' }).click();
+  await expect(progress).toContainText('1 of 25 challenges completed');
+  page.once('dialog', dialog => dialog.accept());
+  await progress.getByRole('button', { name: 'Clear learning progress' }).click();
+  await expect(progress).toContainText('0 of 25 challenges completed');
+});

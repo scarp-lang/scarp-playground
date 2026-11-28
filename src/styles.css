@@ -730,3 +730,11 @@ a { color: inherit; text-decoration: none; }
 .test-report-controls { display: grid; gap: 7px; border-top: 1px solid var(--border); padding: 10px 0 0; margin: 10px 0 0; font-size: 12px; min-width: 0; }
 .test-report-controls label { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .test-report-controls p { color: var(--muted); margin: 0; }
+
+/* Optional metadata-only practice progress. */
+.learning-progress { display: grid; gap: 8px; margin-top: 12px; padding: 10px; border: 1px solid var(--border); border-radius: 8px; min-width: 0; font-size: 12px; }
+.learning-progress h3, .learning-progress p { margin: 0; overflow-wrap: anywhere; }
+.learning-progress progress { width: 100%; accent-color: var(--accent); height: 8px; }
+.learning-progress-tracks { display: grid; gap: 6px; list-style: none; padding: 0; margin: 0; }
+.learning-progress-tracks li { display: grid; grid-template-columns: minmax(85px, 1fr) minmax(40px, 1fr) 42px; gap: 8px; align-items: center; }
+.learning-progress-tracks li span:last-child { text-align: right; font-variant-numeric: tabular-nums; }
