@@ -575,3 +575,19 @@ a { color: inherit; text-decoration: none; }
 .test-case-result { border: 1px solid var(--border); border-radius: 7px; padding: 8px; font-size: 12px; min-width: 0; overflow-wrap: anywhere; }
 .test-case-result p { margin: 5px 0; }
 .test-case-result pre { overflow: auto; white-space: pre; max-height: 180px; padding: 6px; background: var(--panel-2); }
+
+/* On-demand curriculum with exact whitespace examples and bounded previews. */
+.test-case-launch { gap: 8px; flex-wrap: wrap; }
+.challenge-panel { min-width: 0; font-size: 12px; overflow-wrap: anywhere; }
+.challenge-filters { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 145px), 1fr)); gap: 8px; }
+.challenge-panel label { display: grid; gap: 4px; min-width: 0; }
+.challenge-panel input, .challenge-panel select { width: 100%; min-width: 0; color: var(--text); background: var(--panel-2); border: 1px solid var(--border); border-radius: 6px; padding: 7px; }
+.challenge-detail { display: grid; gap: 9px; min-width: 0; margin-top: 10px; }
+.challenge-detail h3, .challenge-detail p { margin: 0; }
+.challenge-meta, .challenge-active { color: var(--muted); }
+.challenge-detail details { border: 1px solid var(--border); border-radius: 7px; padding: 8px; min-width: 0; }
+.challenge-detail summary { cursor: pointer; font-weight: 600; }
+.challenge-detail li { margin: 5px 0; }
+.challenge-case, .challenge-solution { margin: 8px 0; padding: 7px; border-top: 1px solid var(--border); min-width: 0; }
+.challenge-output { display: grid; gap: 3px; margin-top: 5px; min-width: 0; }
+.challenge-output pre, .challenge-solution pre { max-width: 100%; overflow: auto; white-space: pre; max-height: 220px; background: var(--panel-2); padding: 7px; margin: 3px 0; }

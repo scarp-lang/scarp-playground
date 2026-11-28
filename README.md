@@ -14,6 +14,8 @@ site; no application server evaluates user source.
 > [v0.0.1 alpha](https://github.com/scarp-lang/scarp-playground/releases/tag/v0.0.1)
 > is preserved separately. **Neither release is stable or a hardened sandbox.**
 
+The [learning challenges](docs/learning-challenges.md) provide compiler-backed practice with public cases, hints and reference solutions.
+
 ## Compiler compatibility
 
 | Component | Target |

@@ -27,6 +27,8 @@ import type { DiagnosticLocation, RunResult } from './runner/types';
 import { describeBrowserRun, type BrowserRunStats } from './runner/browser-stats';
 import { BrowserRunDetails } from './BrowserRunDetails';
 const TestCasePanel = lazy(() => import('./TestCasePanel').then(module => ({ default: module.TestCasePanel })));
+import type { Challenge } from './challenges/model';
+const ChallengePanel = lazy(() => import('./ChallengePanel').then(module => ({ default: module.ChallengePanel })));
 import { newTestCase, runTestCases, type TestCase, type SuiteReport } from './runner/test-cases';
 import { consoleTranscript, consoleOperationSubtitle, type ConsoleMode } from './runner/transcript';
 import { browserDiagnosticHelp } from './runner/browser-diagnostic-help';
@@ -100,6 +102,9 @@ export function App() {
   const acceptedHash = useRef(window.location.hash);
   const [dark, setDark] = useState(startingTheme() === 'dark');
   const [running, setRunning] = useState(false);
+  const [challengeOpen, setChallengeOpen] = useState(false);
+  const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
+  const [suiteKind, setSuiteKind] = useState<'manual' | 'challenge'>('manual');
   const [testCasesOpen, setTestCasesOpen] = useState(false);
   const [testCases, setTestCases] = useState<TestCase[]>(() => [newTestCase()]);
   const [suiteRunning, setSuiteRunning] = useState(false);
@@ -360,7 +365,9 @@ export function App() {
     }
   }, [workspace, programInput, allowPrompts]);
 
-  async function runSuite() {
+  async function runSuite(kind: 'manual' | 'challenge' = 'manual') {
+    const cases = kind === 'challenge' ? activeChallenge?.cases : testCases;
+    if (!cases) return;
     const execution = executionScope.current.start();
     if (!execution) return;
     definitionScope.current.invalidate();
@@ -373,12 +380,13 @@ export function App() {
     setResult(null);
     setNotice(null);
     setRunning(true);
+    setSuiteKind(kind);
     setSuiteRunning(true);
     setSuiteProgress(0);
     setSuiteReport(null);
     setOperation('run');
     try {
-      const report = await runTestCases(workspace, testCases, execution.controller.signal,
+      const report = await runTestCases(workspace, cases, execution.controller.signal,
         (source, signal, stdin, prompts) => runWorkspace(source, signal, stdin, prompts),
         completed => {
           if (executionScope.current.isCurrent(execution)) setSuiteProgress(completed.length);
@@ -397,8 +405,10 @@ export function App() {
   function changeTestCases(next: TestCase[]) {
     if (executionScope.current.running) return;
     setTestCases(next);
-    setSuiteReport(null);
-    setSuiteProgress(0);
+    if (suiteKind === 'manual') {
+      setSuiteReport(null);
+      setSuiteProgress(0);
+    }
   }
 
   function jumpToCompilerDiagnostic(location: DiagnosticLocation | null | undefined) {
@@ -771,6 +781,7 @@ export function App() {
       if (shared !== null) {
         invalidateExecution();
         setSavingLocally(false);
+        setActiveChallenge(null);
         setWorkspace(shared.workspace);
         setCheckpoint({ workspace: shared.workspace, stdin: '', recoverable: true });
         setProgramInput('');
@@ -785,6 +796,7 @@ export function App() {
         const saved = restoreLocalWorkspace(window.localStorage);
         if (saved) {
           invalidateExecution();
+          setActiveChallenge(null);
           setWorkspace(saved.workspace);
           setSavedWorkspace(saved.workspace);
           setCheckpoint({ workspace: saved.workspace, stdin: '', recoverable: true });
@@ -882,6 +894,27 @@ export function App() {
     return true;
   }
 
+  function loadChallenge(challenge: Challenge) {
+    if (running || !window.confirm(
+      'Load the starter for "' + challenge.title + '"? Current source and program input will be replaced. Your saved browser copy will be preserved.',
+    )) return;
+    if (!preserveSavedSourceBeforeSwitch()) return;
+    invalidateExecution();
+    const next = { entry: challenge.starter.entry, files: { ...challenge.starter.files } };
+    setSavingLocally(false);
+    setWorkspace(next);
+    setCheckpoint({ workspace: next, stdin: '', recoverable: false });
+    setProgramInput('');
+    setAllowPrompts(false);
+    setEditorSession(number => number + 1);
+    setActiveFile(next.entry);
+    setLastBulkEdit(null);
+    setActiveChallenge(challenge);
+    setNotice('Loaded challenge: ' + challenge.title + '. Edit the starter and run its public cases.');
+    window.history.replaceState(null, '', window.location.pathname + window.location.search);
+    acceptedHash.current = '';
+  }
+
   function selectExample(example: Example, untouched: boolean) {
     // Do not discard user-authored source or input without consent.
     // An untouched built-in sample can switch immediately; external,
@@ -899,6 +932,7 @@ export function App() {
     // project. Stop autosaving before switching workspaces; explicit Save
     // locally is required to replace the browser's previous snapshot.
     setSavingLocally(false);
+    setActiveChallenge(null);
     const nextWorkspace = { entry: example.entry, files: { ...example.files } };
     setWorkspace(nextWorkspace);
     setCheckpoint({
@@ -1288,6 +1322,7 @@ export function App() {
       'Replace the open workspace with the selected ' + (folderPreview.kind === 'archive' ? 'source ZIP' : 'source folder') + '? Current source edits and program input will be lost. Your locally saved browser copy will not be overwritten.',
     )) return;
     if (!preserveSavedSourceBeforeSwitch()) return;
+    setActiveChallenge(null);
     const next = { ...folderPreview.workspace, entry };
     invalidateExecution();
     setSavingLocally(false);
@@ -1381,6 +1416,7 @@ export function App() {
       if (!preserveSavedSourceBeforeSwitch()) return;
       invalidateExecution();
       setSavingLocally(false);
+      setActiveChallenge(null);
       setWorkspace(imported.workspace);
       setCheckpoint({ workspace: imported.workspace, stdin: '', recoverable: false });
       setProgramInput('');
@@ -2117,17 +2153,28 @@ export function App() {
           </section>
 
           <div className="test-case-launch">
+            <button type="button" className="button-secondary" aria-expanded={challengeOpen}
+              aria-controls="challenge-panel" onClick={() => {
+                if (challengeOpen && suiteRunning && suiteKind === 'challenge') invalidateExecution();
+                setChallengeOpen(open => !open);
+              }}>Learning challenges</button>
             <button type="button" className="button-secondary" aria-expanded={testCasesOpen}
               aria-controls="test-case-panel" onClick={() => {
-                if (testCasesOpen && suiteRunning) invalidateExecution();
+                if (testCasesOpen && suiteRunning && suiteKind === 'manual') invalidateExecution();
                 setTestCasesOpen(open => !open);
               }}>Test cases</button>
           </div>
+          {challengeOpen && <Suspense fallback={<p role="status">Loading learning challenges…</p>}>
+            <ChallengePanel active={activeChallenge} busy={running} running={suiteRunning && suiteKind === 'challenge'}
+              report={suiteKind === 'challenge' ? suiteReport : null} progress={suiteProgress}
+              onLoad={loadChallenge} onRun={() => void runSuite('challenge')} onStop={invalidateExecution}
+              onClose={() => { if (suiteRunning && suiteKind === 'challenge') invalidateExecution(); setChallengeOpen(false); }} />
+          </Suspense>}
           {testCasesOpen && <Suspense fallback={<p className="project-search-status" role="status">Loading workspace tool…</p>}>
-            <TestCasePanel cases={testCases} running={suiteRunning} busy={running}
-            report={suiteReport} progress={suiteProgress} stdin={programInput} allowPrompts={allowPrompts}
+            <TestCasePanel cases={testCases} running={suiteRunning && suiteKind === 'manual'} busy={running}
+            report={suiteKind === 'manual' ? suiteReport : null} progress={suiteProgress} stdin={programInput} allowPrompts={allowPrompts}
             onChange={changeTestCases} onRun={() => void runSuite()} onStop={invalidateExecution}
-            onClose={() => { if (suiteRunning) invalidateExecution(); setTestCasesOpen(false); }} />
+            onClose={() => { if (suiteRunning && suiteKind === 'manual') invalidateExecution(); setTestCasesOpen(false); }} />
           </Suspense>}
 
           <section className="console-card" aria-label="Program output">

@@ -905,7 +905,7 @@
     "title": "Generic identity across modules",
     "track": "Modules",
     "level": "advanced",
-    "goal": "Complete a public generic identity function in lib/value.srp. The entry uses it for two different types; print the original integer then the original text.",
+    "goal": "Use the public generic identity function in lib/value.srp for two different types; print the original integer then the original text.",
     "hints": [
       "A generic parameter T can appear in both parameter and return type.",
       "The identity function returns its value argument."
