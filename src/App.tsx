@@ -7,6 +7,7 @@ const ScarpEditor = lazy(() =>
 );
 import { examples } from './examples';
 import { ExampleBrowser } from './ExampleBrowser';
+import { ModuleGraphPanel } from './ModuleGraphPanel';
 import { isUntouchedExampleSession } from './example-session';
 import compilerCompatibility from '../compiler-compatibility.json';
 import { checkWorkspace, runWorkspace, verifyWorkspace, MAX_PROGRAM_INPUT_BYTES } from './runner/client';
@@ -98,6 +99,7 @@ export function App() {
   // Session-only opt-in; pre-supplied input never creates a live host terminal.
   const [allowPrompts, setAllowPrompts] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
+  const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -1337,6 +1339,10 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
+                aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
+                Module dependencies
+              </button>
               <button type="button" className="button-secondary" onClick={() => void share()} title="Copy a link to the complete project when it fits the URL limit">Share ↗</button>
               <button type="button" className="button-secondary" onClick={() => void run('verify')}
                 title="Parse, resolve, and type-check the project without running its statements" disabled={running}>
@@ -1357,6 +1363,9 @@ export function App() {
               )}
             </div>
           </div>
+
+          {moduleGraphOpen && <ModuleGraphPanel workspace={workspace} activeFile={activeFile}
+            onNavigate={jumpToSearchHit} onClose={() => setModuleGraphOpen(false)} />}
 
           {searchOpen && (
             <section id="project-search-panel" className="project-search" aria-label="Search Scarp project">

@@ -56,3 +56,7 @@ rejected **without changing the project**.
   and does not upload code. Use **Export project** to save all virtual files.
 - **Rename symbol (F2)** remains a separate compiler-verified operation that
   changes identifiers, not virtual file paths.
+
+## Verbatim string compatibility (v0.0.7-alpha.3 and later)
+
+The conservative import scanner understands ordinary quoted, raw `r"..."` and triple-quoted string literals. Valid simple import paths retain their original delimiters. Import-shaped text in verbatim literals and comments is ignored. Unterminated literals and import paths that cannot be safely normalized block file operations rather than guessing. This is not a replacement for compiler Verify.

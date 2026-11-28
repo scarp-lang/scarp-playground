@@ -1,4 +1,4 @@
-//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.7-alpha.1.
+//! Browser bridge to the real Scarp interpreter, pinned to published v0.0.7-alpha.4.
 use scarp::modules::{self, symbols::IndexLimits, MemorySourceLoader, ModuleLimits, ModuleRunError};
 use scarp::{ExecutionLimits, ExecutionOptions, InputLimits};
 use serde::Deserialize;
@@ -652,6 +652,8 @@ mod v007_alpha1;
 mod v007_alpha2;
 #[cfg(test)]
 mod v007_alpha3;
+#[cfg(test)]
+mod v007_alpha4;
 
 #[cfg(test)]
 mod bigint_capacity;
