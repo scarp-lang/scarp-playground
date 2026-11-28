@@ -1,10 +1,11 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 import { replaceExampleAfterEdit } from './support/example-switch';
 
 // These tests execute the published alpha.9 compiler inside the actual browser WASM Worker.
 test('alpha.9 runs the official exact signed BigInt arithmetic fixture', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Exact big integers/ }).click();
+  await loadExample(page, /Exact big integers/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText(
     '1000000000000000000000000000000\n' +
@@ -17,7 +18,7 @@ test('alpha.9 runs the official exact signed BigInt arithmetic fixture', async (
 
 test('alpha.9 executes a typed BigInt return across imported modules', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /BigInt across modules/ }).click();
+  await loadExample(page, /BigInt across modules/);
   await expect(page.getByRole('tab', { name: /modules\/bigint_math.srp/ })).toBeVisible();
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('246913578024691357802469135780\n', { timeout: 30_000 });

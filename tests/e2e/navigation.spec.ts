@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('F12 navigates to a real Rust-compiler symbol declaration in another module', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
   await editor.focus();
@@ -22,7 +23,7 @@ test('F12 navigates to a real Rust-compiler symbol declaration in another module
 
 test('the accessible Go to definition button navigates from the Monaco cursor', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
   await editor.focus();

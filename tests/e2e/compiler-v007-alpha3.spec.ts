@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 
@@ -24,8 +25,8 @@ for (const [fixture, title] of [["generic_functions","Generic functions and infe
   test('alpha.3 example browser: ' + title, async ({ page }) => {
     await page.goto('./');
     await page.getByRole('searchbox', { name: 'Find an example' }).fill('v0.0.7-alpha.3');
-    await expect(page.locator('.example-button')).toHaveCount(3);
-    await page.locator('.example-button').filter({ has: page.getByText(title, { exact: true }) }).click();
+    await expect(page.locator('#example-select option:not([value=""])')).toHaveCount(3);
+    await loadExample(page, title);
     await page.getByRole('button', { name: 'Run code' }).click();
     const output = readFileSync('bridge/tests/fixtures/v007_alpha3/' + fixture + '.stdout', 'utf8');
     await expect(page.locator('.stdout')).toHaveText(output, { timeout: 30_000 });

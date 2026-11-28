@@ -12,10 +12,18 @@ type Props = {
 
 export function ExampleBrowser({ workspace, stdin, onSelect }: Props) {
   const [query, setQuery] = useState('');
+  const [selectedTitle, setSelectedTitle] = useState('');
   const matches = useMemo(() => filterExamples(examples, query), [query]);
+  const selected = matches.find(({ example }) => example.title === selectedTitle)?.example;
+
+  function changeQuery(value: string) {
+    setQuery(value);
+    // A new search must not silently select or load a different program.
+    setSelectedTitle('');
+  }
 
   return (
-    <div className="example-browser">
+    <section className="example-browser" aria-label="Example programs">
       <div className="section-label">EXAMPLE PROGRAMS</div>
       <label className="example-filter-label" htmlFor="example-filter">Find an example</label>
       <div className="example-filter-row">
@@ -27,39 +35,46 @@ export function ExampleBrowser({ workspace, stdin, onSelect }: Props) {
           maxLength={MAX_EXAMPLE_FILTER_LENGTH}
           placeholder="Topic, version or module…"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => changeQuery(event.target.value)}
           onKeyDown={(event) => {
             if (event.key === 'Escape') {
               event.stopPropagation();
-              setQuery('');
+              changeQuery('');
             }
           }}
         />
         {query && (
-          <button type="button" className="example-filter-clear" onClick={() => setQuery('')}
+          <button type="button" className="example-filter-clear" onClick={() => changeQuery('')}
             aria-label="Clear example filter">Clear</button>
         )}
       </div>
       <div className="example-filter-count" role="status" aria-live="polite">
         {matches.length} of {examples.length} examples
       </div>
-      <div className="example-list" aria-label="Example programs">
-        {matches.map(({ example, index }) => (
-          <button key={example.title} className="example-button" type="button" onClick={() => onSelect(example, isUntouchedExampleSession(workspace, stdin))}>
-            <span className="example-symbol" aria-hidden="true">{index === 0 ? '✦' : index === 1 ? '∑' : '⌘'}</span>
-            <span className="example-details">
-              <strong>{example.title}</strong>
-              <small>{example.description}</small>
-            </span>
-            <span className="example-arrow" aria-hidden="true">›</span>
-          </button>
+      <label className="example-filter-label" htmlFor="example-select">Choose an example</label>
+      <select id="example-select" className="example-select"
+        aria-describedby="example-picker-help"
+        value={selected?.title ?? ''} disabled={matches.length === 0}
+        onChange={event => setSelectedTitle(event.target.value)}>
+        <option value="">Select an example…</option>
+        {matches.map(({ example }) => (
+          <option key={example.title} value={example.title}>{example.title}</option>
         ))}
-        {matches.length === 0 && (
-          <div className="example-filter-empty">
-            No examples match your search. Try a feature name or compiler version.
-          </div>
-        )}
-      </div>
-    </div>
+      </select>
+      {matches.length === 0 ? (
+        <p className="example-filter-empty">No examples match your search. Try a feature name or compiler version.</p>
+      ) : selected && (
+        <div className="example-preview" aria-live="polite">
+          <p>{selected.description}</p>
+          <p className="example-preview-meta">{Object.keys(selected.files).length} source {Object.keys(selected.files).length === 1 ? 'file' : 'files'}
+            {selected.stdin !== undefined ? ' · Includes sample input' : ''}</p>
+        </div>
+      )}
+      <button type="button" className="button-secondary example-load" disabled={!selected}
+        onClick={() => { if (selected) onSelect(selected, isUntouchedExampleSession(workspace, stdin)); }}>
+        Load example
+      </button>
+      <p id="example-picker-help" className="example-picker-help">Choose a program, then load it into the editor. Browsing does not change your code.</p>
+    </section>
   );
 }

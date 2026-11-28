@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { replaceExampleAfterEdit } from './support/example-switch';
+import { loadExample, replaceExampleAfterEdit } from './support/example-switch';
 import { readFileSync } from 'node:fs';
 
 // Playwright runs in Node.js, not Vite: read JSON without an ESM JSON import.
@@ -45,20 +45,20 @@ test('check returns real diagnostics without publishing partial output', async (
 
 test('compiler numerical RMS works in a real browser worker', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Root mean square/ }).click();
+  await loadExample(page, /Root mean square/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('2.0\n', { timeout: 30_000 });
 });
 
 test('runs official alpha.3 Top-K and temperature fixtures in the real WASM interpreter', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Top-K score ranking/ }).click();
+  await loadExample(page, /Top-K score ranking/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText(
     '[integer: 1, 2, 4]\n[5.0, 5.0, 3.0]\n[integer: 1, 2]\n[integer:]\n',
     { timeout: 30_000 },
   );
-  await page.getByRole('button', { name: /Temperature softmax/ }).click();
+  await loadExample(page, /Temperature softmax/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText(
     '[0.5, 0.5]\n[0.0]\n[integer: 1, 2, 3]\n',
@@ -87,7 +87,7 @@ test('executes published alpha.4 scientific examples through the real WASM worke
     ['Cosine similarity', '1.0\n0.0\n-1.0\n'],
   ] as const;
   for (const [name, expected] of cases) {
-    await page.getByRole('button', { name: new RegExp(name) }).click();
+    await loadExample(page, new RegExp(name));
     await page.getByRole('button', { name: 'Run code' }).click();
     await expect(page.locator('.stdout')).toHaveText(expected, { timeout: 30_000 });
     await expect(page.locator('.result-status.success')).toBeVisible();
@@ -111,7 +111,7 @@ test('runs the exact published alpha.5 Top-P and Pearson fixtures in real WASM',
     ['Pearson correlation', '1.0\n-1.0\n0.0\n'],
   ] as const;
   for (const [name, expected] of cases) {
-    await page.getByRole('button', { name: new RegExp(name) }).click();
+    await loadExample(page, new RegExp(name));
     await page.getByRole('button', { name: 'Run code' }).click();
     await expect(page.locator('.stdout')).toHaveText(expected, { timeout: 30_000 });
     await expect(page.locator('.result-status.success')).toBeVisible();
@@ -137,7 +137,7 @@ test('alpha.5 rejects invalid Top-P and zero-variance Pearson atomically, then r
 
 test('imports and executes another .srp source file in the real module loader', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await expect(page.getByRole('tab', { name: /math.srp/ })).toBeVisible();
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
@@ -196,7 +196,7 @@ test('Monaco remains editable, and changed source is executed by real Scarp', as
 
 test('opt-in save restores multi-file sources and the selected tab after reload', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await page.getByRole('button', { name: 'Save locally' }).click();
   await expect(page.getByRole('button', { name: 'Forget saved copy' })).toBeVisible();
@@ -208,7 +208,7 @@ test('opt-in save restores multi-file sources and the selected tab after reload'
 
 test('a shared URL does not erase the separately saved browser workspace', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Save locally' }).click();
   await page.goto('./#code=' + encodeURIComponent('print("URL takes precedence");'));
   await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveCount(0);
@@ -222,7 +222,7 @@ test('a shared URL does not erase the separately saved browser workspace', async
 
 test('switching built-in examples preserves saved projects until explicitly saved again', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   await page.getByRole('button', { name: 'Save locally' }).click();
   const originalSnapshot = await page.evaluate(() =>
@@ -231,7 +231,7 @@ test('switching built-in examples preserves saved projects until explicitly save
 
   // A new example is temporary; the previously saved multi-file project must
   // not be silently replaced by the 350ms autosave debounce.
-  await page.getByRole('button', { name: /Cosine similarity/ }).click();
+  await loadExample(page, /Cosine similarity/);
   await expect(page.locator('.notice')).toContainText('locally saved workspace is preserved');
   await expect(page.getByRole('button', { name: 'Save locally' })).toBeVisible();
   await page.waitForTimeout(600);
@@ -244,7 +244,7 @@ test('switching built-in examples preserves saved projects until explicitly save
   await expect(page.locator('.stdout')).toHaveText('42\n', { timeout: 30_000 });
 
   // Intentional replacement still works: Save locally is the explicit opt-in.
-  await page.getByRole('button', { name: /Sampled calculus/ }).click();
+  await loadExample(page, /Sampled calculus/);
   await page.getByRole('button', { name: 'Save locally' }).click();
   await page.reload();
   await expect(page.getByRole('tab', { name: /math.srp/ })).toHaveCount(0);
@@ -254,7 +254,7 @@ test('switching built-in examples preserves saved projects until explicitly save
 
 test('forgetting browser storage retains the open code but not its next-session copy', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Save locally' }).click();
   page.once('dialog', (dialog) => void dialog.accept());
   await page.getByRole('button', { name: 'Forget saved copy' }).click();
@@ -266,7 +266,7 @@ test('forgetting browser storage retains the open code but not its next-session 
 
 test('keeps the main file undo history when switching to another Scarp module', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
   await editor.focus();
@@ -286,7 +286,7 @@ test('keeps the main file undo history when switching to another Scarp module', 
 
 test('opens an imported module at a real compiler diagnostic', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();
@@ -323,7 +323,7 @@ test('clears stale source markers when editing after a real compiler error', asy
 
 test('downloads a multi-file JSON workspace and reimports it for real Scarp execution', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   const pending = page.waitForEvent('download');
   await page.getByRole('button', { name: 'Export project' }).click();
@@ -340,7 +340,7 @@ test('downloads a multi-file JSON workspace and reimports it for real Scarp exec
 
 test('rejects invalid project files and never overwrites an opt-in saved copy on import', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Save locally' }).click();
 
   await page.locator('input[aria-label="Import project JSON"]')

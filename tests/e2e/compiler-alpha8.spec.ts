@@ -1,10 +1,11 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 import { replaceExampleAfterEdit } from './support/example-switch';
 
 // These tests exercise the real alpha.8 Rust compiler compiled to browser WASM.
 test('alpha.8 runs the official Boolean assertion example', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Boolean assertions/ }).click();
+  await loadExample(page, /Boolean assertions/);
   await page.getByRole('button', { name: 'Run code' }).click();
   await expect(page.locator('.stdout')).toHaveText('3\n', { timeout: 30_000 });
   await expect(page.locator('.error-panel')).toHaveCount(0);
@@ -35,7 +36,7 @@ test('Playground Check code evaluates reachable assertions, unlike native static
 
 test('alpha.8 diagnostics locate failed assertions in a real imported module', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('tab', { name: /math.srp/ }).click();
   const editor = page.locator('.monaco-editor textarea.inputarea');
   await expect(editor).toBeAttached();

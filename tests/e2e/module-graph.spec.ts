@@ -1,8 +1,9 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('shows actual local dependencies, navigates to modules and refreshes on edits', async ({ page }) => {
   await page.goto('./');
-  await page.getByRole('button', { name: /Import a module/ }).click();
+  await loadExample(page, /Import a module/);
   await page.getByRole('button', { name: 'Module dependencies', exact: true }).click();
   const panel = page.getByRole('region', { name: 'Module dependencies' });
   await expect(panel).toContainText('2 files');

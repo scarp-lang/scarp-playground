@@ -1,3 +1,4 @@
+import { loadExample } from './support/example-switch';
 import { expect, test } from '@playwright/test';
 
 test('Ctrl+S opts into local source persistence and protects a same-tab reload', async ({ page }) => {
@@ -75,7 +76,7 @@ test('switching examples does not discard edits made before the autosave debounc
   await page.keyboard.press('ControlOrMeta+A');
   await page.keyboard.insertText('print("Preserved during switch");');
   page.once('dialog', dialog => void dialog.accept());
-  await page.getByRole('button', { name: /Root mean square/ }).click();
+  await loadExample(page, /Root mean square/);
   await expect(page.getByRole('button', { name: 'Save locally' })).toBeVisible();
   // The saved source should be the latest edit, not the prior Hello sample.
   await page.reload();

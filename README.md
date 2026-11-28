@@ -227,6 +227,8 @@ load failure — it never fakes a successful program result.
 
 ## Current development preview capabilities
 
+- **Compact example picker** searches the official catalogue and uses a native dropdown with a separate Load example action; selecting an option never replaces editor source by itself.
+
 - **Program test cases** runs up to eight independent input/output or diagnostic-code assertions sequentially against the real WASM interpreter. See [test cases](docs/program-test-cases.md).
 
 - **Import sources ZIP** restores canonical uncompressed Playground source exports with strict byte validation and entrypoint review. See [source archive](docs/source-archive.md).
