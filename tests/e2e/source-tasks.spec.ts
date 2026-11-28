@@ -11,10 +11,10 @@ test('tagged source comments are counted and filterable without matching strings
   await expect(panel.getByLabel('Source task summary')).toContainText('2 tagged comments');
   await expect(panel.getByLabel('Source task summary')).toContainText('1 urgent');
 
-  await panel.getByLabel('Tag').selectOption('FIXME');
+  await panel.getByLabel('Tag', { exact: true }).selectOption('FIXME');
   await expect(panel.getByRole('button', { name: /Open FIXME in main.srp line 3/ })).toBeVisible();
   await expect(panel.getByText('improve entry')).toHaveCount(0);
-  await panel.getByLabel('Tag').selectOption('all');
+  await panel.getByLabel('Tag', { exact: true }).selectOption('all');
   await panel.getByLabel('Find task').fill('REPAIR');
   await expect(panel.getByRole('button', { name: /Open FIXME in main.srp line 3/ })).toBeVisible();
   await expect(panel.getByRole('button', { name: /Open TODO in main.srp line 1/ })).toHaveCount(0);
