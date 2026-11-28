@@ -37,6 +37,8 @@ import { SourceFolderPreview } from './SourceFolderPreview';
 import { QuickOpenFiles } from './QuickOpenFiles';
 import { quickOpenPosition } from './quick-open';
 import { previewModuleMove, type ModuleMovePlan } from './module-move';
+import { FolderMovePanel } from './FolderMovePanel';
+import type { FolderMovePlan } from './folder-move';
 import { previewModuleRemoval, type ModuleRemovalPlan } from './module-remove';
 import { previewModuleDuplicate, suggestDuplicatePath, type ModuleDuplicatePlan } from './module-duplicate';
 import { createBulkEditUndo, undoBulkEdit, type BulkEditUndo } from './bulk-undo';
@@ -102,6 +104,7 @@ export function App() {
   const [allowPrompts, setAllowPrompts] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [moduleGraphOpen, setModuleGraphOpen] = useState(false);
+  const [folderMoveOpen, setFolderMoveOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quickOpenPrefill, setQuickOpenPrefill] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -264,6 +267,7 @@ export function App() {
 
   function invalidateExecution() {
     setFolderPreview(null);
+    setFolderMoveOpen(false);
     setQuickOpen(false);
     setFileDuplicate(null);
     setFileDuplicatePlan(null);
@@ -939,6 +943,28 @@ export function App() {
       rewrittenImports + ' import path(s). Use Check code to validate the copy.');
   }
 
+  function applyFolderMove(snapshot: Workspace, plan: Extract<FolderMovePlan, { ok: true }>) {
+    if (snapshot !== workspace) {
+      setFolderMoveOpen(false);
+      setNotice('Folder move preview became stale. Preview the current source again.');
+      return;
+    }
+    const token = createBulkEditUndo(workspace, plan.workspace, 'folder move', undefined, undefined, undefined,
+      { from: plan.from, to: plan.to, activeFile });
+    if (!token) {
+      setNotice('Cannot safely apply this folder move. No source files were changed.');
+      return;
+    }
+    const nextActive = plan.paths.find(path => path.from === activeFile)?.to ?? activeFile;
+    invalidateExecution();
+    setWorkspace(plan.workspace);
+    setActiveFile(nextActive);
+    setLastBulkEdit(token);
+    setEditorSession(previous => previous + 1);
+    setNotice('Moved ' + plan.paths.length + ' source files and rewrote ' +
+      plan.rewrittenImports + ' import path(s). Undo bulk change can restore the project.');
+  }
+
   function beginFileMove() {
     invalidateExecution();
     setFileMove({ snapshot: workspace, from: activeFile, to: activeFile });
@@ -1447,6 +1473,12 @@ export function App() {
                 onClick={() => { setReplacePreview(null); setSearchOpen(open => !open); }}>
                 Find in project
               </button>
+              <button type="button" className="button-secondary" aria-expanded={folderMoveOpen}
+                aria-controls="folder-move-panel" onClick={() => {
+                  if (folderMoveOpen) { setFolderMoveOpen(false); return; }
+                  invalidateExecution();
+                  setFolderMoveOpen(true);
+                }}>Move folder</button>
               <button type="button" className="button-secondary" aria-expanded={moduleGraphOpen}
                 aria-controls="module-graph-panel" onClick={() => setModuleGraphOpen(open => !open)}>
                 Module dependencies
@@ -1471,6 +1503,9 @@ export function App() {
               )}
             </div>
           </div>
+
+          {folderMoveOpen && <FolderMovePanel workspace={workspace} onApply={applyFolderMove}
+            onClose={() => setFolderMoveOpen(false)} />}
 
           {moduleGraphOpen && <ModuleGraphPanel workspace={workspace} activeFile={activeFile}
             onNavigate={jumpToSearchHit} onClose={() => setModuleGraphOpen(false)} />}
